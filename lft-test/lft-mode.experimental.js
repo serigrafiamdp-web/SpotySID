@@ -17,6 +17,44 @@
   // TEST209: one additional exact HVSC #85 Uctumi tune for reSIDfp.
   // It is NOT Loco: its output gain must remain unity (1x).
   var UCTUMI_MUJER=new Map([['Mujer_Amante.sid',7667]]);
+  // TEST237: all 19 individually audited HVSC #85 Ray Manta files.
+  // 17 are PAL MOS8580, only LVLLVLtro tunes 3/10 request PAL MOS6581.
+  // Do not enable this backend based on playlist name, artist credit or import.
+  var RAY_PACK='library/packs/musicians/R/Ray_Manta.zip';
+  var RAY_APPROVED=new Map([
+    ['All_the_Hits.sid',[4569,'MOS8580']],
+    ['Cazzowary.sid',[4627,'MOS8580']],
+    ['CPU_EP_Teaser.sid',[4185,'MOS8580']],
+    ['Danglefisch.sid',[3801,'MOS8580']],
+    ['Deimos.sid',[4906,'MOS8580']],
+    ['Eagle_Overthrow.sid',[3868,'MOS8580']],
+    ['Elara.sid',[4962,'MOS8580']],
+    ['Essentials_tune_01.sid',[3455,'MOS8580']],
+    ['Galza-24.sid',[5134,'MOS8580']],
+    ['Ghoul_Altar.sid',[3455,'MOS8580']],
+    ['Grace.sid',[4485,'MOS8580']],
+    ['Hindugong.sid',[4257,'MOS8580']],
+    ['Infernalis_Machina.sid',[3741,'MOS8580']],
+    ['LVLLVLtro_tune_10.sid',[4232,'MOS6581']],
+    ['LVLLVLtro_tune_3.sid',[3978,'MOS6581']],
+    ['LVLLVLtro_tune_9.sid',[2924,'MOS8580']],
+    ['Mechanique.sid',[4826,'MOS8580']],
+    ['Random_Stockphoto_Officeworker_Zoomer.sid',[3499,'MOS8580']],
+    ['Robovalken.sid',[2814,'MOS8580']]
+  ]);
+  function rayModel(ref){
+    return ref&&ref.pack===RAY_PACK&&RAY_APPROVED.has(ref.file)
+      ?RAY_APPROVED.get(ref.file)[1]:null;
+  }
+  function rayHeaderOK(bytes,ref){
+    if(!rayModel(ref)||!sidHeaderOK(bytes))return false;
+    var spec=RAY_APPROVED.get(ref.file);
+    if(bytes.length!==spec[0]||bytes[0]!==80||bytes[1]!==83||
+       bytes[2]!==73||bytes[3]!==68||((bytes[4]<<8)|bytes[5])!==2)return false;
+    var flags=(bytes[0x76]<<8)|bytes[0x77];
+    return ((flags>>2)&3)===1 &&
+      ((flags>>4)&3)===(spec[1]==='MOS8580'?2:1);
+  }
   // TEST177: immutable 66-file approval list taken from HVSC #85 musician index.
   // This is a reference allowlist, not a filename/author guess.
   var APPROVED=new Map([["A_Chipful_of_Love_for_You.sid",5294],["A_Computer_in_My_Backpack.sid",4990],["A_Mind_Is_Born.sid",380],["Air_on_a_Rasterline.sid",2978],["Allt_under_himmelens_faeste.sid",6619],["Allt_under_himmelens_faeste_v2.sid",6569],["Arrow_of_Time.sid",6270],["Cherry_Waffle.sid",5758],["Computational_Soup_2KB.sid",614],["Crank_Crank_Airwolf.sid",2686],["Crank_Crank_Revolution.sid",3710],["Dishwasher_Groove.sid",4990],["Dithered_Island.sid",6270],["Elvendance.sid",4734],["Euclid_Was_Here.sid",6270],["Fargo.sid",4222],["Fjaellevator_Music.sid",5502],["Foerklaedd_Gud_alpha.sid",4740],["Foerklaedd_Gud_beta.sid",4162],["Foerklaedd_Gud_delta.sid",4235],["Foerklaedd_Gud_epsilon.sid",3173],["Foerklaedd_Gud_eta.sid",3532],["Foerklaedd_Gud_gamma.sid",3280],["Foerklaedd_Gud_zeta.sid",3574],["Fratres_Arvo_Paert_2SID.sid",7435],["Fugue_on_a_Theme_by_D_M_Hanlon.sid",3198],["Glyptodont.sid",6270],["Hachi_Bitto_Whirlwind.sid",6526],["Hardsync.sid",4943],["In_Darkness_Hope.sid",6270],["Into_the_Unknown.sid",5502],["King_Fisher_0x28.sid",5463],["Lunatico_End.sid",1022],["Lunatico_Note.sid",6270],["Lunatico_Side_1.sid",5502],["Lunatico_Side_2.sid",5502],["Machine_Yearning_2SID.sid",6313],["Maple_Leaf_Rag.sid",3966],["Nine.sid",4478],["Nymphaea.sid",4754],["Perfectly_Well-Adjusted.sid",5758],["Perpetual_Fragility.sid",435],["Platform_Hopping.sid",12925],["Quintessence.sid",5758],["Quondam_Tunneling.sid",4734],["Racing_the_Beam.sid",6782],["Reminiscence.sid",5502],["Revolutions_Delivered.sid",5246],["Rodents_in_the_Attic.sid",5246],["Scene_Spirit.sid",8176],["Scene_Spirit_v2.sid",7038],["Shards_of_Fancy.sid",4950],["Sideways.sid",8956],["Slaepwerigne.sid",6795],["Sommargubbe.sid",6782],["Specular_Highlight.sid",9813],["Spin_Crazy_World.sid",6014],["Summer_Cloud.sid",6205],["Summer_Cloud_v2.sid",5502],["Thus_Spoke_the_PC_Speaker.sid",6270],["To_Die_For.sid",4734],["To_Die_For_II.sid",3966],["Toy_Rocket.sid",5758],["Trinket.sid",3454],["Withering_Bytes.sid",5246],["Your_Heptacular_Eyes.sid",6526]]);
@@ -125,7 +163,8 @@
     }
   }
   var fillTask=null, lastBytes=null, currentSong=0, songReady=false;
-  var approvedNext=null, initTask=null, requestSerial=0, active8580=false, activeMujer=false;
+  var approvedNext=null, initTask=null, requestSerial=0, active8580=false, activeMujer=false, activeRay=false;
+  var approvedTrackRef=null;
 
   // TEST203: independently prime the *next* approved SID during the outgoing
   // fade. Keep its exact 00:00 PCM frames queued; do not use sound detection,
@@ -152,14 +191,18 @@
     }
     var route8580=ref.pack===UCTUMI_PACK&&UCTUMI_8580.has(ref.file);
     var routeMujer=ref.pack===UCTUMI_PACK&&UCTUMI_MUJER.has(ref.file);
+    var routeRay=ref.pack===RAY_PACK&&RAY_APPROVED.has(ref.file);
     var expectedSize=route8580?UCTUMI_8580.get(ref.file):
-      routeMujer?UCTUMI_MUJER.get(ref.file):APPROVED.get(ref.file);
-    if(sourceBytes.length!==expectedSize){releaseStaged();return Promise.resolve(false);}
+      routeMujer?UCTUMI_MUJER.get(ref.file):
+      routeRay?RAY_APPROVED.get(ref.file)[0]:APPROVED.get(ref.file);
+    if(sourceBytes.length!==expectedSize||
+       (routeRay&&!rayHeaderOK(sourceBytes,ref))){releaseStaged();return Promise.resolve(false);}
     var key=stageKey(ref);
     if(stagedNext&&stagedNext.key===key)return stagedNext.promise;
     releaseStaged();
     var state={key:key,engine:null,ready:false,cancelled:false,
       route8580:route8580,routeMujer:routeMujer,
+      routeRay:routeRay,rayModel:routeRay?rayModel(ref):null,
       frames:null,meta:null,song:null,promise:null};
     stagedNext=state;
     var safeBytes=new Uint8Array(sourceBytes);
@@ -174,8 +217,10 @@
         if(state.cancelled||stagedNext!==state){candidate.dispose();return false;}
         var meta=songMeta(safeBytes),song=meta.actualSubsong;
         await candidate.loadSidBuffer(safeBytes,song);
-        if(route8580||routeMujer)
-          await candidate.setEmulationConfig({sidModel:'MOS8580',forceSidModel:true});
+        if(route8580||routeMujer||routeRay)
+          await candidate.setEmulationConfig({
+            sidModel:routeRay?rayModel(ref):'MOS8580',forceSidModel:true
+          });
         if(state.cancelled||stagedNext!==state){candidate.dispose();return false;}
         var frames=[];
         for(var i=0;i<PRIMING;i++){
@@ -225,13 +270,14 @@
     return !MODE_OFF && !!ref && !ref.sidId && typeof ref.file==='string' &&
       ((ref.pack===PACK && APPROVED.has(ref.file)) ||
        (ref.pack===UCTUMI_PACK &&
-         (UCTUMI_8580.has(ref.file)||UCTUMI_MUJER.has(ref.file))));
+         (UCTUMI_8580.has(ref.file)||UCTUMI_MUJER.has(ref.file))) ||
+       (ref.pack===RAY_PACK&&RAY_APPROVED.has(ref.file)));
   }
   function syncModeLabel(){
     var title=document.getElementById('ricoLivePlaylistTitle');
     if(!title)return;
     var base=title.textContent.replace(/ · LFT MODE ON$/,'');
-    title.textContent=base+((!active8580&&!activeMujer&&active&&songReady&&player.isPlaying)?' · LFT MODE ON':'');
+    title.textContent=base+((!active8580&&!activeMujer&&!activeRay&&active&&songReady&&player.isPlaying)?' · LFT MODE ON':'');
   }
   function sidHeaderOK(bytes){
     if(!(bytes instanceof Uint8Array)||bytes.length<0x7c||bytes.length>256*1024)return false;
@@ -337,7 +383,7 @@
   function deactivate(){
     releaseStaged();
     epoch++;trackEpoch++;requestSerial++;
-    active=false;songReady=false;lastBytes=null;approvedNext=null;initTask=null;active8580=false;activeMujer=false;
+    active=false;songReady=false;lastBytes=null;approvedNext=null;approvedTrackRef=null;initTask=null;active8580=false;activeMujer=false;activeRay=false;
     queue=[];frame=quiet;
     if(typeof player.ricoSetTrackOutputGain==='function')player.ricoSetTrackOutputGain(1);
     resetVoiceState();
@@ -391,8 +437,10 @@
       if(!active||sequence!==trackEpoch||engine!==local)return;
       // TEST209: independently audited MOS8580 header for Mujer Amante.
       // Loco's existing MOS8580 route and +8.3dB gain remain unchanged.
-      if(active8580||activeMujer){
-        await local.setEmulationConfig({sidModel:'MOS8580',forceSidModel:true});
+      if(active8580||activeMujer||activeRay){
+        await local.setEmulationConfig({
+          sidModel:activeRay?rayModel(approvedTrackRef):'MOS8580',forceSidModel:true
+        });
         if(!active||sequence!==trackEpoch||engine!==local)return;
       }
       // TEST197: fixed whole-track +8.3dB gain before any playback for
@@ -479,9 +527,12 @@
     // WebAssembly binary, even if called with a forged source reference.
     var route8580=ref.pack===UCTUMI_PACK && UCTUMI_8580.has(ref.file);
     var routeMujer=ref.pack===UCTUMI_PACK && UCTUMI_MUJER.has(ref.file);
+    var routeRay=ref.pack===RAY_PACK && RAY_APPROVED.has(ref.file);
     var expectedSize=route8580?UCTUMI_8580.get(ref.file):
-      routeMujer?UCTUMI_MUJER.get(ref.file):APPROVED.get(ref.file);
-    if(!sidHeaderOK(bytes)||bytes.length!==expectedSize){
+      routeMujer?UCTUMI_MUJER.get(ref.file):
+      routeRay?RAY_APPROVED.get(ref.file)[0]:APPROVED.get(ref.file);
+    if(!sidHeaderOK(bytes)||bytes.length!==expectedSize||
+       (routeRay&&!rayHeaderOK(bytes,ref))){
       if(active||initTask||engine)deactivate();
       applyLocoGainForBytes(bytes);
       return nativeLoad.apply(this,arguments);
@@ -492,7 +543,7 @@
     if(hot){
       try{
         if(active||initTask||engine)deactivate();
-        engine=hot.engine;active=true;active8580=route8580;activeMujer=routeMujer;
+        engine=hot.engine;active=true;active8580=route8580;activeMujer=routeMujer;activeRay=routeRay;approvedTrackRef=ref;
         trackEpoch++;requestSerial++;
         resetVoiceState();
         queue=hot.frames.map(function(f){
@@ -521,12 +572,14 @@
     // Original async path still handles uncached tracks and unavailable staging.
     if(stagedNext&&stagedNext.key!==stageKey(ref))releaseStaged();
     // Do not carry a forced 8580 model over into Linus or other tracks.
-    if((active8580&&!route8580)||(activeMujer&&!routeMujer))deactivate();
+    if((active8580&&!route8580)||(activeMujer&&!routeMujer)||(activeRay&&!routeRay))deactivate();
     var serial=++requestSerial,sidBytes=new Uint8Array(bytes);
     void (async function(){
       if(!await ensureEngine()||serial!==requestSerial)return;
       active8580=route8580;
       activeMujer=routeMujer;
+      activeRay=routeRay;
+      approvedTrackRef=ref;
       await startSong(sidBytes,null,true);
     })().catch(function(error){
       if(serial!==requestSerial)return;
@@ -547,7 +600,7 @@
   window.RicoLftMode={prepare:prepare,deactivate:deactivate,eligible:eligible,
     approveTrustedReference:approveTrustedReference,eligibleRef:eligibleRef,
     stageNextReference:stageNextReference,cancelStagedNext:releaseStaged,
-    active:function(){return active;},playingApproved:function(){return !active8580&&!activeMujer&&active&&songReady&&player.isPlaying;},
+    active:function(){return active;},playingApproved:function(){return !active8580&&!activeMujer&&!activeRay&&active&&songReady&&player.isPlaying;},
     scopeRegisters:function(){return latestRegs?latestRegs.slice():null;},
-    version:'TEST213-mujer-canonical-fix'};
+    version:'TEST237-ray-manta-sid-models'};
 })();
