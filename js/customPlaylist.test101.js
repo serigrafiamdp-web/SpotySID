@@ -4520,6 +4520,7 @@
                 throw Error('Missing SID reference. Local playlist preserved.');
               var refs=stored.tracks.map(remixCanonicalRef);
               var id=stored.pendingPublicId||'';
+              var createdNow=!id;
               if(!id){
                 var response=await fetch(communityWriteApi+'/playlists',{
                   method:'POST',headers:{'Content-Type':'application/json','X-Beta-Key':key},
@@ -4537,7 +4538,11 @@
               }
               await verifyRemoteOrder(communityWriteApi+'/playlists/'+encodeURIComponent(id),
                 refs,'playlist');
-              say('PUBLISHED · '+stored.name+' · '+refs.length+' SID');
+              var newOrderPromoted=!createdNow;
+              if(createdNow&&typeof window.ricoPromoteNewCommunityPlaylist==='function')
+                newOrderPromoted=await window.ricoPromoteNewCommunityPlaylist(id,key);
+              say('PUBLISHED · '+stored.name+' · '+refs.length+' SID'+
+                (newOrderPromoted?'':' · COMMUNITY ORDER PENDING'));
               await loadCommunityCatalog();
             }else{
               // Original V1 imported-collection publishing remains unchanged.
@@ -5547,9 +5552,23 @@
             body:JSON.stringify(data)
           });
           var receipt=await publishResponse.json();
-          if(!publishResponse.ok)throw Error(receipt.error||'Publication failed.');
+          if(!publishResponse.ok||!receipt.id)
+            throw Error(receipt.error||'Publication failed or returned no playlist ID.');
           draftId=receipt.id;
-          status('PUBLISHED for everyone: '+title+' — Playlist by '+creator+' · '+data.tracks.length+' SID.');
+          // TEST246: publication is already complete here. Failed validation
+          // or shared-order promotion must never trigger another POST.
+          var firstInCommunity=false;
+          try{
+            await verifyRemoteOrder(communityApiBase+'/playlists/'+encodeURIComponent(draftId),
+              data.tracks.map(remixCanonicalRef),'playlist');
+            if(typeof window.ricoPromoteNewCommunityPlaylist==='function')
+              firstInCommunity=await window.ricoPromoteNewCommunityPlaylist(draftId,betaKey);
+          }catch(orderError){
+            console.warn('Playlist published but order confirmation is pending:',orderError);
+          }
+          status('PUBLISHED for everyone: '+title+' — Playlist by '+creator+
+            ' · '+data.tracks.length+' SID'+
+            (firstInCommunity?' · FIRST IN COMMUNITY':' · COMMUNITY ORDER PENDING'));
           say('Published: '+title+' — Playlist by '+creator+'.');
           await loadCommunityCatalog();
         }catch(error){status('Could not save: '+error.message);}
