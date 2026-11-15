@@ -2934,7 +2934,7 @@
   // Scope the override to its exact HVSC archive entry + subtune, NOT artist,
   // group, playlist row, substring title, or any other 'Hat' composition.
   var HAT_TUNE1_END_SECONDS=108;  // User-confirmed final length (TEST249 PASS)
-  var HAT_CALIBRATION_SECONDS=240; // TEST250: temporary 04:00 for tunes 2–4
+  var HAT_CALIBRATION_SECONDS=300; // TEST251: temporary 05:00 for tunes 2–4
   function hatTuneNumber(source){
     if(!source||source.sub!==0)return 0;
     // Prefer identity from the exact HVSC archive, shared by musician/group.
@@ -2985,8 +2985,8 @@
     var ticket=++songlengthTicket,source=songTimerSource();
     playingTimerKey=source?source.key:null;
     var override=source?manualSongTimers.get(source.key):null;
-    // TEST249 PASS: tune 1 ends at 01:48. TEST250: tunes 2/3/4 get
-    // temporary 04:00 to allow listening and measuring their real endings.
+    // TEST249 PASS: tune 1 ends at 01:48. TEST251: tunes 2/3/4 get
+    // temporary 05:00 to allow listening and measuring their real endings.
     // A user-entered manual timer override always takes precedence.
     var hatNumber=hatTuneNumber(source);
     var hatDuration=hatNumber===1?HAT_TUNE1_END_SECONDS:
@@ -3013,7 +3013,7 @@
   // for files without song-length metadata. Begin a five-second fade before
   // the limit, so the *next* SID starts near the displayed timer value.
   player.getAutoDurationSeconds=function(){
-    // TEST250: all four The Hat tunes switch at their full timer limit
+    // TEST251: all four The Hat tunes switch at their full timer limit
     // without the usual 5-second fade. Tunes 2–4 are calibration caps;
     // their true ending times are not established yet.
     if(hatTuneNumber(songTimerSource())>0)
@@ -3037,7 +3037,7 @@
   window.RICO_TEST249_HAT_TUNE1={version:249,seconds:HAT_TUNE1_END_SECONDS,
     file:'Fegolhuzz/Hat_tune_1.sid',noFade:true,
     isActive:function(){return isHatTuneOneSource(songTimerSource());}};
-  window.RICO_TEST250_HAT_CALIBRATION={version:250,seconds:240,
+  window.RICO_TEST250_HAT_CALIBRATION={version:251,seconds:300,
     tunes:[2,3,4],noFade:true,
     activeTune:function(){return hatTuneNumber(songTimerSource());}};
   $('#ricoLiveTimer').on('focus',function(){
