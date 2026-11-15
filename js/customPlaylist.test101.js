@@ -4774,6 +4774,7 @@
           // One small SHARE action per published/curated public playlist.
           var shareButton=document.createElement('button');
           shareButton.type='button';
+          shareButton.className='rico-community-share';
           shareButton.textContent='SHARE';
           shareButton.title='Copy direct link to '+item.title;
           shareButton.setAttribute('aria-label','Copy share link for '+item.title);
