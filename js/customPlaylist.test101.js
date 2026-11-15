@@ -1293,9 +1293,11 @@
       }
       var readUrl=communityWriteApi+'/playlists/'+encodeURIComponent(id);
       await verifyRemoteOrder(readUrl,desired,'playlist');
-      // This path can update an existing adopted playlist. Publishing the
-      // first new copy is creation, not a last-edit event.
-      if(matches.length&&response.ok&&result.updated===true&&
+      // TEST246: the first verified adoption is a NEW published list.
+      // An existing authorized update retains TEST219's REPUBLISH behavior.
+      if(!matches.length&&typeof window.ricoPromoteNewCommunityPlaylist==='function')
+        await window.ricoPromoteNewCommunityPlaylist(id,key);
+      else if(matches.length&&response.ok&&result.updated===true&&
          typeof window.ricoPromoteEditedCommunityPlaylist==='function')
         await window.ricoPromoteEditedCommunityPlaylist(id,key);
       activePublicPlaylist={remoteId:id,name:payload.name,createdBy:payload.createdBy,
@@ -1569,6 +1571,8 @@
   // playlist, create a placeholder title, or change ADD + TO until the user
   // explicitly chooses a destination from the floating playlist.
   var creatingNewRemix=false;
+  // TEST246: new, unpublished drafts appear first for their creator only.
+  var communityNewestDraftId='';
   function createRemix(){
     creatingNewRemix=true;
     remixOpen=true;
@@ -1598,6 +1602,7 @@
     var draft={id:'remix-'+Date.now()+'-'+remixCounter,
       name:name.slice(0,100),creator:creator.slice(0,60),tracks:[]};
     remixDrafts.push(draft);
+    communityNewestDraftId=draft.id;
     // The previous ADD + TO destination stays intact.
     // The new playlist appears in that destination selector for explicit use.
     remixTarget=draft.id;
@@ -1978,7 +1983,13 @@
         activeLocalOrderDirty=false;
         renderLivePlaylist();
       }
-      remixNotice('PUBLISHED AND VERIFIED: '+draft.name+' · '+expectedDraftRefs.length+' SID in the correct order.');
+      // Shared catalog ordering is updated only AFTER the new playlist was
+      // verified from D1; no change to its internal SID order or public ID.
+      var newListOnTop=typeof window.ricoPromoteNewCommunityPlaylist==='function'&&
+        await window.ricoPromoteNewCommunityPlaylist(remoteId,key);
+      if(communityNewestDraftId===draft.id)communityNewestDraftId='';
+      remixNotice('PUBLISHED AND VERIFIED: '+draft.name+' · '+expectedDraftRefs.length+
+        ' SID in the correct order.'+(newListOnTop?' · FIRST IN COMMUNITY':' · COMMUNITY ORDER PENDING'));
       remixDrafts=remixDrafts.filter(function(d){return d!==draft;});
       if(preferredRemixDestination===draft.id)rememberRemixDestination('published:'+remoteId);
       remixTarget='';
@@ -3685,10 +3696,9 @@
     var communityServerOrder=null;
     var communityServerRevision=null;
     var communityPublicOrderDirty=false;
-    // TEST219 — temporary Community rule until real ratings:
-    // The LAST SUCCESSFULLY beta-authorized EDIT/REPUBLISH goes first.
-    // Reuse the existing D1 /catalog-order endpoint and its revision guard.
-    // Never move a playlist for PLAY, local edits, bad keys or failed writes.
+    // TEST246: the latest verified public CREATE or EDIT/REPUBLISH goes first.
+    // Use D1 /catalog-order with its revision guard; never reorder for PLAY,
+    // private drafts, rejected writes or unverifiable publications.
     async function promoteAuthorizedCommunityEdit(remoteId,betaKey){
       if(typeof remoteId!=='string'||!/^[a-z0-9-]{12,48}$/i.test(remoteId)||
          typeof betaKey!=='string'||!betaKey)
@@ -3748,6 +3758,17 @@
         console.warn('Playlist edit saved, but Community reorder is pending:',error);
         if(communityOrderStatus)
           communityOrderStatus.textContent='Edit saved · order pending';
+        return false;
+      }
+    };
+    // A newly published D1 playlist uses the identical shared ordering
+    // protocol as an authorized REPUBLISH. Never request the beta key twice.
+    window.ricoPromoteNewCommunityPlaylist=async function(remoteId,betaKey){
+      try{return await promoteAuthorizedCommunityEdit(remoteId,betaKey);}
+      catch(error){
+        console.warn('Playlist published, but first position is pending:',error);
+        if(communityOrderStatus)
+          communityOrderStatus.textContent='Published · order pending';
         return false;
       }
     };
@@ -3861,6 +3882,8 @@
       if(from<0)return;
       var to=Math.max(0,Math.min(rows.length-1,from+step));
       if(to===from)return;
+      // Respect the user's deliberate manual order after first creation.
+      communityNewestDraftId='';
       var previousPublic=catalogOrderRows().map(function(entry){
         return entry.dataset.communityOrderKey;
       }).join('\n');
@@ -4659,6 +4682,12 @@
       });
       communityItems.appendChild(fragment);
       restorePrivateCommunityPositions();
+      if(communityNewestDraftId){
+        var newestRow=Array.prototype.find.call(
+          communityItems.querySelectorAll('.rico-community-remix-row'),
+          function(row){return row.dataset.communityOrderKey==='remix:'+communityNewestDraftId;});
+        if(newestRow)communityItems.insertBefore(newestRow,communityItems.firstChild);
+      }
       updateCatalogArrows();
     }
     window.ricoRenderRemixCommunityRows=renderRemixCommunityRows;
