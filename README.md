@@ -6,7 +6,17 @@
 
 SpotySid preserves and extends the original James / Jojati SID Player. RICO maintains the project and develops the community, playlist and browsing tools. The project does not modify the underlying SID compositions.
 
-## Community ordering — TEST246 (pending browser PASS)
+## Bulk SID selection — TEST247 (pending browser PASS)
+
+Every playable row in the floating playlist has a compact palette-aware
+checkbox as its first action, immediately **left of +**. With checked SIDs,
+the existing `+`, `↑`, `↓` and `×` act on the selection in one batch
+(where the source already allows that operation), preserving relative
+order and synchronizing HVSC/NO HVSC references. Batch addition of
+locally imported unknown SIDs reuses one authorized NO HVSC archive
+operation. [Manual tests and technical notes](docs/TEST247_BULK_PLAYLIST_CHECKBOX.md).
+
+## Community ordering — TEST246 (user PASS)
 
 Newly created unpublished REMIX drafts appear first in their creator's local COMMUNITY list. Once a new playlist is **PUBLISHed and verified**, it moves to **first place in the shared COMMUNITY catalog**, using the same authorized D1 ordering as the last EDIT/REPUBLISH. No ranking change on PLAY or SHARE. [TEST246 notes](docs/TEST246_NEW_PLAYLIST_FIRST.md).
 
