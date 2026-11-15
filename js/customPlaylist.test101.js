@@ -2179,13 +2179,14 @@
         : isOldSidCurated()
           ? 'Register this HVSC reference playlist as editable in Cloudflare (beta key required)'
           : 'Save current song order locally; publication requires beta key');
-    // TEST177: show active LFT MODE on any playlist while an approved
-    // LFT track actually plays; never label an entire mixed playlist as LFT.
-    var lftModeTitle=!landingPlaylists&&customActive&&
-      window.RicoLftMode&&window.RicoLftMode.playingApproved();
+    // TEST238: show the actual reSIDfp route of the playing track, not
+    // the playlist title. In mixed lists the indicator changes per SID.
+    var routeInfo=!landingPlaylists&&customActive&&window.RicoLftMode;
+    var rayModeTitle=routeInfo&&window.RicoLftMode.playingRay();
+    var lftModeTitle=routeInfo&&!rayModeTitle&&window.RicoLftMode.playingApproved();
     $('#ricoLivePlaylistTitle').text((landingPlaylists ? "COMMUNITY PLAYLISTS" :
       (customActive ? (loadedPlaylistTitle || 'CUSTOM PLAYLIST') : 'GAMES'))+
-      (lftModeTitle?' · LFT MODE ON':''));
+      (rayModeTitle?' · RAY MANTA MODE ON':lftModeTitle?' · LFT MODE ON':''));
     // TEST34: keep the creator/ratings strip visible while a playlist is loaded.
     // Never confuse the playlist creator with each SID's composer.
     var hasLoadedPlaylist = !!loadedPlaylistTitle && customActive;
