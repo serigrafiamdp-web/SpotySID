@@ -1,6 +1,6 @@
 # TEST253 — The Hat (tune 2) | 05:10 duration, five-second fade-out
 
-**2026-11-15 — implemented on the canonical SpotySid site; user listening PASS pending.**
+**2026-11-15 — PASS: user accepted the resulting Track 2 transition as satisfactory after TEST253.**
 
 ## Reason
 
@@ -29,6 +29,6 @@ Manual per-song timer adjustments still take precedence. **AUTO OFF** disables a
 - `index.html`: cache-bust `test253-hat2-510-fade5`.
 - JavaScript syntax check PASSED.
 - Mock tests: at 05:04.96 no advance; at 05:05.01 tune 2 invokes the normal fade transition; tune 1 triggers hard cut at 01:48; tunes 3/4 hard cut at 06:00; AUTO OFF blocks advance — **PASS at code level**. The actual audio and YouTube edit boundaries have not been objectively rendered/verified.
-- **User listening PASS pending**. The intended next test is listening to tune 2 through the final 10 seconds, checking gradual 5-second fade before the next track begins.
+- **User PASS:** after TEST253 implementation, the user explicitly stated “damos por bueno track 2”. Fade-out of 5 s before 05:10 is retained.
 
 Recovery branch: `backup/pre-test253-the-hat-tune2-fade-2026-11-15`.
