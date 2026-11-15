@@ -162,15 +162,31 @@
       resetSoftTransition(false);
     return serial;
   }
-  async function switchToPreparedPlaylist(serial,commit){
+  async function preparePlaylistFirstSid(entry){
+    var bridge=window.RicoLftMode;
+    var ref=entry&&entry._hvscRef;
+    if(!bridge||!ref||!entry.localBytes||
+       typeof bridge.eligibleRef!=='function'||!bridge.eligibleRef(ref)||
+       typeof bridge.stageNextReference!=='function')return;
+    try{
+      // Independently warm up the approved reSIDfp engine while the old SID
+      // is still audible; this avoids a silent WASM startup after the fade.
+      await bridge.stageNextReference(ref,entry.localBytes);
+    }catch(error){
+      console.warn('Playlist SID warm-up unavailable:',error);
+    }
+  }
+  async function switchToPreparedPlaylist(serial,commit,firstSid){
+    if(serial!==playlistChangeSerial)return false;
+    // Do not start the five-second fade while ZIP/SID data are still loading.
+    // The previous SID continues at full level until the target is ready.
+    if(transitionBusy)resetSoftTransition(false);
+    await preparePlaylistFirstSid(firstSid);
     if(serial!==playlistChangeSerial)return false;
     if(!player.isPlaying||player.isPaused){
       commit();
       return true;
     }
-    // Do not start the five-second fade while ZIP/SID data are still loading.
-    // The previous SID continues at full level until the target is ready.
-    if(transitionBusy)resetSoftTransition(false);
     player.initWebAudio();
     transitionBusy=true;transitionSource='playlist';
     transitionAwaitingStart=false;queuedLiveIndex=null;
@@ -505,7 +521,8 @@
     queuedLiveIndex=null;
     transitionSource=keepPlaylistHandoff?'playlist':null;
     preparedDefaultSid=null;
-    if(window.RicoLftMode&&typeof window.RicoLftMode.cancelStagedNext==='function')
+    if(!keepPlaylistHandoff&&window.RicoLftMode&&
+       typeof window.RicoLftMode.cancelStagedNext==='function')
       window.RicoLftMode.cancelStagedNext();
     if(resetSelection){
       selectedLiveIndex=null;followPlayingRowOnce=false;
@@ -3743,7 +3760,7 @@
       else player.initFileSelection();
       loadCustomIndex(Number.isInteger(startIndex) ? startIndex : 0);
       showLivePlaylist(true);
-      });
+      },entries[Number.isInteger(startIndex)?startIndex:0]);
     }
 
     // TEST112: first-play fast path for the large historical HVSC playlist.
@@ -3885,7 +3902,7 @@
       loadCustomIndex(0);showLivePlaylist(true);
       $('#ricoLiveStatus').text('First SID ready; the rest of HVSC loads progressively.');
       setTimeout(function(){if(activeReferenceStream===stream)stream.prefetch();},0);
-      });
+      },stream.slots[0]);
       if(!applied)stream.cancel();
       return applied;
     }
@@ -3976,7 +3993,7 @@
       loadedPlaylistCreator=(data.createdBy||'You').slice(0,100);
       if(!customActive)activate('custom');else player.initFileSelection();
       loadCustomIndex(0);showLivePlaylist(true);
-      });
+      },output[0]);
     }
     window.ricoPlayRemixDraft=async function(data){
       await loadStoredPlaylist(data);
