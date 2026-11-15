@@ -2921,6 +2921,7 @@
       }
       renderImportedSidList();
       if(accepted){
+        activeSharePlaylistId='';
         loadedPlaylistTitle='';
         loadedPlaylistCreator='';
         if(!customActive)activate('custom');
@@ -3020,6 +3021,7 @@
     importedSidEntries.length=0;renderImportedSidList();
     custom.length = 0;
     loadedPlaylistTitle = '';
+    activeSharePlaylistId='';
     if (customActive) {
       player.isPlaying = false;
       player.sidListIndex = false;
@@ -3633,6 +3635,7 @@
       await dbCall('readwrite',function(store){return store.put(data);});
       currentId=data.id;
       loadedPlaylistTitle=data.name;
+      activeSharePlaylistId='';
       renderLivePlaylist();
       await refreshSaved();
       say('Saved locally: '+data.name+' ('+data.tracks.length+' SID).');
@@ -4188,6 +4191,7 @@
             player.sidList=custom;player.sidListIndex=false;
             player.initFileSelection();
             loadedPlaylistTitle=cfg.title;loadedPlaylistCreator='CSDb ranking';
+            activeSharePlaylistId='';
             nameEl.value=cfg.title;landingPlaylists=false;
           }
           activeCsdbRankDisplay={kind:kind,items:items,trackRanks:trackRanks,trackCounts:trackCounts};
