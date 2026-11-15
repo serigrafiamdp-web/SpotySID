@@ -2935,7 +2935,7 @@
   // group, playlist row, substring title, or any other 'Hat' composition.
   var HAT_TUNE1_END_SECONDS=108;  // User-confirmed final length (TEST249 PASS)
   var HAT_TUNE2_END_SECONDS=310; // TEST253 PASS: YouTube demo 07:15 - 02:05 = 05:10
-  var HAT_TUNE3_END_SECONDS=154; // TEST254: YouTube demo 09:52 - 07:18 = 02:34
+  var HAT_TUNE3_END_SECONDS=180; // TEST255: 03:00 provisional for precise listening (demo segment 02:34)
   var HAT_CALIBRATION_SECONDS=360; // TEST252: temporary 06:00 for tune 4
   function hatTuneNumber(source){
     if(!source||source.sub!==0)return 0;
@@ -2988,8 +2988,8 @@
     playingTimerKey=source?source.key:null;
     var override=source?manualSongTimers.get(source.key):null;
     // TEST249 PASS: tune 1 01:48 direct. TEST253 PASS: tune 2 05:10
-    // (five-second fade). TEST254: tune 3 02:34 direct, pending listening.
-    // Tune 4 remains 06:00 provisional. Manual overrides win.
+    // (five-second fade). TEST255: tune 3 03:00 listening window,
+    // direct no fade. Tune 4 stays 06:00 provisional. Manual overrides win.
     var hatNumber=hatTuneNumber(source);
     var hatDuration=hatNumber===1?HAT_TUNE1_END_SECONDS:
       (hatNumber===2?HAT_TUNE2_END_SECONDS:
@@ -3017,8 +3017,8 @@
   // for files without song-length metadata. Begin a five-second fade before
   // the limit, so the *next* SID starts near the displayed timer value.
   player.getAutoDurationSeconds=function(){
-    // TEST254: tune 3 ends at 02:34 with the existing direct/no-fade
-    // transition. Tune 1 is still PASS at 01:48 without fade; tune 2
+    // TEST255: tune 3 uses a provisional 03:00 direct/no-fade limit.
+    // Tune 1 is still PASS at 01:48 without fade; tune 2
     // is PASS with 05:10 and a 5-second fade; tune 4 stays 06:00 provisional.
     var hat=hatTuneNumber(songTimerSource());
     if(hat===1||hat===3||hat===4)
@@ -3051,7 +3051,7 @@
   window.RICO_TEST253_HAT_TUNE2={version:253,seconds:HAT_TUNE2_END_SECONDS,
     fadeSeconds:FADE_OUT_MS/1000,file:'Fegolhuzz/Hat_tune_2.sid',
     active:function(){return hatTuneNumber(songTimerSource())===2;}};
-  window.RICO_TEST254_HAT_TUNE3={version:254,seconds:HAT_TUNE3_END_SECONDS,
+  window.RICO_TEST254_HAT_TUNE3={version:255,seconds:HAT_TUNE3_END_SECONDS,
     fadeSeconds:0,file:'Fegolhuzz/Hat_tune_3.sid',
     active:function(){return hatTuneNumber(songTimerSource())===3;}};
   $('#ricoLiveTimer').on('focus',function(){
