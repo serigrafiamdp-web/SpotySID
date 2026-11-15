@@ -42,6 +42,60 @@
     ['Random_Stockphoto_Officeworker_Zoomer.sid',[3499,'MOS8580']],
     ['Robovalken.sid',[2814,'MOS8580']]
   ]);
+  // TEST239: HVSC #85 Ray Manta ZIP per-entry CRC32 over the original SID
+  // bytes, NOT over compressed ZIP data. Works for imported/v1/v2 playlists.
+  // A same-named or same-sized edited SID cannot enter this special backend.
+  var RAY_FINGERPRINTS=new Map([
+    ['All_the_Hits.sid',0x35c75862],
+    ['Cazzowary.sid',0x8d5e8c7c],
+    ['CPU_EP_Teaser.sid',0x93be4b81],
+    ['Danglefisch.sid',0x732e1085],
+    ['Deimos.sid',0xaf4bcc2d],
+    ['Eagle_Overthrow.sid',0x40c927aa],
+    ['Elara.sid',0x5c8c6b17],
+    ['Essentials_tune_01.sid',0x5717a048],
+    ['Galza-24.sid',0xd6b1e294],
+    ['Ghoul_Altar.sid',0xc9d1e94d],
+    ['Grace.sid',0x184d0081],
+    ['Hindugong.sid',0xbd2e7cf2],
+    ['Infernalis_Machina.sid',0xf125b855],
+    ['LVLLVLtro_tune_10.sid',0x0d133da1],
+    ['LVLLVLtro_tune_3.sid',0x892d33f4],
+    ['LVLLVLtro_tune_9.sid',0x2d6afdb1],
+    ['Mechanique.sid',0xabcb6973],
+    ['Random_Stockphoto_Officeworker_Zoomer.sid',0xf8d6988b],
+    ['Robovalken.sid',0x99d93ab3]
+  ]);
+  var RAY_BY_SIZE=new Map();
+  RAY_APPROVED.forEach(function(spec,file){
+    var list=RAY_BY_SIZE.get(spec[0])||[];
+    list.push(file);RAY_BY_SIZE.set(spec[0],list);
+  });
+  var crcTable=new Uint32Array(256);
+  for(var crcIndex=0;crcIndex<256;crcIndex++){
+    var crc=crcIndex;
+    for(var c=0;c<8;c++)crc=(crc&1)?(0xedb88320^(crc>>>1)):(crc>>>1);
+    crcTable[crcIndex]=crc>>>0;
+  }
+  function rayCrc32(bytes){
+    var crc=0xffffffff;
+    for(var i=0;i<bytes.length;i++)
+      crc=crcTable[(crc^bytes[i])&255]^(crc>>>8);
+    return (crc^0xffffffff)>>>0;
+  }
+  function trustedRayRefByBytes(bytes){
+    if(RAY_OFF||!(bytes instanceof Uint8Array)||!RAY_BY_SIZE.has(bytes.length)||
+       !sidHeaderOK(bytes))return null;
+    var hash=rayCrc32(bytes);
+    var candidates=RAY_BY_SIZE.get(bytes.length);
+    for(var i=0;i<candidates.length;i++){
+      if(RAY_FINGERPRINTS.get(candidates[i])===hash){
+        var ref={pack:RAY_PACK,file:candidates[i]};
+        return rayHeaderOK(bytes,ref)?ref:null;
+      }
+    }
+    return null;
+  }
   function rayModel(ref){
     return ref&&ref.pack===RAY_PACK&&RAY_APPROVED.has(ref.file)
       ?RAY_APPROVED.get(ref.file)[1]:null;
@@ -53,7 +107,8 @@
        bytes[2]!==73||bytes[3]!==68||((bytes[4]<<8)|bytes[5])!==2)return false;
     var flags=(bytes[0x76]<<8)|bytes[0x77];
     return ((flags>>2)&3)===1 &&
-      ((flags>>4)&3)===(spec[1]==='MOS8580'?2:1);
+      ((flags>>4)&3)===(spec[1]==='MOS8580'?2:1) &&
+      rayCrc32(bytes)===RAY_FINGERPRINTS.get(ref.file);
   }
   // TEST177: immutable 66-file approval list taken from HVSC #85 musician index.
   // This is a reference allowlist, not a filename/author guess.
@@ -529,6 +584,13 @@
   player.loadSIDData=function(bytes){
     var ref=approvedNext;
     approvedNext=null;
+    // A user-created playlist may carry the exact HVSC SID without its original
+    // _hvscRef. Verify content before choosing the Ray-only backend.
+    var identifiedByBytes=false;
+    if(!ref){
+      ref=trustedRayRefByBytes(bytes);
+      identifiedByBytes=!!ref;
+    }
     if(!ref){
       if(active||initTask||engine)deactivate();
       // Applies to the exact HVSC SID bytes in ANY playlist or local import.
@@ -557,6 +619,9 @@
       try{
         if(active||initTask||engine)deactivate();
         engine=hot.engine;active=true;active8580=route8580;activeMujer=routeMujer;activeRay=routeRay;approvedTrackRef=ref;
+        if(routeRay)console.info('[TEST239 RAY MANTA]',{
+          file:ref.file,model:rayModel(ref),source:'HVSC reference',engine:'reSIDfp staged'
+        });
         trackEpoch++;requestSerial++;
         resetVoiceState();
         queue=hot.frames.map(function(f){
@@ -593,6 +658,11 @@
       activeMujer=routeMujer;
       activeRay=routeRay;
       approvedTrackRef=ref;
+      if(routeRay)console.info('[TEST239 RAY MANTA]',{
+        file:ref.file,model:rayModel(ref),
+        source:identifiedByBytes?'Verified file CRC32':'HVSC reference',
+        engine:'reSIDfp'
+      });
       await startSong(sidBytes,null,true);
     })().catch(function(error){
       if(serial!==requestSerial)return;
@@ -618,5 +688,5 @@
     rayStatus:function(){return {active:active&&activeRay,songReady:songReady,
       model:activeRay?rayModel(approvedTrackRef):null,bypassed:RAY_OFF};},
     scopeRegisters:function(){return latestRegs?latestRegs.slice():null;},
-    version:'TEST238-ray-manta-pal-digiboost'};
+    version:'TEST239-ray-manta-fingerprint'};
 })();
