@@ -150,6 +150,52 @@
   var transitionBusy=false;
   var transitionSource=null;
   var transitionGeneration=0;
+  // TEST262: a playlist change is a prepared handoff, never an early stop.
+  var playlistChangeSerial=0;
+  var playlistCommitInProgress=false;
+  function requestPlaylistChange(){
+    var serial=++playlistChangeSerial;
+    // A newer playlist choice cancels an unfinished fade, keeping playback
+    // audible while the replacement's first SID is prepared.
+    if(transitionBusy&&transitionSource==='playlist'&&!playlistCommitInProgress)
+      resetSoftTransition(false);
+    return serial;
+  }
+  async function switchToPreparedPlaylist(serial,commit){
+    if(serial!==playlistChangeSerial)return false;
+    if(!player.isPlaying||player.isPaused){
+      commit();
+      return true;
+    }
+    // Do not start the five-second fade while ZIP/SID data are still loading.
+    // The previous SID continues at full level until the target is ready.
+    if(transitionBusy)resetSoftTransition(false);
+    player.initWebAudio();
+    transitionBusy=true;transitionSource='playlist';
+    transitionAwaitingStart=false;queuedLiveIndex=null;
+    player.autoLoading=true;
+    var generation=++transitionGeneration;
+    if(fadeGainNode)rampVolume(FADE_OUT_FLOOR,FADE_OUT_MS);
+    $('#ricoLiveStatus').text('NEXT PLAYLIST · fading out');
+    await new Promise(function(resolve){setTimeout(resolve,
+      fadeGainNode?FADE_OUT_MS:20);});
+    // STOP, another NEXT or a more recent playlist selection wins.
+    if(serial!==playlistChangeSerial||generation!==transitionGeneration||
+       !transitionBusy||transitionSource!=='playlist')return false;
+    playlistCommitInProgress=true;
+    transitionAwaitingStart=true;
+    try{
+      commit();
+      if(transitionAwaitingStart)throw Error('Next playlist did not start a SID.');
+      return true;
+    }catch(error){
+      playlistCommitInProgress=false;
+      resetSoftTransition(false);
+      throw error;
+    }finally{
+      playlistCommitInProgress=false;
+    }
+  }
   // TEST260: AUTO/NEXT may load a new SID while the user is browsing HVSC.
   // The original SID loader must not close Choose A SID for a playlist handoff.
   // Explicit SID selections (source='manual') retain their existing behavior.
@@ -427,17 +473,21 @@
     fadeGainNode.gain.setValueAtTime(1,now);
   }
   function resetSoftTransition(resetSelection){
+    var keepPlaylistHandoff=playlistCommitInProgress&&
+      transitionSource==='playlist';
     resetSilenceDetector();
     transitionGeneration++;
     if(transitionTimer!==null){clearTimeout(transitionTimer);transitionTimer=null;}
     if(transitionRecovery!==null){clearTimeout(transitionRecovery);transitionRecovery=null;}
     if(transitionBusy&&!transitionAwaitingStart)player.autoLoading=false;
-    transitionBusy=false;transitionAwaitingStart=false;
+    transitionBusy=keepPlaylistHandoff;
+    transitionAwaitingStart=keepPlaylistHandoff;
     pendingNewSidUnmute=false;
     openingBufferReplay=null;
     openingReplayTime=null;
     openingReplayFallbackBlocks=0;
-    queuedLiveIndex=null;transitionSource=null;
+    queuedLiveIndex=null;
+    transitionSource=keepPlaylistHandoff?'playlist':null;
     preparedDefaultSid=null;
     if(window.RicoLftMode&&typeof window.RicoLftMode.cancelStagedNext==='function')
       window.RicoLftMode.cancelStagedNext();
@@ -445,7 +495,7 @@
       selectedLiveIndex=null;followPlayingRowOnce=false;
       $('#ricoLivePlaylistItems').scrollTop(0);
     }
-    restoreFullVolume();
+    if(!keepPlaylistHandoff)restoreFullVolume();
   }
   var originalPlaySong=player.playSong;
   player.playSong=function(){
@@ -3627,15 +3677,16 @@
       });
       return entries;
     }
-    function loadPlaylist(data,startIndex,localImport,ranked) {
-      // Legacy/local source: preserve unchanged TinySID behavior.
+    async function loadPlaylist(data,startIndex,localImport,ranked) {
+      // Validate first, then fade the outgoing playlist without a loading gap.
+      var serial=requestPlaylistChange();
+      var entries=validatedEntries(data);
+      return switchToPreparedPlaylist(serial,function(){
       if(window.RicoLftMode)window.RicoLftMode.deactivate();
       resetCsdbRankDisplay();
       resetSoftTransition(true);
       if(activeReferenceStream){activeReferenceStream.cancel();activeReferenceStream=null;}
       referenceSwitchSerial++;
-      // Validate everything before changing the currently loaded playlist.
-      var entries=validatedEntries(data);
       batchSelectedSids.clear();
       activeSharePlaylistId='';
       // TEST220: opening any successfully validated list requires a fresh
@@ -3670,6 +3721,7 @@
       else player.initFileSelection();
       loadCustomIndex(Number.isInteger(startIndex) ? startIndex : 0);
       showLivePlaylist(true);
+      });
     }
 
     // TEST112: first-play fast path for the large historical HVSC playlist.
@@ -3773,20 +3825,24 @@
         cancel:function(){cancelled=true;controller.abort();archives.clear();}};
       return stream;
     }
-    async function loadProgressiveReferencePlaylist(data,localImport){
-      resetCsdbRankDisplay();
+    async function loadProgressiveReferencePlaylist(data,localImport,serial){
       var stream=createProgressiveReferenceStream(data.tracks,data.name==='UNKNOWN CSDB');
       // TOP 100 DEMOS: song metadata is already in the source manifest.
       // Load song bytes on demand without decoding the entire list at launch.
       stream.onDemandOnly=data.name==='TOP 100 DEMOS'||/^TOP 100 CSDb (?:ONEFILE )?DEMOS/.test(data.name);
-      activeReferenceStream=stream;
       try{
         await stream.loadSlot(stream.slots[0]);
-        if(activeReferenceStream!==stream)throw Error('Playlist selection changed');
       }catch(error){
-        if(activeReferenceStream===stream){stream.cancel();activeReferenceStream=null;}
+        stream.cancel();
         throw error;
       }
+      if(serial!==playlistChangeSerial){stream.cancel();return false;}
+      var applied=await switchToPreparedPlaylist(serial,function(){
+      resetCsdbRankDisplay();
+      resetSoftTransition(true);
+      if(activeReferenceStream)activeReferenceStream.cancel();
+      referenceSwitchSerial++;
+      activeReferenceStream=stream;
       // TEST220: reset after the first SID has loaded successfully.
       resetAddToDestination();
       activePublicPlaylist=null;activePublicCollection=null;
@@ -3806,23 +3862,23 @@
       loadCustomIndex(0);showLivePlaylist(true);
       $('#ricoLiveStatus').text('First SID ready; the rest of HVSC loads progressively.');
       setTimeout(function(){if(activeReferenceStream===stream)stream.prefetch();},0);
+      });
+      if(!applied)stream.cancel();
+      return applied;
     }
     // TEST61: reference-only playlists resolve SID files from one immutable HVSC base.
     // Existing v1 playlists with embedded SID remain fully supported.
     async function loadStoredPlaylist(data,localImport,sourceRemoteId) {
       // TEST177: do not activate an engine by list name, owner or publication.
       // The selected track's verified HVSC reference decides its engine.
-      resetCsdbRankDisplay();
-      resetSoftTransition(true);
-      if(activeReferenceStream){activeReferenceStream.cancel();activeReferenceStream=null;}
-      referenceSwitchSerial++;
+      var serial=requestPlaylistChange();
       if (!data || data.format!=='ricos-sid-playlist') throw Error('Unsupported playlist.');
       batchSelectedSids.clear();
       activeSharePlaylistId='';
       if (data.version===1) {
-        loadPlaylist(data,undefined,!!localImport);
-        activeLocalSavedId=localImport&&typeof data.id==='string'?data.id:null;
-        return;
+        var legacyApplied=await loadPlaylist(data,undefined,!!localImport);
+        if(legacyApplied)activeLocalSavedId=localImport&&typeof data.id==='string'?data.id:null;
+        return legacyApplied;
       }
       if (data.version!==2 || !Array.isArray(data.tracks) ||
           !data.tracks.length || data.tracks.length>2000) throw Error('Invalid reference playlist.');
@@ -3834,13 +3890,13 @@
          ((data.name==='OLD SID COLLECTION RICO'||data.name==='UNKNOWN CSDB')&&
          data.tracks.length>=200)||
          (data.name==="RICO'S BEST OF MUS"&&data.tracks.length>=80)||
-         ((data.name==='TOP 100 DEMOS'||/^TOP 100 CSDb (?:ONEFILE )?DEMOS/.test(data.name))&&data.tracks.length>=1)){
+         ((data.name==='TOP 100 DEMOS'||/^TOP 100 CSDb (?:ONEFILE )?DEMOS/.test(data.name))&&data.tracks.length>=1)||
+         data.tracks.length>=40){
         for(var k=0;k<data.tracks.length;k++){
           var ref=data.tracks[k];
           if(!validRemixRef(ref))throw Error('Invalid catalog SID reference.');
         }
-        await loadProgressiveReferencePlaylist(data,localImport);
-        return;
+        return loadProgressiveReferencePlaylist(data,localImport,serial);
       }
       var packages=new Map(), output=[], bytesTotal=0;
       for(var i=0;i<data.tracks.length;i++){
@@ -3873,7 +3929,13 @@
         entry._hvscRef=remixCanonicalRef(track);
         output.push(entry);
       }
-      // Do not change playback until every reference has been resolved and validated.
+      // The outgoing SID keeps playing throughout ZIP download and decoding.
+      // Only after all data are ready do we start the five-second fade.
+      return switchToPreparedPlaylist(serial,function(){
+      resetCsdbRankDisplay();
+      resetSoftTransition(true);
+      if(activeReferenceStream){activeReferenceStream.cancel();activeReferenceStream=null;}
+      referenceSwitchSerial++;
       // TEST220: never inherit ADD + TO from another loaded playlist.
       resetAddToDestination();
       activePublicPlaylist=null;activePublicCollection=null;
@@ -3892,6 +3954,7 @@
       loadedPlaylistCreator=(data.createdBy||'You').slice(0,100);
       if(!customActive)activate('custom');else player.initFileSelection();
       loadCustomIndex(0);showLivePlaylist(true);
+      });
     }
     window.ricoPlayRemixDraft=async function(data){
       await loadStoredPlaylist(data);
@@ -4055,7 +4118,7 @@
       try {
         if (file.size > MAX_BYTES*2) throw Error('JSON file is too large.');
         var data=JSON.parse(await file.text());
-        loadPlaylist(data,undefined,true);
+        await loadPlaylist(data,undefined,true);
         say('Imported '+data.name+' ('+data.tracks.length+' SID). Use SAVE LIST to keep it locally.');
       } catch(error) {
         say(error.message || 'Invalid JSON playlist.');
@@ -4603,7 +4666,7 @@
               trackCounts.filter(function(n){return n===0;}).length+' pending.'
             : '100 CSDb entries · SID associations pending. Playback unavailable.');
         }else{
-          loadPlaylist(data,0,false,true);
+          await loadPlaylist(data,0,false,true);
           showLivePlaylist(true);
           $('#ricoLiveStatus').text(cfg.title+' · 100 SID loaded.');
         }
@@ -4632,7 +4695,7 @@
         name:title||cfg.title,createdBy:'CSDb / HVSC',tracks:tracks};
       hvscStatus.textContent='Loading SID audio...';
       try{
-        if(version===1)loadPlaylist(selection,0,false,true);
+        if(version===1)await loadPlaylist(selection,0,false,true);
         else await loadStoredPlaylist(selection,false);
         hvscStatus.textContent='SID playback ready.';
         return true;
@@ -4704,7 +4767,7 @@
         var title=document.createElement('span');title.className='rico-hvsc-title';title.textContent=name;
         var who=document.createElement('span');who.className='rico-hvsc-artist';who.textContent=alias;
         row.appendChild(nr);row.appendChild(title);row.appendChild(who);
-        row.addEventListener('click',function(){loadPlaylist(data,index,false,true);});
+        row.addEventListener('click',async function(){try{await loadPlaylist(data,index,false,true);}catch(error){hvscStatus.textContent='Cannot play SID: '+error.message;}});
         hvscItems.appendChild(row);
       });
     }
@@ -4719,7 +4782,7 @@
         return;
       }
       hvscLoad.disabled=true;
-      try{loadPlaylist(await getRankData(kind),0,false,true);}
+      try{await loadPlaylist(await getRankData(kind),0,false,true);}
       catch(e){hvscStatus.textContent='Could not load playlist: '+e.message;}
       finally{hvscLoad.disabled=false;}
     });
@@ -5553,7 +5616,7 @@
                   songs.push({file:track.file,sidBase64:encode(bytes)});
                 }
               }
-              loadPlaylist({format:'ricos-sid-playlist',version:1,
+              await loadPlaylist({format:'ricos-sid-playlist',version:1,
                 name:c.name,createdBy:c.creator,
                 tracks:songs.map(function(t){return {file:t.file,sidBase64:t.sidBase64};})},0,false);
               // Reloaded remote collection is editable by order only: original SID bytes stay immutable.
