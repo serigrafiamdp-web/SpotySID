@@ -2928,6 +2928,18 @@
     if(!localTimerIds.has(entry))localTimerIds.set(entry,++nextLocalTimerId);
     return {key:'local:'+localTimerIds.get(entry)+'|'+sub,shard:null,sub:sub};
   }
+  // TEST249: The Hat (tune 1) is a standalone SID in both the FairLight
+  // group and Fegolhuzz musician shelves. Its first loop ends at 01:48,
+  // as confirmed by the user (03:00 countdown shows 01:12 remaining).
+  // Scope the override to its exact HVSC archive entry + subtune, NOT artist,
+  // group, playlist row, substring title, or any other 'Hat' composition.
+  var HAT_TUNE1_END_SECONDS=108;
+  function isHatTuneOneSource(source){
+    return !!source &&
+      source.shard==='library/songlengths/musicians-F.json' &&
+      source.relative==='Fegolhuzz/Hat_tune_1.sid' &&
+      source.sub===0;
+  }
   function loadSonglengthShard(path){
     if(!songlengthShards.has(path)){
       songlengthShards.set(path,fetch(path).then(function(response){
@@ -2947,8 +2959,13 @@
     var ticket=++songlengthTicket,source=songTimerSource();
     playingTimerKey=source?source.key:null;
     var override=source?manualSongTimers.get(source.key):null;
-    updateAutoTime(override===undefined||override===null?180:override);
-    if(!source||!source.shard||(override!==undefined&&override!==null))return;
+    // TEST249: the 01:48 user-confirmed end wins over the absent HVSC
+    // Songlengths.md5 entry. Explicit manual per-song timing still wins.
+    var isHatTune1=isHatTuneOneSource(source);
+    updateAutoTime(override===undefined||override===null?
+      (isHatTune1?HAT_TUNE1_END_SECONDS:180):override);
+    if(isHatTune1||!source||!source.shard||
+       (override!==undefined&&override!==null))return;
     loadSonglengthShard(source.shard).then(function(durations){
       if(ticket!==songlengthTicket||playingTimerKey!==source.key||
          manualSongTimers.has(source.key)||!durations)return;
@@ -2967,8 +2984,29 @@
   // for files without song-length metadata. Begin a five-second fade before
   // the limit, so the *next* SID starts near the displayed timer value.
   player.getAutoDurationSeconds=function(){
+    // TEST249: trigger at the exact end, not five seconds early.
+    // Every other track keeps its existing five-second fade behavior.
+    if(isHatTuneOneSource(songTimerSource()))
+      return player.autoFallbackSeconds;
     return Math.max(0.1,player.autoFallbackSeconds-FADE_OUT_MS/1000);
   };
+  var priorCheckAutoAdvance249=player.checkAutoAdvance;
+  player.checkAutoAdvance=function(){
+    if(!isHatTuneOneSource(songTimerSource()))
+      return priorCheckAutoAdvance249.apply(this,arguments);
+    if(!this.autoAdvance||!this.isPlaying||this.isPaused||
+       this.autoLoading||transitionBusy||!this.sampleRate||
+       this.sidListIndex===false||!this.sidList||this.sidList.length<2)return;
+    if(this.autoElapsedSamples/this.sampleRate<this.autoFallbackSeconds)return;
+    // The SID engine's automatic timer callback is deferred from rendering.
+    // Reuse the proven immediate/silent handoff: no fade, no renderer change,
+    // no global silence detector and no replay before the following SID.
+    this.autoElapsedSamples=0;
+    requestSidSwitch((this.sidListIndex+1)%this.sidList.length,'silence');
+  };
+  window.RICO_TEST249_HAT_TUNE1={version:249,seconds:HAT_TUNE1_END_SECONDS,
+    file:'Fegolhuzz/Hat_tune_1.sid',noFade:true,
+    isActive:function(){return isHatTuneOneSource(songTimerSource());}};
   $('#ricoLiveTimer').on('focus',function(){
     // Editing always starts from the full duration, not the remaining time.
     countdownEditing=true;
