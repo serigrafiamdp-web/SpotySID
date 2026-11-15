@@ -1617,7 +1617,13 @@ SidPlayer.prototype = {
 
 
   loadSIDData: function(data) {
-    this.dialogManager.hideDialog();
+    // TEST260: keep Choose A SID/HVSC open when AUTO (or NEXT) advances the
+    // playing list; explicit selection and user-controlled closing are unchanged.
+    var keepBrowserOpen = this.dialogManager &&
+      this.dialogManager.dialogShown === 'chooseSidDialog' &&
+      typeof window.ricoKeepBrowseDialogOnPlaybackAdvance === 'function' &&
+      window.ricoKeepBrowseDialogOnPlaybackAdvance();
+    if(!keepBrowserOpen) this.dialogManager.hideDialog();
 
     var loadResult = SID.loadMusicData(this.sampleRate, '', '', data);
     if(loadResult !== 0) {
