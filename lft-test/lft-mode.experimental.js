@@ -66,6 +66,29 @@
     ['Random_Stockphoto_Officeworker_Zoomer.sid',0xf8d6988b],
     ['Robovalken.sid',0x99d93ab3]
   ]);
+  // TEST239 integrity hardening: CRC32 is only a fast lookup; SHA-256 is
+  // required before untrusted local files can enter the legacy WASM backend.
+  var RAY_SHA256=new Map([
+    ['All_the_Hits.sid','e811520fe822d3e60e7b98ea7c122b4aff1dbe0056d85f0087397051cadb2135'],
+    ['Cazzowary.sid','3f26beed818feb0e1115a345b3e95f5c0946576b99256362d1fa26a591355fee'],
+    ['CPU_EP_Teaser.sid','2c22c90558d3870e9ec741a55d0fec95ac5261a3019e75dec35312cbe183a42a'],
+    ['Danglefisch.sid','d37aa07115041fc2347ae6151b7f58a7fedb4fbf919b55419c0b8cc387af6faf'],
+    ['Deimos.sid','0c940ede5c639acdafa7dfb7bbda767fbf274b3c94b98ac095b86353ac5a5f9b'],
+    ['Eagle_Overthrow.sid','57d2efd057c305bb677f5653f6777f1fe13605ee7d2c4bfe7596cf7764a09841'],
+    ['Elara.sid','415d22a62b5d7bc6eae8f9afd3c3b0579f75aed6133886f6542652a9ffd68bf6'],
+    ['Essentials_tune_01.sid','d4d559b1a2c91c26a1d9fa1805e6d58f1d419af6a6fb26731a78f6b3a4f101b0'],
+    ['Galza-24.sid','ff3ce78d0d0952762a57bb49bf0b5991afbfb3ec3835ad3da7a498e4c122f281'],
+    ['Ghoul_Altar.sid','1f36a5bba9ea221ae5196cd2e2448e7fb187001047227477c831d2beb62281d6'],
+    ['Grace.sid','8266f34bc54180d34845c8709fe49b3bcf90103d084026a8792e1996e1dc1b89'],
+    ['Hindugong.sid','f9bef53cd221fee608976068e8f173bcb39bcb8052e609fffe1a38f10f7c4e09'],
+    ['Infernalis_Machina.sid','0f59813f866d94b1492186b2bb3ff668eb193bff9158933bd307ca1300884d2d'],
+    ['LVLLVLtro_tune_10.sid','d1ed234768c638ec810b1ea4bea392dd677947e3699df15a0c86fffcf165990d'],
+    ['LVLLVLtro_tune_3.sid','afbd8faa4c93bb412c32547d38bb38ab03e104c2cfcbc0f4f8e574f4463c71b4'],
+    ['LVLLVLtro_tune_9.sid','d12badfc2b1c53c0169b39c6720fa201927a07ea02535fd6236a89894dd44583'],
+    ['Mechanique.sid','d041d62662e337da02d7277a9b131fbc4845d5ea27280bb2f447671160bd6a09'],
+    ['Random_Stockphoto_Officeworker_Zoomer.sid','43559dcd992d22059b9a88e07dd5354a5211d3e4a12946b59f60fe03e6e47542'],
+    ['Robovalken.sid','1d2c38d5c7cb2e58eaf85f8f8e6e2e601b90403153bcb822b3de0877696f8fc2']
+  ]);
   var RAY_BY_SIZE=new Map();
   RAY_APPROVED.forEach(function(spec,file){
     var list=RAY_BY_SIZE.get(spec[0])||[];
@@ -82,6 +105,58 @@
     for(var i=0;i<bytes.length;i++)
       crc=crcTable[(crc^bytes[i])&255]^(crc>>>8);
     return (crc^0xffffffff)>>>0;
+  }
+  // Synchronous SHA-256 because loadSIDData is synchronous; deterministic
+  // standard FIPS 180-4 compression, checked against known test vectors.
+  var hashPrimes=[];
+  for(var num=2;hashPrimes.length<64;num++){
+    var prime=true;
+    for(var k=0;k<hashPrimes.length&&hashPrimes[k]*hashPrimes[k]<=num;k++)
+      if(num%hashPrimes[k]===0){prime=false;break;}
+    if(prime)hashPrimes.push(num);
+  }
+  function hashFrac(x){return Math.floor((x-Math.floor(x))*4294967296)>>>0;}
+  var hashK=hashPrimes.map(function(p){return hashFrac(Math.cbrt(p));});
+  var hashStart=hashPrimes.slice(0,8).map(function(p){return hashFrac(Math.sqrt(p));});
+  function rotr32(x,b){return (x>>>b)|(x<<(32-b));}
+  function raySha256(bytes){
+    var length=bytes.length,padded=new Uint8Array(Math.ceil((length+9)/64)*64);
+    padded.set(bytes);padded[length]=128;
+    var bitLength=length*8,end=padded.length;
+    padded[end-4]=(bitLength>>>24)&255;
+    padded[end-3]=(bitLength>>>16)&255;
+    padded[end-2]=(bitLength>>>8)&255;
+    padded[end-1]=bitLength&255;
+    var h=hashStart.slice();
+    for(var block=0;block<end;block+=64){
+      var w=new Uint32Array(64);
+      for(var j=0;j<16;j++){
+        var off=block+j*4;
+        w[j]=(padded[off]<<24)|(padded[off+1]<<16)|
+             (padded[off+2]<<8)|padded[off+3];
+      }
+      for(var j=16;j<64;j++){
+        var x=w[j-15],y=w[j-2],
+          s0=rotr32(x,7)^rotr32(x,18)^(x>>>3),
+          s1=rotr32(y,17)^rotr32(y,19)^(y>>>10);
+        w[j]=(w[j-16]+s0+w[j-7]+s1)>>>0;
+      }
+      var a=h[0],b=h[1],c=h[2],d=h[3],
+        e=h[4],f=h[5],g=h[6],z=h[7];
+      for(var j=0;j<64;j++){
+        var S1=rotr32(e,6)^rotr32(e,11)^rotr32(e,25),
+          ch=(e&f)^(~e&g),
+          t1=(z+S1+ch+hashK[j]+w[j])>>>0,
+          S0=rotr32(a,2)^rotr32(a,13)^rotr32(a,22),
+          maj=(a&b)^(a&c)^(b&c),
+          t2=(S0+maj)>>>0;
+        z=g;g=f;f=e;e=(d+t1)>>>0;
+        d=c;c=b;b=a;a=(t1+t2)>>>0;
+      }
+      var result=[a,b,c,d,e,f,g,z];
+      for(var j=0;j<8;j++)h[j]=(h[j]+result[j])>>>0;
+    }
+    return h.map(function(v){return v.toString(16).padStart(8,'0');}).join('');
   }
   function trustedRayRefByBytes(bytes){
     if(RAY_OFF||!(bytes instanceof Uint8Array)||!RAY_BY_SIZE.has(bytes.length)||
@@ -108,7 +183,8 @@
     var flags=(bytes[0x76]<<8)|bytes[0x77];
     return ((flags>>2)&3)===1 &&
       ((flags>>4)&3)===(spec[1]==='MOS8580'?2:1) &&
-      rayCrc32(bytes)===RAY_FINGERPRINTS.get(ref.file);
+      rayCrc32(bytes)===RAY_FINGERPRINTS.get(ref.file) &&
+      raySha256(bytes)===RAY_SHA256.get(ref.file);
   }
   // TEST177: immutable 66-file approval list taken from HVSC #85 musician index.
   // This is a reference allowlist, not a filename/author guess.
