@@ -6,7 +6,15 @@
 
 SpotySid preserves and extends the original James / Jojati SID Player. RICO maintains the project and develops the community, playlist and browsing tools. The project does not modify the underlying SID compositions.
 
-## Bulk SID selection — TEST247 (pending browser PASS)
+## New additions first — TEST248 (pending browser PASS)
+
+When adding one or multiple checked SIDs with **+**, insert the new SID(s)
+at the top of the ADD + TO destination. Batch insertion preserves the order
+of selected SIDs, skips existing duplicates without moving them, and keeps
+the older destination entries in their original order. This is a local edit
+until SAVE or REPUBLISH. [TEST248 notes](docs/TEST248_ADDED_SIDS_FIRST.md).
+
+## Bulk SID selection — TEST247 (user PASS)
 
 Every playable row in the floating playlist has a compact palette-aware
 checkbox as its first action, immediately **left of +**. With checked SIDs,
