@@ -1878,7 +1878,7 @@
       items.append(line);
     });
   }
-  async function addRemixTrack(index,batchMode){
+  async function addRemixTrack(index,batchMode,batchFrontIndex){
     // Add original HVSC references, not copies of embedded ranking SID bytes.
     // Never interrupt the currently playing track or silently change the source.
     remixOpen=false;
@@ -1955,7 +1955,12 @@
       if(target.tracks.some(function(t){return remixRefKey(t)===remixRefKey(reference);})){
         if(!batchMode)remixNotice('This SID is already in '+target.name+'.');return false;
       }
-      target.tracks.push(Object.assign(remixCanonicalRef(reference),{
+      // TEST248: each new SID goes FIRST in its chosen destination.
+      // In a checked batch, append inside the new front block so the
+      // checked tracks keep their original visible order, not reverse it.
+      var insertIndex=batchMode?Math.max(0,Math.min(target.tracks.length,
+        Number.isInteger(batchFrontIndex)?batchFrontIndex:0)):0;
+      target.tracks.splice(insertIndex,0,Object.assign(remixCanonicalRef(reference),{
         title:reference.title||sidEntry.name||reference.file,
         artist:reference.artist||sidEntry.author||''
       }));
@@ -2013,7 +2018,7 @@
         }
         var index=source.indexOf(entries[i]);
         if(index<0){skipped++;continue;}
-        var result=await addRemixTrack(index,true);
+        var result=await addRemixTrack(index,true,done);
         if(result===true)done++;
         else if(result&&result.error){errors++;if(!firstError)firstError=result.error;}
         else skipped++;
