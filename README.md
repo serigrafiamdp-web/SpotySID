@@ -6,6 +6,10 @@
 
 SpotySid preserves and extends the original James / Jojati SID Player. RICO maintains the project and develops the community, playlist and browsing tools. The project does not modify the underlying SID compositions.
 
+## Community ordering — TEST246 (pending browser PASS)
+
+Newly created unpublished REMIX drafts appear first in their creator's local COMMUNITY list. Once a new playlist is **PUBLISHed and verified**, it moves to **first place in the shared COMMUNITY catalog**, using the same authorized D1 ordering as the last EDIT/REPUBLISH. No ranking change on PLAY or SHARE. [TEST246 notes](docs/TEST246_NEW_PLAYLIST_FIRST.md).
+
 ## Shareable playlists — TEST244 (pending browser PASS)
 
 Each published COMMUNITY playlist now has a **SHARE** button that copies its
