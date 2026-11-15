@@ -2935,7 +2935,7 @@
   // group, playlist row, substring title, or any other 'Hat' composition.
   var HAT_TUNE1_END_SECONDS=108;  // User-confirmed final length (TEST249 PASS)
   var HAT_TUNE2_END_SECONDS=310; // TEST253 PASS: YouTube demo 07:15 - 02:05 = 05:10
-  var HAT_TUNE3_END_SECONDS=210; // TEST256: 03:30 provisional, direct/no fade for choosing exit
+  var HAT_TUNE3_END_SECONDS=210; // TEST257: 03:30 total; 5s fade starts at 03:25
   var HAT_CALIBRATION_SECONDS=360; // TEST252: temporary 06:00 for tune 4
   function hatTuneNumber(source){
     if(!source||source.sub!==0)return 0;
@@ -2988,8 +2988,8 @@
     playingTimerKey=source?source.key:null;
     var override=source?manualSongTimers.get(source.key):null;
     // TEST249 PASS: tune 1 01:48 direct. TEST253 PASS: tune 2 05:10
-    // (five-second fade). TEST256: tune 3 03:30 listening window,
-    // direct no fade. Tune 4 stays 06:00 provisional. Manual overrides win.
+    // (five-second fade). TEST257: tune 3 03:30 with five-second fade.
+    // Tune 4 stays 06:00 provisional. Manual overrides win.
     var hatNumber=hatTuneNumber(source);
     var hatDuration=hatNumber===1?HAT_TUNE1_END_SECONDS:
       (hatNumber===2?HAT_TUNE2_END_SECONDS:
@@ -3017,20 +3017,20 @@
   // for files without song-length metadata. Begin a five-second fade before
   // the limit, so the *next* SID starts near the displayed timer value.
   player.getAutoDurationSeconds=function(){
-    // TEST256: tune 3 uses a provisional 03:30 direct/no-fade limit.
+    // TEST257: tune 3 uses 03:30 and starts a five-second fade at 03:25.
     // Tune 1 is still PASS at 01:48 without fade; tune 2
     // is PASS with 05:10 and a 5-second fade; tune 4 stays 06:00 provisional.
     var hat=hatTuneNumber(songTimerSource());
-    if(hat===1||hat===3||hat===4)
+    if(hat===1||hat===4)
       return player.autoFallbackSeconds;
     return Math.max(0.1,player.autoFallbackSeconds-FADE_OUT_MS/1000);
   };
   var priorCheckAutoAdvance249=player.checkAutoAdvance;
   player.checkAutoAdvance=function(){
-    // Tune 2 follows the original timer->nextSid->5s fade pipeline.
-    // Keep the zero-fade TEST249/250 override only for tunes 1, 3 and 4.
+    // Tunes 2 and 3 follow the original timer->nextSid->5s fade pipeline.
+    // Keep the zero-fade TEST249/250 override only for tunes 1 and 4.
     var hat=hatTuneNumber(songTimerSource());
-    if(hat!==1&&hat!==3&&hat!==4)
+    if(hat!==1&&hat!==4)
       return priorCheckAutoAdvance249.apply(this,arguments);
     if(!this.autoAdvance||!this.isPlaying||this.isPaused||
        this.autoLoading||transitionBusy||!this.sampleRate||
@@ -3051,8 +3051,8 @@
   window.RICO_TEST253_HAT_TUNE2={version:253,seconds:HAT_TUNE2_END_SECONDS,
     fadeSeconds:FADE_OUT_MS/1000,file:'Fegolhuzz/Hat_tune_2.sid',
     active:function(){return hatTuneNumber(songTimerSource())===2;}};
-  window.RICO_TEST254_HAT_TUNE3={version:255,seconds:HAT_TUNE3_END_SECONDS,
-    fadeSeconds:0,file:'Fegolhuzz/Hat_tune_3.sid',
+  window.RICO_TEST254_HAT_TUNE3={version:257,seconds:HAT_TUNE3_END_SECONDS,
+    fadeSeconds:FADE_OUT_MS/1000,file:'Fegolhuzz/Hat_tune_3.sid',
     active:function(){return hatTuneNumber(songTimerSource())===3;}};
   $('#ricoLiveTimer').on('focus',function(){
     // Editing always starts from the full duration, not the remaining time.
