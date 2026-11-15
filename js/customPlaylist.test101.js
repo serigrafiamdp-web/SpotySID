@@ -1761,13 +1761,16 @@
     });
     return added;
   }
-  async function beginPublishedEdit(id){
+  async function beginPublishedEdit(id,openEditor){
+    // TEST263: choosing ADD + TO is not an instruction to open the editor.
+    // Explicit EDIT actions retain their usual editor behavior.
+    var showEditor=openEditor!==false;
     if(!/^[a-z0-9-]{12,48}$/i.test(id))throw Error('Invalid published playlist ID.');
     var existing=remixDrafts.find(function(d){return d.remoteEditId===id;});
     if(existing){
       var addedExisting=await stagePatMoritasAdditions(existing);
       var addedCodeblasters=await stageCodeblastersAdditions(existing);
-      remixTarget=existing.id;remixOpen=true;rememberRemixDestination('published:'+id);
+      remixTarget=existing.id;remixOpen=showEditor;rememberRemixDestination('published:'+id);
       preserveRemixes();renderRemixes();
       remixNotice(addedExisting?
         'LOS PAT MORITAS: '+addedExisting+' missing SID added to your private draft. Use REPUBLISH to save the same public list.':
@@ -1792,7 +1795,7 @@
       tracks:tracks};
     var addedSids=await stagePatMoritasAdditions(draft);
     var addedCodeblasters=await stageCodeblastersAdditions(draft);
-    remixDrafts.push(draft);remixTarget=draft.id;remixOpen=true;
+    remixDrafts.push(draft);remixTarget=draft.id;remixOpen=showEditor;
     rememberRemixDestination('published:'+id);
     preserveRemixes();renderRemixes();
     remixNotice(addedSids?
@@ -1801,6 +1804,8 @@
       'Editing '+draft.name+' privately. Play any other list and press + to add its songs. PUBLISH CHANGES keeps the same public ID.');
   }
   async function selectRemixDestination(value){
+    // Destination selection is independent of the floating playlist editor.
+    remixOpen=false;
     rememberRemixDestination(value);
     if(value.indexOf('published:')!==0){
       remixTarget=value;
@@ -1809,7 +1814,7 @@
     }
     var id=value.slice('published:'.length);
     renderRemixes();
-    try{await beginPublishedEdit(id);}
+    try{await beginPublishedEdit(id,false);}
     catch(error){remixNotice('Could not select published playlist: '+error.message);renderRemixes();}
   }
   function selectedRemix(){return remixDrafts.find(function(d){return d.id===remixTarget;})||null;}
@@ -1987,7 +1992,7 @@
     })||null;
     if(!target&&preferredRemixDestination.indexOf('published:')===0){
       try{
-        await beginPublishedEdit(preferredRemixDestination.slice('published:'.length));
+        await beginPublishedEdit(preferredRemixDestination.slice('published:'.length),false);
         target=selectedRemix();
       }catch(error){remixNotice('Cannot select destination: '+error.message);return;}
     }
