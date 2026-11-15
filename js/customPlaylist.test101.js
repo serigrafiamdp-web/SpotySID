@@ -1984,6 +1984,8 @@
     batchActionBusy=true;
     try{
       for(var i=0;i<entries.length;i++){
+        if(i%20===0&&entries.length>20)
+          $('#ricoLiveStatus').text('ADDING SID '+i+' / '+entries.length);
         if(player.sidList!==source){
           firstError='Playlist changed during batch';errors++;break;
         }
@@ -2508,6 +2510,9 @@
       });
     });
     var nextCsdbRank=0;
+    // TEST247: compute once for long lists; scanning 1,376 SID checkboxes
+    // for every ↑/↓ button would block Web Audio on the main thread.
+    var hasCheckedBatch=checkedSidIndices().length>0;
     visualRows.forEach(function (entry) {
       if(entry.heading){
         var heading=$('<div>').addClass('rico-csdb-live-heading');
@@ -2610,13 +2615,13 @@
           .toggleClass('rico-ranked-disabled',loadedRankedPlaylist).text('↑')
           .attr('data-single-disabled',String(!canMoveUp))
           .prop('disabled',loadedRankedPlaylist||savingCommunityEdits||
-            (!checkedSidIndices().length&&!canMoveUp)),-1,moveWithinVisibleGroup)
+            (!hasCheckedBatch&&!canMoveUp)),-1,moveWithinVisibleGroup)
           .appendTo(wrap);
         bindReorderArrows($('<button type="button">').addClass('rico-live-move')
           .toggleClass('rico-ranked-disabled',loadedRankedPlaylist).text('↓')
           .attr('data-single-disabled',String(!canMoveDown))
           .prop('disabled',loadedRankedPlaylist||savingCommunityEdits||
-            (!checkedSidIndices().length&&!canMoveDown)),1,moveWithinVisibleGroup)
+            (!hasCheckedBatch&&!canMoveDown)),1,moveWithinVisibleGroup)
           .appendTo(wrap);
         if(!activePublicCollection){
         bindThemedPlaylistHint($('<button type="button">').addClass('rico-live-remove')
@@ -3003,6 +3008,7 @@
     customActive = wantCustom;
     if (!wantCustom) {
       loadedPlaylistTitle = ''; loadedPlaylistCreator = '';
+      batchSelectedSids.clear();
       activeSharePlaylistId='';
     }
     player.sidList = wantCustom ? custom : originalList;
@@ -3510,6 +3516,7 @@
       referenceSwitchSerial++;
       // Validate everything before changing the currently loaded playlist.
       var entries=validatedEntries(data);
+      batchSelectedSids.clear();
       activeSharePlaylistId='';
       // TEST220: opening any successfully validated list requires a fresh
       // ADD + TO destination. Do not touch existing REMIX drafts.
@@ -3690,6 +3697,7 @@
       if(activeReferenceStream){activeReferenceStream.cancel();activeReferenceStream=null;}
       referenceSwitchSerial++;
       if (!data || data.format!=='ricos-sid-playlist') throw Error('Unsupported playlist.');
+      batchSelectedSids.clear();
       activeSharePlaylistId='';
       if (data.version===1) {
         loadPlaylist(data,undefined,!!localImport);
