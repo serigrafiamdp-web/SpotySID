@@ -672,6 +672,29 @@
   var loadedPlaylistCreator = '';
   // TEST63: the loaded public v2 playlist is editable locally until beta-authorized PUT.
   var activePublicPlaylist = null;
+  // TEST244: only published/static catalog playlists get portable public URLs.
+  // Local files and unPUBLISHED remix drafts cannot be shared by URL.
+  var activeSharePlaylistId='';
+  function playlistShareUrl(id){
+    if(typeof id!=='string'||!/^[a-z0-9-]{1,80}$/i.test(id))return '';
+    var url=new URL('index.html',window.location.href);
+    url.hash='';url.search='';
+    url.searchParams.set('playlist',id);
+    return url.href;
+  }
+  async function copyPlaylistShareLink(id){
+    var url=playlistShareUrl(id);
+    if(!url)return;
+    try{
+      if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function')
+        throw Error('Clipboard unavailable');
+      await navigator.clipboard.writeText(url);
+      $('#ricoLiveStatus').text('Playlist link copied.');
+    }catch(clipboardError){
+      // Explicit, selectable URL fallback in browsers without clipboard permission.
+      window.prompt('Copy this public playlist link:',url);
+    }
+  }
   // TEST94: loaded published contributed SID collection; reorder only its references.
   var activePublicCollection = null;
   // TEST170: NO HVSC-only visual subgroups; preserve original SID order.
@@ -2179,6 +2202,9 @@
         : isOldSidCurated()
           ? 'Register this HVSC reference playlist as editable in Cloudflare (beta key required)'
           : 'Save current song order locally; publication requires beta key');
+    // TEST244: the floating playlist shares only its published catalog source.
+    $('#ricoLiveShare').css('display',
+      customActive&&!landingPlaylists&&!!activeSharePlaylistId?'inline-block':'none');
     // TEST238: show the actual reSIDfp route of the playing track, not
     // the playlist title. In mixed lists the indicator changes per SID.
     var routeInfo=!landingPlaylists&&customActive&&window.RicoLftMode;
@@ -2424,6 +2450,10 @@
     }catch(error){$('#ricoLiveStatus').text('SAVE failed: '+error.message);}
   });
 
+  $('#ricoLiveShare').on('click',function(event){
+    event.preventDefault();
+    if(activeSharePlaylistId)void copyPlaylistShareLink(activeSharePlaylistId);
+  });
   function showLivePlaylist(visible) {
     liveVisible = !!visible;
     // A flex column keeps the playlist scrolling inside a shorter panel.
@@ -2710,7 +2740,10 @@
     renderCountdownTimer(true);
     $('#playButton').text('Play');
     customActive = wantCustom;
-    if (!wantCustom) { loadedPlaylistTitle = ''; loadedPlaylistCreator = ''; }
+    if (!wantCustom) {
+      loadedPlaylistTitle = ''; loadedPlaylistCreator = '';
+      activeSharePlaylistId='';
+    }
     player.sidList = wantCustom ? custom : originalList;
     player.sidListIndex = false;
     player.songInfo = {};
@@ -3214,6 +3247,7 @@
       referenceSwitchSerial++;
       // Validate everything before changing the currently loaded playlist.
       var entries=validatedEntries(data);
+      activeSharePlaylistId='';
       // TEST220: opening any successfully validated list requires a fresh
       // ADD + TO destination. Do not touch existing REMIX drafts.
       resetAddToDestination();
@@ -3393,6 +3427,7 @@
       if(activeReferenceStream){activeReferenceStream.cancel();activeReferenceStream=null;}
       referenceSwitchSerial++;
       if (!data || data.format!=='ricos-sid-playlist') throw Error('Unsupported playlist.');
+      activeSharePlaylistId='';
       if (data.version===1) {
         loadPlaylist(data,undefined,!!localImport);
         activeLocalSavedId=localImport&&typeof data.id==='string'?data.id:null;
@@ -3932,6 +3967,33 @@
     var startupPlaylistTimer=null;
     var selectedCommunityId='';
     var communityRequestNumber=0;
+    // TEST244: a share URL selects exactly one public playlist on first load.
+    // Normal home page startup remains idle (TEST161).
+    var sharedRequestId=(function(){
+      try{
+        var value=new URLSearchParams(window.location.search).get('playlist')||'';
+        return /^[a-z0-9-]{1,80}$/i.test(value)?value:'';
+      }catch(error){return '';}
+    })();
+    var sharedRequestAttempted=false;
+    var sharedAudioGesturePending=false;
+    // Some browsers suspend Web Audio until the visitor clicks PLAY. Resume
+    // rather than forwarding that first click to the old pause toggle.
+    var sharedPlayButton=document.getElementById('playButton');
+    if(sharedPlayButton)sharedPlayButton.addEventListener('click',function(event){
+      if(!sharedAudioGesturePending)return;
+      var audio=player.audioContext;
+      if(!audio||audio.state!=='suspended'){sharedAudioGesturePending=false;return;}
+      sharedAudioGesturePending=false;
+      event.preventDefault();event.stopImmediatePropagation();
+      Promise.resolve(audio.resume()).then(function(){
+        $('#playButton').text(player.isPlaying?'Pause':'Play');
+        $('#ricoLiveStatus').text('Audio enabled for shared playlist.');
+      }).catch(function(error){
+        sharedAudioGesturePending=true;
+        $('#ricoLiveStatus').text('Audio blocked: '+error.message+' · Click PLAY again.');
+      });
+    },true);
     // TEST161: preserve manually selected playlist order; no startup autoplay.
     var COMMUNITY_STARTUP_LAST_KEY='rico-community-startup-last-v1';
     function cancelStartupPlaylist() {
@@ -4664,6 +4726,7 @@
           return;
         }
         var startupPlayable=[];
+        var sharedOpen=null;
         catalog.playlists.forEach(function(item){
           if(!item || typeof item.title!=='string' ||
              !(item.remoteId ? /^[a-z0-9-]{12,48}$/i.test(item.remoteId) :
@@ -4703,6 +4766,17 @@
           var button=document.createElement('button');
           button.type='button';button.textContent='PLAY';
           row.appendChild(label);row.appendChild(orderButtons);row.appendChild(button);
+          // One small SHARE action per published/curated public playlist.
+          var shareButton=document.createElement('button');
+          shareButton.type='button';
+          shareButton.textContent='SHARE';
+          shareButton.title='Copy direct link to '+item.title;
+          shareButton.setAttribute('aria-label','Copy share link for '+item.title);
+          shareButton.addEventListener('click',function(event){
+            event.stopPropagation();
+            void copyPlaylistShareLink(item.remoteId||item.id);
+          });
+          row.appendChild(shareButton);
           if(item.remoteId){
             var editButton=document.createElement('button');
             editButton.type='button';editButton.textContent='EDIT';
@@ -4801,7 +4875,7 @@
           }
           communityItems.appendChild(row);
           if(item.id && item.id===selectedCommunityId) row.classList.add('rico-community-selected');
-          async function openPlaylist(isStartup) {
+          async function openPlaylist(isStartup,isShared) {
             if(!isStartup) cancelStartupPlaylist();
             button.disabled=true;
             row.setAttribute('aria-busy','true');
@@ -4813,7 +4887,7 @@
               var data=JSON.parse(body);
               // A user's explicit PLAY opens the locally edited version of the
               // same published playlist, so + additions are visible before REPUBLISH.
-              var pending=!isStartup&&item.remoteId?remixDrafts.find(function(d){
+              var pending=!isStartup&&!isShared&&item.remoteId?remixDrafts.find(function(d){
                 return d.remoteEditId===item.remoteId&&Array.isArray(d.baseTracks)&&
                   remixTrackKeys(d.tracks)!==remixTrackKeys(d.baseTracks);
               }):null;
@@ -4834,6 +4908,7 @@
                 tracks:data.tracks.map(remixCanonicalRef),
                 originalCount:data.tracks.length,dirtyOrder:false
               }:null;
+              activeSharePlaylistId=pending?'':(item.remoteId||item.id||'');
               renderLivePlaylist();
               selectedCommunityId=item.id||item.file;
               if(isStartup){
@@ -4871,7 +4946,23 @@
                 }
               } else {
                 showCommunity(false,'local');
-                say('Community playlist loaded: '+data.name);
+                if(isShared){
+                  // Deep links load the first SID; a real gesture may still be
+                  // required by the browser before Web Audio can be audible.
+                  if(!player.audioContext)player.initWebAudio();
+                  var blocked=player.audioContext&&
+                    player.audioContext.state==='suspended';
+                  if(blocked){
+                    sharedAudioGesturePending=true;
+                    $('#playButton').text('Play');
+                    $('#ricoLiveStatus').text('Shared playlist ready. Click PLAY to enable audio.');
+                  }else{
+                    $('#ricoLiveStatus').text('Shared playlist loaded: '+data.name);
+                  }
+                }else{
+                  sharedAudioGesturePending=false;
+                  say('Community playlist loaded: '+data.name);
+                }
               }
             } catch(error) {
               communityItems.setAttribute('data-error',error.message);
@@ -4894,6 +4985,9 @@
             event.stopPropagation();
             openPlaylist(false);
           });
+          if(sharedRequestId&&!sharedRequestAttempted&&
+             (item.remoteId===sharedRequestId||(!item.remoteId&&item.id===sharedRequestId)))
+            sharedOpen=function(){return openPlaylist(false,true);};
           // Only published COMMUNITY playlists with playable SID tracks participate.
           // Nothing is shuffled or moved in the visible playlist or its track list.
           if(Number(item.tracks)>0)
@@ -4904,6 +4998,11 @@
         // Refresh ADD + TO options after the remote catalog arrives. Never
         // change playback or the currently selected editing draft.
         renderRemixes();
+        if(sharedRequestId&&!sharedRequestAttempted){
+          sharedRequestAttempted=true;
+          if(sharedOpen)await sharedOpen();
+          else $('#ricoLiveStatus').text('Shared playlist not found. Choose a public list from COMMUNITY.');
+        }
         // TEST161: No automatic playlist selection or playback after loading
         // COMMUNITY PLAYLISTS. Tracks start only after the visitor selects PLAY.
       } catch(error){
