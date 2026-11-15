@@ -2935,10 +2935,27 @@
   // group, playlist row, substring title, or any other 'Hat' composition.
   var HAT_TUNE1_END_SECONDS=108;
   function isHatTuneOneSource(source){
-    return !!source &&
-      source.shard==='library/songlengths/musicians-F.json' &&
-      source.relative==='Fegolhuzz/Hat_tune_1.sid' &&
-      source.sub===0;
+    if(!source||source.sub!==0)return false;
+    // Both HVSC shelves normally resolve to the same Fegolhuzz pack.
+    if(source.shard==='library/songlengths/musicians-F.json'&&
+       source.relative==='Fegolhuzz/Hat_tune_1.sid')return true;
+    // A community/user playlist may retain song identity as metadata instead
+    // of a pack reference. Match BOTH exact tune and author to avoid changing
+    // similarly titled compositions or Fegolhuzz's other Hat subtunes.
+    var index=player.sidListIndex,list=player.sidList||[];
+    var entry=typeof index==='number'&&index>=0?list[index]:null;
+    if(!entry)return false;
+    var name=String(entry.name||entry.title||'').trim();
+    var author=String(entry.author||entry.artist||'').trim();
+    var ref=entry._hvscRef||
+      (activeReferenceTracks&&activeReferenceTracks[index])||null;
+    var file=String((ref&&ref.file)||entry.file||'');
+    var pack=String((ref&&ref.pack)||'');
+    if(/(?:^|\\|\/)Hat_tune_1\.sid$/i.test(file)&&
+       (/\/Fegolhuzz\.zip$/i.test(pack)||
+        /(?:Fegolhuzz|Figge Wasberger)/i.test(author)))return true;
+    return /^The Hat \(tune 1\)$/i.test(name)&&
+      /(?:Fegolhuzz|Figge Wasberger)/i.test(author);
   }
   function loadSonglengthShard(path){
     if(!songlengthShards.has(path)){
