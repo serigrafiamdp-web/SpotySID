@@ -1983,6 +1983,28 @@
     var done=0,skipped=0,errors=0,firstError='';
     batchActionBusy=true;
     try{
+      // TEST247: archive multiple imported NO HVSC binaries together, using
+      // the EXISTING authorized batches and ONE beta-key dialog, never one
+      // separate authorization/upload for each selected song.
+      var inflight=Array.from(new Set(entries.map(function(item){
+        return item&&item._noHvscPending;
+      }).filter(Boolean)));
+      if(inflight.length)await Promise.allSettled(inflight);
+      var unarchived=entries.filter(function(item){
+        return item&&item.localBytes instanceof Uint8Array&&!item._hvscRef&&
+          !item._noHvscAssetId;
+      });
+      if(unarchived.length){
+        try{
+          await startNoHvscArchive(unarchived,true,function(stage,done,total){
+            $('#ricoLiveStatus').text(stage+' '+done+' / '+total+' SID');
+          });
+        }catch(archiveError){
+          remixNotice('NO HVSC batch archive not completed: '+archiveError.message+
+            '. Playlist unchanged; retry + when ready.');
+          return;
+        }
+      }
       for(var i=0;i<entries.length;i++){
         if(i%20===0&&entries.length>20)
           $('#ricoLiveStatus').text('ADDING SID '+i+' / '+entries.length);
