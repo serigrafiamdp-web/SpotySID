@@ -977,6 +977,16 @@
       ?activeCsdbRankDisplay.items.length:list.length)+
       (n?' · '+n+' CHECKED':'')+')');
   }
+  function updateBatchArrowAvailability(){
+    var bulk=checkedSidIndices().length>0;
+    // Existing ranked/published constraints remain unchanged. The first
+    // row's single UP may be disabled, yet a checked selection below it
+    // should still be movable using that button.
+    document.querySelectorAll('#ricoLivePlaylistItems .rico-live-move').forEach(function(button){
+      if(loadedRankedPlaylist||savingCommunityEdits)return;
+      button.disabled=!bulk&&button.dataset.singleDisabled==='true';
+    });
+  }
   function permuteCheckedIndices(length,selected,delta,groups){
     var order=Array.from({length:length},function(_,i){return i;});
     var picked=new Set(selected);
@@ -1027,7 +1037,7 @@
       array.splice.apply(array,[0,array.length].concat(
         permutation.map(function(i){return old[i];})));
     }
-    resetSoftTransition(false);
+    // Reordering is metadata-only: do NOT reset the current SID or fade.
     reorder(custom);reorder(embeddedHvscPaths);reorder(activeReferenceTracks);
     if(activePublicPlaylist&&activePublicPlaylist.tracks.length===size){
       reorder(activePublicPlaylist.tracks);activePublicPlaylist.dirtyOrder=true;
@@ -2570,6 +2580,7 @@
             else batchSelectedSids.delete(item);
             wrap.toggleClass('rico-live-batch-checked',this.checked);
             updateCheckedSidCount();
+            updateBatchArrowAvailability();
           }).appendTo(checkLabel);
         wrap.toggleClass('rico-live-batch-checked',batchSelectedSids.has(item));
         checkLabel.appendTo(wrap);
@@ -2597,11 +2608,15 @@
         }
         bindReorderArrows($('<button type="button">').addClass('rico-live-move')
           .toggleClass('rico-ranked-disabled',loadedRankedPlaylist).text('↑')
-          .prop('disabled',loadedRankedPlaylist||savingCommunityEdits||!canMoveUp),-1,moveWithinVisibleGroup)
+          .attr('data-single-disabled',String(!canMoveUp))
+          .prop('disabled',loadedRankedPlaylist||savingCommunityEdits||
+            (!checkedSidIndices().length&&!canMoveUp)),-1,moveWithinVisibleGroup)
           .appendTo(wrap);
         bindReorderArrows($('<button type="button">').addClass('rico-live-move')
           .toggleClass('rico-ranked-disabled',loadedRankedPlaylist).text('↓')
-          .prop('disabled',loadedRankedPlaylist||savingCommunityEdits||!canMoveDown),1,moveWithinVisibleGroup)
+          .attr('data-single-disabled',String(!canMoveDown))
+          .prop('disabled',loadedRankedPlaylist||savingCommunityEdits||
+            (!checkedSidIndices().length&&!canMoveDown)),1,moveWithinVisibleGroup)
           .appendTo(wrap);
         if(!activePublicCollection){
         bindThemedPlaylistHint($('<button type="button">').addClass('rico-live-remove')
