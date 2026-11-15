@@ -2170,6 +2170,10 @@
     });
   }
   function renderLivePlaylist() {
+    // TEST244: update SHARE even when a large playlist uses virtual painting
+    // and returns early before the ordinary row renderer.
+    $('#ricoLiveShare').css('display',
+      customActive&&!landingPlaylists&&!!activeSharePlaylistId?'inline-block':'none');
     // Ordinary short lists retain the original complete render behavior.
     if(!activeCsdbRankDisplay&&paintLargePlaylistMarkers())return;
     var scrollNode=document.getElementById('ricoLivePlaylistItems');
@@ -2202,9 +2206,6 @@
         : isOldSidCurated()
           ? 'Register this HVSC reference playlist as editable in Cloudflare (beta key required)'
           : 'Save current song order locally; publication requires beta key');
-    // TEST244: the floating playlist shares only its published catalog source.
-    $('#ricoLiveShare').css('display',
-      customActive&&!landingPlaylists&&!!activeSharePlaylistId?'inline-block':'none');
     // TEST238: show the actual reSIDfp route of the playing track, not
     // the playlist title. In mixed lists the indicator changes per SID.
     var routeInfo=!landingPlaylists&&customActive&&window.RicoLftMode;
