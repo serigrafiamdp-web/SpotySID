@@ -153,6 +153,7 @@
   // TEST262: a playlist change is a prepared handoff, never an early stop.
   var playlistChangeSerial=0;
   var playlistCommitInProgress=false;
+  var playlistStartResolver=null;
   function requestPlaylistChange(){
     var serial=++playlistChangeSerial;
     // A newer playlist choice cancels an unfinished fade, keeping playback
@@ -184,9 +185,22 @@
        !transitionBusy||transitionSource!=='playlist')return false;
     playlistCommitInProgress=true;
     transitionAwaitingStart=true;
+    // Some approved LFT/reSIDfp SIDs begin asynchronously. Keep the new
+    // audio muted until the real playSong callback confirms its first frame.
+    var startTimeout=null;
+    var onStarted=null;
+    var started=new Promise(function(resolve){onStarted=resolve;});
+    playlistStartResolver=onStarted;
     try{
       commit();
-      if(transitionAwaitingStart)throw Error('Next playlist did not start a SID.');
+      playlistCommitInProgress=false;
+      if(transitionAwaitingStart){
+        await Promise.race([started,new Promise(function(resolve,reject){
+          startTimeout=setTimeout(function(){
+            reject(Error('Next playlist SID did not become ready.'));
+          },30000);
+        })]);
+      }
       return true;
     }catch(error){
       playlistCommitInProgress=false;
@@ -194,6 +208,8 @@
       throw error;
     }finally{
       playlistCommitInProgress=false;
+      if(startTimeout!==null)clearTimeout(startTimeout);
+      if(playlistStartResolver===onStarted)playlistStartResolver=null;
     }
   }
   // TEST260: AUTO/NEXT may load a new SID while the user is browsing HVSC.
@@ -511,6 +527,7 @@
     // TEST199: the active SID/subtune chooses its initial TIMER value.
     selectTentativeSidTimer();
     if(transitionAwaitingStart){
+      var wasPlaylistHandoff=transitionSource==='playlist';
       transitionAwaitingStart=false;transitionBusy=false;queuedLiveIndex=null;
       if(transitionRecovery!==null){clearTimeout(transitionRecovery);transitionRecovery=null;}
       // TEST100: hold the outgoing SID at its near-zero gain until the actual
@@ -521,6 +538,11 @@
       if(transitionSource==='next'||transitionSource==='silence')followPlayingRowOnce=true;
       transitionSource=null;
       renderLivePlaylist();
+      if(wasPlaylistHandoff&&playlistStartResolver){
+        var confirmPlaylistStart=playlistStartResolver;
+        playlistStartResolver=null;
+        confirmPlaylistStart(true);
+      }
     }
     return result;
   };
@@ -3844,6 +3866,7 @@
       referenceSwitchSerial++;
       activeReferenceStream=stream;
       // TEST220: reset after the first SID has loaded successfully.
+      batchSelectedSids.clear();activeSharePlaylistId='';
       resetAddToDestination();
       activePublicPlaylist=null;activePublicCollection=null;
       activeRemixDraftId=null;
@@ -3873,8 +3896,6 @@
       // The selected track's verified HVSC reference decides its engine.
       var serial=requestPlaylistChange();
       if (!data || data.format!=='ricos-sid-playlist') throw Error('Unsupported playlist.');
-      batchSelectedSids.clear();
-      activeSharePlaylistId='';
       if (data.version===1) {
         var legacyApplied=await loadPlaylist(data,undefined,!!localImport);
         if(legacyApplied)activeLocalSavedId=localImport&&typeof data.id==='string'?data.id:null;
@@ -3937,6 +3958,7 @@
       if(activeReferenceStream){activeReferenceStream.cancel();activeReferenceStream=null;}
       referenceSwitchSerial++;
       // TEST220: never inherit ADD + TO from another loaded playlist.
+      batchSelectedSids.clear();activeSharePlaylistId='';
       resetAddToDestination();
       activePublicPlaylist=null;activePublicCollection=null;
       activeRemixDraftId=null;
