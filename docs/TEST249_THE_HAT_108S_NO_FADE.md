@@ -1,6 +1,6 @@
 # TEST249 — The Hat (tune 1): exact 01:48 end, AUTO NEXT without fade
 
-**Date:** 2026-11-15. **Status:** implemented on the canonical SpotySid page; **browser listening PASS pending user confirmation**.
+**Date:** 2026-11-15. **Status: PASS — user confirmed by listening on the canonical SpotySid page.**
 
 ## User-reported symptom
 
@@ -30,6 +30,6 @@ File: `js/customPlaylist.test101.js`. Canonical `index.html` loads it with the `
 
 10 mocked JavaScript assertions passed: exact archive, matching embedded/metadata playlist track, excludes other subtunes and artists, 108s duration, no switch before boundary, immediate switch at 108s, AUTO OFF, ordinary song 5s fade lead and delegation to existing `checkAutoAdvance`. Source passes JavaScript syntax compilation.
 
-**Manual listening test:** open canonical https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/, choose the FairLight or Fegolhuzz list, play The Hat (tune 1) in AUTO ON, watch TIMER starting at 01:48 and ensure the next track starts without fade and without waiting for a second loop. Check (tune 2) remains unchanged. Mark PASS only after user confirmation.
+**Manual listening test — PASS (2026-11-15):** The user confirmed the change after testing the canonical SpotySid implementation. The specific target was The Hat (tune 1), with AUTO NEXT at 01:48 and no fade-out. Do not generalize this single-song PASS to every SID; tune 2 and other normal tracks retain their existing transition logic.
 
 **Backup:** branch `backup/pre-test249-hat-hard-cut-2026-11-15` before modification.
