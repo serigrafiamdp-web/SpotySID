@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SpotySid TEST242 · Offline Ray Manta diagnostic</title>
+<style>
+:root{color-scheme:dark}*{box-sizing:border-box}
+body{background:#10151a;color:#d9ebe8;font:13px/1.6 Consolas,Monaco,monospace;margin:0;padding:25px 14px}
+main{max-width:760px;margin:auto}h1{font-size:21px;color:#70d7c7;margin:0 0 8px}
+h2{font-size:15px;margin:0 0 5px}p{margin:0 0 14px}.subtle{color:#97abad}
+.box{border:1px solid #344a4c;margin:12px 0;padding:15px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-top:10px}
+button{border:1px solid #70d7c7;background:#23383b;color:#e4fffb;cursor:pointer;font:bold 12px Consolas,monospace;border-radius:2px;padding:9px 13px}
+button:disabled{opacity:.55;cursor:default}button:hover:not(:disabled){background:#325459}
+audio{width:100%;height:35px;margin-top:12px;display:none}audio.ready{display:block}
+a{color:#83d8cc}.info{font-size:11px;color:#b0ceca;white-space:normal;overflow-wrap:anywhere}
+#status{color:#d5f5ed;min-height:22px;padding:10px 0}
+footer{border-top:1px solid #344a4c;color:#8ba2a0;margin-top:20px;padding-top:12px;font-size:11px}
+</style></head><body>
+<main><h1>SpotySid — TEST242</h1>
+<p><strong>RAY MANTA: OFFLINE AUDIO COMPARISON</strong></p>
+<p class="subtle">Two different trackers. Same isolated reSIDfp backend, PAL 8580, no DigiBoost. WAV is generated entirely before playback, without streaming, live rendering or the main SpotySid output chain.</p>
+<section class="box" data-track="all">
+  <h2>A — ALL THE HITS</h2>
+  <div class="subtle">GoatTracker V2.x · Original HVSC PSID · 2021</div>
+  <div class="row"><button type="button" data-generate="all">GENERATE 25s WAV</button><a target="_blank" rel="noopener" href="https://deepsid.chordian.net/?file=%2FMUSICIANS%2FR%2FRay_Manta%2FAll_the_Hits.sid">DeepSID reference</a></div>
+  <audio controls preload="none" data-audio="all"></audio>
+  <div class="info" data-info="all"></div>
+</section>
+<section class="box" data-track="cazzowary">
+  <h2>B — CAZZOWARY</h2>
+  <div class="subtle">SID-Wizard V1.4 · Original HVSC PSID · 2022</div>
+  <div class="row"><button type="button" data-generate="cazzowary">GENERATE 25s WAV</button><a target="_blank" rel="noopener" href="https://deepsid.chordian.net/?file=%2FMUSICIANS%2FR%2FRay_Manta%2FCazzowary.sid">DeepSID reference</a></div>
+  <audio controls preload="none" data-audio="cazzowary"></audio>
+  <div class="info" data-info="cazzowary"></div>
+</section>
+<div id="status" role="status" aria-live="polite">Select A or B. Wait for the WAV to be generated, then press PLAY on its audio bar.</div>
+<footer>TEST242 is diagnostic only. No modification to SpotySid playback or its published playlists. Source: HVSC #85 files already in SpotySid, checked by SHA-256. If both offline WAVs sound bad but DeepSID sounds good, investigate the underlying WASM emulator or SID file compatibility rather than the realtime audio bridge.</footer>
+</main>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script type="module">
+'use strict';
+const ZIP='../library/packs/musicians/R/Ray_Manta.zip';
+const SR=44100,SECONDS=25,CHUNK=44100;
+const tracks={
+ all:{file:'All_the_Hits.sid',sha:'e811520fe822d3e60e7b98ea7c122b4aff1dbe0056d85f0087397051cadb2135',size:4569,bytes:null,url:null},
+ cazzowary:{file:'Cazzowary.sid',sha:'3f26beed818feb0e1115a345b3e95f5c0946576b99256362d1fa26a591355fee',size:4627,bytes:null,url:null}
+};
+const status=document.getElementById('status'),buttons=Array.from(document.querySelectorAll('[data-generate]'));
+let zipPromise=null,serial=0,currentEngine=null;
+function setStatus(message){status.textContent=message;}
+function busy(flag){buttons.forEach(b=>b.disabled=flag);}
+function writeWav(samples){
+ const buffer=new ArrayBuffer(44+2*samples.length),v=new DataView(buffer);
+ function txt(at,text){for(let i=0;i<text.length;i++)v.setUint8(at+i,text.charCodeAt(i));}
+ txt(0,'RIFF');v.setUint32(4,buffer.byteLength-8,true);txt(8,'WAVE');
+ txt(12,'fmt ');v.setUint32(16,16,true);v.setUint16(20,1,true);
+ v.setUint16(22,1,true);v.setUint32(24,SR,true);v.setUint32(28,SR*2,true);
+ v.setUint16(32,2,true);v.setUint16(34,16,true);
+ txt(36,'data');v.setUint32(40,samples.length*2,true);
+ for(let i=0;i<samples.length;i++)v.setInt16(44+i*2,samples[i],true);
+ return new Blob([buffer],{type:'audio/wav'});
+}
+async function fetchFile(track){
+ if(track.bytes)return track.bytes;
+ if(!window.crypto?.subtle)throw Error('HTTPS is required for SHA-256 verification.');
+ if(!window.JSZip)throw Error('ZIP decoder unavailable.');
+ if(!zipPromise)zipPromise=(async()=>{
+   const response=await fetch(ZIP);
+   if(!response.ok)throw Error('HVSC pack unavailable: HTTP '+response.status);
+   return JSZip.loadAsync(await response.arrayBuffer());
+ })().catch(err=>{zipPromise=null;throw err;});
+ const zip=await zipPromise;
+ const file=zip.file(track.file);
+ if(!file)throw Error('Missing original HVSC SID: '+track.file);
+ const bytes=await file.async('uint8array');
+ if(bytes.length!==track.size)throw Error('SID size mismatch.');
+ const digest=new Uint8Array(await crypto.subtle.digest('SHA-256',bytes));
+ const hex=Array.from(digest,b=>b.toString(16).padStart(2,'0')).join('');
+ if(hex!==track.sha)throw Error('Original SID SHA-256 mismatch.');
+ track.bytes=bytes;
+ return bytes;
+}
+function tick(){return new Promise(resolve=>setTimeout(resolve,0));}
+function pcmStats(audio){
+ let sum=0,peak=0,clip=0;
+ for(let i=0;i<audio.length;i++){
+   const v=audio[i]/32768;
+   sum+=v*v;peak=Math.max(peak,Math.abs(v));
+   if(Math.abs(audio[i])>=32760)clip++;
+ }
+ return {peak:peak.toFixed(3),rms:Math.sqrt(sum/audio.length).toFixed(3),clipping:(clip*100/audio.length).toFixed(3)+'%'};
+}
+async function generate(key){
+ const track=tracks[key],button=document.querySelector('[data-generate="'+key+'"]');
+ const audio=document.querySelector('[data-audio="'+key+'"]');
+ const info=document.querySelector('[data-info="'+key+'"]');
+ const my=++serial;
+ if(track.url){
+   audio.pause();audio.src=track.url;audio.classList.add('ready');
+   setStatus(track.file+' ready — use the audio PLAY control.');
+   return;
+ }
+ busy(true);
+ let engine=null;
+ try{
+   setStatus('Verifying '+track.file+'…');
+   const bytes=await fetchFile(track);
+   if(my!==serial)return;
+   const lib=await import('../lft-test/lft-wasm/index.js');
+   if(my!==serial)return;
+   engine=new lib.SidAudioEngine({engine:'residfp',sampleRate:SR,stereo:false,cacheSecondsLimit:2});
+   currentEngine=engine;
+   const name=await engine.getEngineName();
+   if(name!=='WasmReSIDfp')throw Error('Unexpected WASM engine: '+name);
+   await engine.loadSidBuffer(bytes,0);
+   await engine.setEmulationConfig({
+     c64Model:'PAL',forceC64Model:true,sidModel:'MOS8580',forceSidModel:true,digiBoost:false
+   });
+   const count=SR*SECONDS,pcm=new Int16Array(count);
+   let written=0;
+   while(written<count){
+     if(serial!==my)return;
+     const block=await engine.renderFrames(Math.min(CHUNK,count-written));
+     if(!block.length)throw Error('WASM stopped before end of render at '+(written/SR).toFixed(1)+'s');
+     pcm.set(block.subarray(0,Math.min(block.length,count-written)),written);
+     written+=block.length;
+     setStatus('Rendering '+track.file+' — '+Math.floor(written/SR)+' / '+SECONDS+' seconds');
+     await tick();
+   }
+   const stats=pcmStats(pcm),wav=writeWav(pcm);
+   track.url=URL.createObjectURL(wav);
+   audio.pause();audio.src=track.url;audio.classList.add('ready');
+   info.textContent='WAV ready · '+SECONDS+'s · reSIDfp / PAL 8580 · RMS '+stats.rms+' · Peak '+stats.peak+' · clip '+stats.clipping;
+   setStatus(track.file+' ready. Press PLAY on the audio bar; compare with DeepSID.');
+ }catch(err){
+   info.textContent=String(err.message||err);
+   setStatus('TEST242: '+String(err.message||err));
+   console.error('TEST242',err);
+ }finally{
+   if(engine){try{engine.dispose();}catch(e){}}
+   if(currentEngine===engine)currentEngine=null;
+   busy(false);
+ }
+}
+buttons.forEach(button=>button.addEventListener('click',()=>generate(button.dataset.generate)));
+document.querySelectorAll('audio').forEach(audio=>audio.addEventListener('play',()=>{
+ document.querySelectorAll('audio').forEach(other=>{if(other!==audio)other.pause();});
+}));
+window.addEventListener('pagehide',()=>{
+ serial++;
+ if(currentEngine){try{currentEngine.dispose();}catch(e){}}
+ Object.values(tracks).forEach(track=>{if(track.url)URL.revokeObjectURL(track.url);});
+});
+</script></body></html>
