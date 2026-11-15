@@ -2933,29 +2933,38 @@
   // as confirmed by the user (03:00 countdown shows 01:12 remaining).
   // Scope the override to its exact HVSC archive entry + subtune, NOT artist,
   // group, playlist row, substring title, or any other 'Hat' composition.
-  var HAT_TUNE1_END_SECONDS=108;
-  function isHatTuneOneSource(source){
-    if(!source||source.sub!==0)return false;
-    // Both HVSC shelves normally resolve to the same Fegolhuzz pack.
-    if(source.shard==='library/songlengths/musicians-F.json'&&
-       source.relative==='Fegolhuzz/Hat_tune_1.sid')return true;
-    // A community/user playlist may retain song identity as metadata instead
-    // of a pack reference. Match BOTH exact tune and author to avoid changing
-    // similarly titled compositions or Fegolhuzz's other Hat subtunes.
+  var HAT_TUNE1_END_SECONDS=108;  // User-confirmed final length (TEST249 PASS)
+  var HAT_CALIBRATION_SECONDS=240; // TEST250: temporary 04:00 for tunes 2–4
+  function hatTuneNumber(source){
+    if(!source||source.sub!==0)return 0;
+    // Prefer identity from the exact HVSC archive, shared by musician/group.
+    if(source.shard==='library/songlengths/musicians-F.json'){
+      var hvsc=/^Fegolhuzz\/Hat_tune_([1-4])\.sid$/i.exec(source.relative||'');
+      if(hvsc)return Number(hvsc[1]);
+    }
+    // Community/user playlists can have embedded SID metadata rather than
+    // a pack-derived songlength key. Require Fegolhuzz identity as well.
     var index=player.sidListIndex,list=player.sidList||[];
     var entry=typeof index==='number'&&index>=0?list[index]:null;
-    if(!entry)return false;
+    if(!entry)return 0;
     var name=String(entry.name||entry.title||'').trim();
     var author=String(entry.author||entry.artist||'').trim();
     var ref=entry._hvscRef||
       (activeReferenceTracks&&activeReferenceTracks[index])||null;
     var file=String((ref&&ref.file)||entry.file||'');
     var pack=String((ref&&ref.pack)||'');
-    if(/(?:^|\\|\/)Hat_tune_1\.sid$/i.test(file)&&
-       (/\/Fegolhuzz\.zip$/i.test(pack)||
-        /(?:Fegolhuzz|Figge Wasberger)/i.test(author)))return true;
-    return /^The Hat \(tune 1\)$/i.test(name)&&
-      /(?:Fegolhuzz|Figge Wasberger)/i.test(author);
+    var match=/(?:^|\\|\/)Hat_tune_([1-4])\.sid$/i.exec(file);
+    if(match&&(/\/Fegolhuzz\.zip$/i.test(pack)||
+       /(?:Fegolhuzz|Figge Wasberger)/i.test(author)))
+      return Number(match[1]);
+    var label=/^The Hat \(tune ([1-4])\)$/i.exec(name);
+    return label&&/(?:Fegolhuzz|Figge Wasberger)/i.test(author)?
+      Number(label[1]):0;
+  }
+  function isHatTuneOneSource(source){return hatTuneNumber(source)===1;}
+  function isHatCalibrationSource(source){
+    var n=hatTuneNumber(source);
+    return n>=2&&n<=4;
   }
   function loadSonglengthShard(path){
     if(!songlengthShards.has(path)){
@@ -2976,12 +2985,15 @@
     var ticket=++songlengthTicket,source=songTimerSource();
     playingTimerKey=source?source.key:null;
     var override=source?manualSongTimers.get(source.key):null;
-    // TEST249: the 01:48 user-confirmed end wins over the absent HVSC
-    // Songlengths.md5 entry. Explicit manual per-song timing still wins.
-    var isHatTune1=isHatTuneOneSource(source);
+    // TEST249 PASS: tune 1 ends at 01:48. TEST250: tunes 2/3/4 get
+    // temporary 04:00 to allow listening and measuring their real endings.
+    // A user-entered manual timer override always takes precedence.
+    var hatNumber=hatTuneNumber(source);
+    var hatDuration=hatNumber===1?HAT_TUNE1_END_SECONDS:
+      (hatNumber>=2&&hatNumber<=4?HAT_CALIBRATION_SECONDS:null);
     updateAutoTime(override===undefined||override===null?
-      (isHatTune1?HAT_TUNE1_END_SECONDS:180):override);
-    if(isHatTune1||!source||!source.shard||
+      (hatDuration===null?180:hatDuration):override);
+    if(hatDuration!==null||!source||!source.shard||
        (override!==undefined&&override!==null))return;
     loadSonglengthShard(source.shard).then(function(durations){
       if(ticket!==songlengthTicket||playingTimerKey!==source.key||
@@ -3001,15 +3013,16 @@
   // for files without song-length metadata. Begin a five-second fade before
   // the limit, so the *next* SID starts near the displayed timer value.
   player.getAutoDurationSeconds=function(){
-    // TEST249: trigger at the exact end, not five seconds early.
-    // Every other track keeps its existing five-second fade behavior.
-    if(isHatTuneOneSource(songTimerSource()))
+    // TEST250: all four The Hat tunes switch at their full timer limit
+    // without the usual 5-second fade. Tunes 2–4 are calibration caps;
+    // their true ending times are not established yet.
+    if(hatTuneNumber(songTimerSource())>0)
       return player.autoFallbackSeconds;
     return Math.max(0.1,player.autoFallbackSeconds-FADE_OUT_MS/1000);
   };
   var priorCheckAutoAdvance249=player.checkAutoAdvance;
   player.checkAutoAdvance=function(){
-    if(!isHatTuneOneSource(songTimerSource()))
+    if(!hatTuneNumber(songTimerSource()))
       return priorCheckAutoAdvance249.apply(this,arguments);
     if(!this.autoAdvance||!this.isPlaying||this.isPaused||
        this.autoLoading||transitionBusy||!this.sampleRate||
@@ -3024,6 +3037,9 @@
   window.RICO_TEST249_HAT_TUNE1={version:249,seconds:HAT_TUNE1_END_SECONDS,
     file:'Fegolhuzz/Hat_tune_1.sid',noFade:true,
     isActive:function(){return isHatTuneOneSource(songTimerSource());}};
+  window.RICO_TEST250_HAT_CALIBRATION={version:250,seconds:240,
+    tunes:[2,3,4],noFade:true,
+    activeTune:function(){return hatTuneNumber(songTimerSource());}};
   $('#ricoLiveTimer').on('focus',function(){
     // Editing always starts from the full duration, not the remaining time.
     countdownEditing=true;
