@@ -6,6 +6,16 @@
 
 SpotySid preserves and extends the original James / Jojati SID Player. RICO maintains the project and develops the community, playlist and browsing tools. The project does not modify the underlying SID compositions.
 
+## Shareable playlists — TEST244 (pending browser PASS)
+
+Each published COMMUNITY playlist now has a **SHARE** button that copies its
+own direct SpotySid URL. Opening `index.html?playlist=<published-id>` loads
+that playlist's public selection and starts from its first SID; browsers may
+require one user PLAY click to unlock Web Audio. REPUBLISH preserves the same
+link because the public playlist ID is unchanged. Static curated playlists
+also have share links. Unpublished local drafts require PUBLISH first.
+[Implementation notes and tests](docs/TEST244_SHAREABLE_PLAYLISTS.md).
+
 ## New features — November 2026
 
 These capabilities are now visible in **[the full feature list](docs/FEATURES.md)**:
