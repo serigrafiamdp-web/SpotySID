@@ -35,7 +35,7 @@
   <div class="meta"><strong>RAY MANTA — ALL THE HITS</strong><div class="muted">One original HVSC SID · GoatTracker V2.x · PSID v2 · PAL · MOS8580</div></div>
   <div id="options" aria-label="Playback variants"></div>
   <div class="actions"><button id="stop" type="button">STOP</button><span id="time">00:00</span></div>
-  <div id="status" role="status" aria-live="polite">Select A–G to play the same file from 00:00.</div>
+  <div id="status" role="status" aria-live="polite">Select A–F to play the same file from 00:00.</div>
   <footer>
     Direct, isolated listening comparison. Every PLAY switches the engine and starts the <strong>same verified HVSC file at 00:00</strong>. Nothing is uploaded or saved. The main SpotySid player is not modified.<br>
     Report which letters sound <strong>correct</strong> or <strong>bad</strong>. These are diagnostic variants, not release-quality fixes.<br>
@@ -55,8 +55,7 @@ const VARIANTS=[
   {id:'C',name:'reSIDfp — PAL 8580',note:'Forced 8580 · DigiBoost OFF',type:'residfp',model:'MOS8580',boost:false},
   {id:'D',name:'reSIDfp — PAL 8580 + DigiBoost',note:'Forced 8580 · DigiBoost ON',type:'residfp',model:'MOS8580',boost:true},
   {id:'E',name:'reSIDfp — PAL 6581',note:'Diagnostic alternate SID chip (not file default)',type:'residfp',model:'MOS6581',boost:false},
-  {id:'F',name:'reSIDfp — PAL 8580, filter OFF',note:'Separate filter test · DigiBoost OFF',type:'residfp',model:'MOS8580',boost:false,noFilter:true},
-  {id:'G',name:'SIDLite — PAL 8580',note:'Alternative WASM SID engine · DigiBoost OFF',type:'sidlite',model:'MOS8580',boost:false}
+  {id:'F',name:'reSIDfp — PAL 8580, filter OFF',note:'Separate filter test · DigiBoost OFF',type:'residfp',model:'MOS8580',boost:false,noFilter:true}
 ];
 const optionRoot=document.getElementById('options');
 const statusEl=document.getElementById('status');
