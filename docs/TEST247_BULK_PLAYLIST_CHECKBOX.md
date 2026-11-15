@@ -74,4 +74,4 @@ checkmark, hover and focus. Do **not** add a separate toolbar.
 - Uncheck all: the original per-row + ↑ ↓ × behavior returns.
 - Confirm C64 audio never stutters on checkbox toggling.
 
-**TEST247 pending user PASS; no live-browser acceptance performed.**
+**TEST247 — PASS confirmed by user on 2026-11-15.**
