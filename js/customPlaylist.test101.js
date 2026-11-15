@@ -954,6 +954,177 @@
   function insertAt(array,from,to){
     array.splice(to,0,array.splice(from,1)[0]);
   }
+  // TEST247: a checkbox is attached to each loaded SID entry (not an index).
+  // Its identity survives reordering, while old selections from another
+  // playlist cannot accidentally modify that new list.
+  var batchSelectedSids=new Set();
+  var batchActionBusy=false;
+  function checkedSidIndices(){
+    var list=player.sidList||[],available=new Set(list),indices=[];
+    batchSelectedSids.forEach(function(item){
+      if(!available.has(item))batchSelectedSids.delete(item);
+    });
+    list.forEach(function(item,i){if(batchSelectedSids.has(item))indices.push(i);});
+    return indices;
+  }
+  function clearCheckedSids(){
+    batchSelectedSids.clear();
+    updateCheckedSidCount();
+  }
+  function updateCheckedSidCount(){
+    var n=checkedSidIndices().length,list=player.sidList||[];
+    $('#ricoLiveCount').text('('+(activeCsdbRankDisplay
+      ?activeCsdbRankDisplay.items.length:list.length)+
+      (n?' · '+n+' CHECKED':'')+')');
+  }
+  function permuteCheckedIndices(length,selected,delta,groups){
+    var order=Array.from({length:length},function(_,i){return i;});
+    var picked=new Set(selected);
+    if(!delta||!selected.length)return order;
+    var moveSlots=function(slots){
+      var ids=slots.map(function(index){return order[index];});
+      for(var step=0;step<Math.abs(delta);step++){
+        var changed=false;
+        if(delta<0){
+          for(var i=1;i<ids.length;i++){
+            if(picked.has(ids[i])&&!picked.has(ids[i-1])){
+              var t=ids[i-1];ids[i-1]=ids[i];ids[i]=t;changed=true;
+            }
+          }
+        }else{
+          for(var j=ids.length-2;j>=0;j--){
+            if(picked.has(ids[j])&&!picked.has(ids[j+1])){
+              var t2=ids[j+1];ids[j+1]=ids[j];ids[j]=t2;changed=true;
+            }
+          }
+        }
+        if(!changed)break;
+      }
+      slots.forEach(function(index,k){order[index]=ids[k];});
+    };
+    if(groups&&groups.length){
+      groups.forEach(function(group){moveSlots(group.indices);});
+    }else{
+      moveSlots(order.map(function(_,i){return i;}));
+    }
+    return order;
+  }
+  function bulkMoveCheckedSids(step){
+    var indices=checkedSidIndices();
+    if(!indices.length||!customActive||loadedRankedPlaylist||savingCommunityEdits||
+       batchActionBusy||!Number.isInteger(step))return;
+    var size=custom.length;
+    var groups=buildNoHvscArtistGroups(custom);
+    var permutation=permuteCheckedIndices(size,indices,step,groups);
+    if(permutation.every(function(oldIndex,newIndex){return oldIndex===newIndex;}))return;
+    var inverse=new Array(size);
+    permutation.forEach(function(oldIndex,newIndex){inverse[oldIndex]=newIndex;});
+    // Reorder every parallel array using the SAME permutation once; never
+    // regenerate a thousand-row playlist for each individual selected SID.
+    function reorder(array){
+      if(!array||array.length!==size)return;
+      var old=array.slice();
+      array.splice.apply(array,[0,array.length].concat(
+        permutation.map(function(i){return old[i];})));
+    }
+    resetSoftTransition(false);
+    reorder(custom);reorder(embeddedHvscPaths);reorder(activeReferenceTracks);
+    if(activePublicPlaylist&&activePublicPlaylist.tracks.length===size){
+      reorder(activePublicPlaylist.tracks);activePublicPlaylist.dirtyOrder=true;
+    }
+    if(activePublicCollection&&activePublicCollection.tracks.length===size){
+      reorder(activePublicCollection.tracks);activePublicCollection.dirtyOrder=true;
+    }
+    if(!activePublicPlaylist&&!activePublicCollection)activeLocalOrderDirty=true;
+    function cursor(value){return typeof value==='number'?inverse[value]:value;}
+    player.sidListIndex=cursor(player.sidListIndex);
+    selectedLiveIndex=cursor(selectedLiveIndex);
+    queuedLiveIndex=cursor(queuedLiveIndex);
+    largePlaylistStructureRevision++;
+    if(activeRemixDraftId&&activeReferenceTracks&&activeReferenceTracks.length===size){
+      var draft=remixDrafts.find(function(d){return d.id===activeRemixDraftId;});
+      if(draft){
+        var byKey=new Map(draft.tracks.map(function(track){
+          return [remixRefKey(track),track];
+        }));
+        var consumed=new Set(),ordered=[];
+        activeReferenceTracks.forEach(function(ref){
+          var key=remixRefKey(ref);
+          if(byKey.has(key)&&!consumed.has(key)){
+            ordered.push(byKey.get(key));consumed.add(key);
+          }
+        });
+        draft.tracks.forEach(function(track){
+          var key=remixRefKey(track);
+          if(!consumed.has(key)){ordered.push(track);consumed.add(key);}
+        });
+        draft.tracks=ordered;
+        activeLocalOrderDirty=false;
+        preserveRemixes();renderRemixes();
+      }
+    }
+    renderLivePlaylist();
+    $('#ricoLiveStatus').text(indices.length+' SID moved '+(step<0?'up':'down')+
+      ' · '+(activePublicPlaylist?'REPUBLISH to publish':'SAVE to keep changes'));
+  }
+  function bulkRemoveCheckedSids(){
+    var indices=checkedSidIndices();
+    if(!indices.length||!customActive||loadedRankedPlaylist||savingCommunityEdits||
+       activePublicCollection||batchActionBusy)return;
+    var size=custom.length,removed=new Set(indices);
+    var oldCurrent=typeof player.sidListIndex==='number'?player.sidListIndex:-1;
+    var currentRemoved=removed.has(oldCurrent);
+    var remaining=[],remap=new Array(size),dest=0;
+    for(var i=0;i<size;i++){
+      if(removed.has(i)){remap[i]=-1;continue;}
+      remap[i]=dest++;remaining.push(i);
+    }
+    var removedRefs=activeReferenceTracks&&activeReferenceTracks.length===size
+      ?indices.map(function(i){return activeReferenceTracks[i];}):[];
+    function filterParallel(array){
+      if(!array||array.length!==size)return;
+      var copy=array.slice();
+      array.splice.apply(array,[0,array.length].concat(
+        remaining.map(function(i){return copy[i];})));
+    }
+    resetSoftTransition(false);
+    filterParallel(custom);filterParallel(embeddedHvscPaths);
+    filterParallel(activeReferenceTracks);
+    if(activePublicPlaylist&&activePublicPlaylist.tracks.length===size){
+      filterParallel(activePublicPlaylist.tracks);
+      activePublicPlaylist.dirtyOrder=true;
+    }else if(!activePublicPlaylist)activeLocalOrderDirty=true;
+    if(activeRemixDraftId&&removedRefs.length){
+      var draft=remixDrafts.find(function(d){return d.id===activeRemixDraftId;});
+      if(draft){
+        var removing=new Set(removedRefs.map(remixRefKey));
+        draft.tracks=draft.tracks.filter(function(ref){
+          return !removing.has(remixRefKey(ref));
+        });
+        preserveRemixes();renderRemixes();
+      }
+    }
+    batchSelectedSids.clear();
+    largePlaylistStructureRevision++;
+    selectedLiveIndex=typeof selectedLiveIndex==='number'&&remap[selectedLiveIndex]>=0
+      ?remap[selectedLiveIndex]:null;
+    queuedLiveIndex=typeof queuedLiveIndex==='number'&&remap[queuedLiveIndex]>=0
+      ?remap[queuedLiveIndex]:null;
+    if(!custom.length){
+      player.isPlaying=false;player.isPaused=false;player.sidListIndex=false;
+      player.initFileSelection();
+    }else if(currentRemoved){
+      var newIndex=remaining.findIndex(function(i){return i>oldCurrent;});
+      if(newIndex<0)newIndex=remaining.length-1;
+      loadCustomIndex(newIndex);
+    }else{
+      if(oldCurrent>=0)player.sidListIndex=remap[oldCurrent];
+      player.initFileSelection();
+    }
+    renderLivePlaylist();
+    $('#ricoLiveStatus').text(indices.length+' SID removed from current selection · '+
+      (activePublicPlaylist?'REPUBLISH to publish changes':'SAVE to keep changes'));
+  }
   function relocateCursor(cursor,from,to){
     if(typeof cursor!=='number')return cursor;
     if(cursor===from)return to;
@@ -1697,7 +1868,7 @@
       items.append(line);
     });
   }
-  async function addRemixTrack(index){
+  async function addRemixTrack(index,batchMode){
     // Add original HVSC references, not copies of embedded ranking SID bytes.
     // Never interrupt the currently playing track or silently change the source.
     remixOpen=false;
@@ -1772,19 +1943,53 @@
       }
       if(target.tracks.length>=2000)throw Error('Remix limit: 2000 SID.');
       if(target.tracks.some(function(t){return remixRefKey(t)===remixRefKey(reference);})){
-        remixNotice('This SID is already in '+target.name+'.');return;
+        if(!batchMode)remixNotice('This SID is already in '+target.name+'.');return false;
       }
       target.tracks.push(Object.assign(remixCanonicalRef(reference),{
         title:reference.title||sidEntry.name||reference.file,
         artist:reference.artist||sidEntry.author||''
       }));
+      if(batchMode)return true;
       preserveRemixes();renderRemixes();
       remixNotice('Added '+(reference.title||sidEntry.name||reference.file)+
         ' to '+target.name+(reference.sidId?' from NO HVSC archive.':' from HVSC.')+
         ' Playback unchanged.');
+      return true;
     }catch(error){
+      if(batchMode)return {error:error.message};
       remixNotice('Cannot add SID: '+error.message);
+      return false;
     }
+  }
+  async function bulkAddCheckedSids(){
+    if(batchActionBusy)return;
+    var indices=checkedSidIndices();
+    if(!indices.length)return;
+    if(!preferredRemixDestination){
+      remixNotice('Select a destination first using ADD + TO.');return;
+    }
+    var source=player.sidList;
+    var entries=indices.map(function(i){return source[i];});
+    var done=0,skipped=0,errors=0,firstError='';
+    batchActionBusy=true;
+    try{
+      for(var i=0;i<entries.length;i++){
+        if(player.sidList!==source){
+          firstError='Playlist changed during batch';errors++;break;
+        }
+        var index=source.indexOf(entries[i]);
+        if(index<0){skipped++;continue;}
+        var result=await addRemixTrack(index,true);
+        if(result===true)done++;
+        else if(result&&result.error){errors++;if(!firstError)firstError=result.error;}
+        else skipped++;
+        if(i%20===19)await new Promise(function(resolve){setTimeout(resolve,0);});
+      }
+      preserveRemixes();renderRemixes();
+      remixNotice(done+' SID added · '+skipped+' already present'+
+        (errors?' · '+errors+' failed'+(firstError?' ('+firstError+')':''):'')+
+        '. Playback unchanged.');
+    }finally{batchActionBusy=false;}
   }
   async function playRemixDraft(){
     var draft=selectedRemix();
@@ -2186,7 +2391,10 @@
     $('#ricoLiveShare').css('display',
       customActive&&!landingPlaylists&&!!activeSharePlaylistId?'inline-block':'none');
     // Ordinary short lists retain the original complete render behavior.
-    if(!activeCsdbRankDisplay&&paintLargePlaylistMarkers())return;
+    // Update only the count on playback changes in a large SID collection.
+    if(!activeCsdbRankDisplay&&paintLargePlaylistMarkers()){
+      updateCheckedSidCount();return;
+    }
     var scrollNode=document.getElementById('ricoLivePlaylistItems');
     var previousScroll=scrollNode?scrollNode.scrollTop:0;
     var holder = $('#ricoLivePlaylistItems').empty();
@@ -2195,7 +2403,7 @@
     var list = player.sidList || [];
     if(selectedLiveIndex!==null && selectedLiveIndex>=list.length)selectedLiveIndex=null;
     $('#ricoRemixBar').css('display',(!landingPlaylists&&list.length)?'flex':'none');
-    $('#ricoLiveCount').text('(' + (activeCsdbRankDisplay?activeCsdbRankDisplay.items.length:list.length) + ')');
+    updateCheckedSidCount();
     // TEST106: SAVE is visible for any editable loaded list, never TOP 100.
     var canSave=!!(customActive&&!landingPlaylists&&!loadedRankedPlaylist&&list.length);
     var pendingDraft=remixDrafts.find(function(d){
@@ -2348,10 +2556,31 @@
         var wrap=$('<div>').addClass('rico-live-edit-row');
         if(artistGroups){wrap.attr('data-sid-index',index);groupedRowsByIndex[index]=wrap[0];}
         row.appendTo(wrap);
+        // TEST247: same compact control size, immediately LEFT of +.
+        // Do not bubble to the underlying song PLAY/selection handler.
+        var checkLabel=$('<label>').addClass('rico-live-batch-toggle')
+          .attr('aria-label','Select '+songTitle+' for batch actions');
+        $('<input type="checkbox">').addClass('rico-live-batch-check')
+          .prop('checked',batchSelectedSids.has(item))
+          .attr('aria-label','Select '+songTitle)
+          .on('click mousedown pointerdown',function(event){event.stopPropagation();})
+          .on('change',function(event){
+            event.stopPropagation();
+            if(this.checked)batchSelectedSids.add(item);
+            else batchSelectedSids.delete(item);
+            wrap.toggleClass('rico-live-batch-checked',this.checked);
+            updateCheckedSidCount();
+          }).appendTo(checkLabel);
+        wrap.toggleClass('rico-live-batch-checked',batchSelectedSids.has(item));
+        checkLabel.appendTo(wrap);
         bindThemedPlaylistHint($('<button type="button">').addClass('rico-live-add').text('+')
           .attr('aria-label','Add '+songTitle+' to selected remix'),
           'Add to selected REMIX PLAYLIST without changing playback')
-          .on('click',function(event){event.stopPropagation();hideReorderHint();addRemixTrack(index);})
+          .on('click',function(event){
+            event.stopPropagation();hideReorderHint();
+            if(checkedSidIndices().length)void bulkAddCheckedSids();
+            else void addRemixTrack(index);
+          })
           .appendTo(wrap);
         if(customActive){
         var artistPosition=artistPositions&&artistPositions[index];
@@ -2359,6 +2588,7 @@
         var canMoveDown=artistPosition
           ?artistPosition.position<artistPosition.indices.length-1:index<list.length-1;
         function moveWithinVisibleGroup(step){
+          if(checkedSidIndices().length){bulkMoveCheckedSids(step);return;}
           if(!artistPosition){moveLiveSong(index,step);return;}
           var next=Math.max(0,Math.min(artistPosition.indices.length-1,
             artistPosition.position+step));
@@ -2379,7 +2609,11 @@
           .attr('aria-label','Remove '+songTitle+' temporarily')
           .prop('disabled',loadedRankedPlaylist),
           loadedRankedPlaylist?'Fixed original ranking entry':'Remove song temporarily')
-          .on('click',function(event){event.stopPropagation();hideReorderHint();removeLiveSong(index);})
+          .on('click',function(event){
+            event.stopPropagation();hideReorderHint();
+            if(checkedSidIndices().length)bulkRemoveCheckedSids();
+            else removeLiveSong(index);
+          })
           .appendTo(wrap);
         }
         }
