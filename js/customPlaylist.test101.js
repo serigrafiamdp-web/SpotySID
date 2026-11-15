@@ -1760,7 +1760,7 @@
     renderRemixes();
     $('#ricoRemixName,#ricoRemixCreator').prop('disabled',false).val('');
     $('#ricoRemixFloatHeader strong').text('CREATE PLAYLIST');
-    $('#ricoRemixClose').text('CREAR');
+    $('#ricoRemixClose').text('CREATE');
     var field=document.getElementById('ricoRemixName');
     if(field){field.focus();field.setSelectionRange(0,0);}
   }
@@ -1838,7 +1838,7 @@
     }
     $('#ricoRemixFloatHeader strong').text(creatingNewRemix?'CREATE PLAYLIST':
       selected&&selected.remoteEditId?'EDIT PUBLISHED PLAYLIST':'REMIX PLAYLIST CREATOR');
-    $('#ricoRemixClose').text(creatingNewRemix?'CREAR':'DONE');
+    $('#ricoRemixClose').text(creatingNewRemix?'CREATE':'DONE');
     $('#ricoRemixPublish').text(selected&&selected.remoteEditId?'REPUBLISH':'PUBLISH REMIX')
       .prop('disabled',!selected||!selected.tracks.length||remixBusy);
     $('#ricoRemixPlay').text(selected&&selected.remoteEditId?'PREVIEW CHANGES':'PLAY REMIX')
