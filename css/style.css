@@ -3027,3 +3027,56 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
 #ricoLivePlaylistHeader #ricoLiveClose {
   border:0 !important;
 }
+
+/* TEST247 — a compact checkbox is the FIRST control, immediately left of +.
+   Match the existing 27px add button and current SpotySid palette. */
+#ricoLivePlaylistItems .rico-live-batch-toggle {
+  box-sizing:border-box;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 27px;
+  width:27px;
+  min-width:27px;
+  margin:0;
+  padding:0;
+  border:0;
+  border-left:1px solid var(--rico-theme-border,#888);
+  background:transparent !important;
+  color:var(--rico-theme-fg,#fff) !important;
+  cursor:pointer;
+}
+#ricoLivePlaylistItems .rico-live-batch-toggle:hover,
+#ricoLivePlaylistItems .rico-live-batch-checked > .rico-live-batch-toggle {
+  background:var(--rico-theme-hover,#444) !important;
+}
+#ricoLivePlaylistItems .rico-live-batch-toggle > .rico-live-batch-check {
+  -webkit-appearance:none;
+  appearance:none;
+  display:block;
+  box-sizing:border-box;
+  width:14px;
+  min-width:14px;
+  height:14px;
+  margin:0;
+  padding:0;
+  border:1px solid var(--rico-theme-fg,#fff) !important;
+  border-radius:1px;
+  background:transparent !important;
+  color:var(--rico-theme-bg,#000) !important;
+  cursor:pointer;
+}
+#ricoLivePlaylistItems .rico-live-batch-toggle > .rico-live-batch-check:checked {
+  background:var(--rico-theme-fg,#fff) !important;
+}
+#ricoLivePlaylistItems .rico-live-batch-toggle > .rico-live-batch-check:checked::after {
+  content:"✓";
+  display:block;
+  color:var(--rico-theme-bg,#000) !important;
+  font:700 12px/12px Tahoma,Arial,sans-serif;
+  text-align:center;
+}
+#ricoLivePlaylistItems .rico-live-batch-toggle > .rico-live-batch-check:focus-visible {
+  outline:2px solid var(--rico-theme-fg,#fff);
+  outline-offset:2px;
+}
