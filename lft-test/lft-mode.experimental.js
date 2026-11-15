@@ -191,7 +191,7 @@
     }
     var route8580=ref.pack===UCTUMI_PACK&&UCTUMI_8580.has(ref.file);
     var routeMujer=ref.pack===UCTUMI_PACK&&UCTUMI_MUJER.has(ref.file);
-    var routeRay=ref.pack===RAY_PACK&&RAY_APPROVED.has(ref.file);
+    var routeRay=!RAY_OFF&&ref.pack===RAY_PACK&&RAY_APPROVED.has(ref.file);
     var expectedSize=route8580?UCTUMI_8580.get(ref.file):
       routeMujer?UCTUMI_MUJER.get(ref.file):
       routeRay?RAY_APPROVED.get(ref.file)[0]:APPROVED.get(ref.file);
@@ -218,8 +218,8 @@
         var meta=songMeta(safeBytes),song=meta.actualSubsong;
         await candidate.loadSidBuffer(safeBytes,song);
         if(route8580||routeMujer||routeRay)
-          await candidate.setEmulationConfig({
-            sidModel:routeRay?rayModel(ref):'MOS8580',forceSidModel:true
+          await candidate.setEmulationConfig(routeRay?rayConfig(ref):{
+            sidModel:'MOS8580',forceSidModel:true
           });
         if(state.cancelled||stagedNext!==state){candidate.dispose();return false;}
         var frames=[];
@@ -255,6 +255,16 @@
     return stage;
   }
   var MODE_OFF=/(?:^|[?&])lftmode=off(?:&|$)/i.test(String(window.location&&window.location.search||''));
+  // TEST238: diagnostic bypass for Ray alone; never changes LFT or Uctumi.
+  var RAY_OFF=/(?:^|[?&])raymode=off(?:&|$)/i.test(String(window.location&&window.location.search||''));
+  function rayConfig(ref){
+    var model=rayModel(ref);
+    return model?{
+      c64Model:'PAL',forceC64Model:true,
+      sidModel:model,forceSidModel:true,
+      digiBoost:model==='MOS8580'
+    }:null;
+  }
 
   function eligible(data,remoteId){
     return !MODE_OFF && typeof remoteId==='string' && /^[a-z0-9-]{12,48}$/i.test(remoteId) &&
@@ -271,13 +281,16 @@
       ((ref.pack===PACK && APPROVED.has(ref.file)) ||
        (ref.pack===UCTUMI_PACK &&
          (UCTUMI_8580.has(ref.file)||UCTUMI_MUJER.has(ref.file))) ||
-       (ref.pack===RAY_PACK&&RAY_APPROVED.has(ref.file)));
+       (!RAY_OFF&&ref.pack===RAY_PACK&&RAY_APPROVED.has(ref.file)));
   }
   function syncModeLabel(){
     var title=document.getElementById('ricoLivePlaylistTitle');
     if(!title)return;
-    var base=title.textContent.replace(/ · LFT MODE ON$/,'');
-    title.textContent=base+((!active8580&&!activeMujer&&!activeRay&&active&&songReady&&player.isPlaying)?' · LFT MODE ON':'');
+    var base=title.textContent.replace(/ · (?:LFT|RAY MANTA) MODE ON$/,'');
+    var live=active&&songReady&&player.isPlaying;
+    title.textContent=base+
+      (live&&activeRay?' · RAY MANTA MODE ON':
+       live&&!active8580&&!activeMujer?' · LFT MODE ON':'');
   }
   function sidHeaderOK(bytes){
     if(!(bytes instanceof Uint8Array)||bytes.length<0x7c||bytes.length>256*1024)return false;
@@ -438,8 +451,8 @@
       // TEST209: independently audited MOS8580 header for Mujer Amante.
       // Loco's existing MOS8580 route and +8.3dB gain remain unchanged.
       if(active8580||activeMujer||activeRay){
-        await local.setEmulationConfig({
-          sidModel:activeRay?rayModel(approvedTrackRef):'MOS8580',forceSidModel:true
+        await local.setEmulationConfig(activeRay?rayConfig(approvedTrackRef):{
+          sidModel:'MOS8580',forceSidModel:true
         });
         if(!active||sequence!==trackEpoch||engine!==local)return;
       }
@@ -527,7 +540,7 @@
     // WebAssembly binary, even if called with a forged source reference.
     var route8580=ref.pack===UCTUMI_PACK && UCTUMI_8580.has(ref.file);
     var routeMujer=ref.pack===UCTUMI_PACK && UCTUMI_MUJER.has(ref.file);
-    var routeRay=ref.pack===RAY_PACK && RAY_APPROVED.has(ref.file);
+    var routeRay=!RAY_OFF && ref.pack===RAY_PACK && RAY_APPROVED.has(ref.file);
     var expectedSize=route8580?UCTUMI_8580.get(ref.file):
       routeMujer?UCTUMI_MUJER.get(ref.file):
       routeRay?RAY_APPROVED.get(ref.file)[0]:APPROVED.get(ref.file);
@@ -601,6 +614,9 @@
     approveTrustedReference:approveTrustedReference,eligibleRef:eligibleRef,
     stageNextReference:stageNextReference,cancelStagedNext:releaseStaged,
     active:function(){return active;},playingApproved:function(){return !active8580&&!activeMujer&&!activeRay&&active&&songReady&&player.isPlaying;},
+    playingRay:function(){return active&&activeRay&&songReady&&player.isPlaying;},
+    rayStatus:function(){return {active:active&&activeRay,songReady:songReady,
+      model:activeRay?rayModel(approvedTrackRef):null,bypassed:RAY_OFF};},
     scopeRegisters:function(){return latestRegs?latestRegs.slice():null;},
-    version:'TEST237-ray-manta-sid-models'};
+    version:'TEST238-ray-manta-pal-digiboost'};
 })();
