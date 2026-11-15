@@ -150,6 +150,14 @@
   var transitionBusy=false;
   var transitionSource=null;
   var transitionGeneration=0;
+  // TEST260: AUTO/NEXT may load a new SID while the user is browsing HVSC.
+  // The original SID loader must not close Choose A SID for a playlist handoff.
+  // Explicit SID selections (source='manual') retain their existing behavior.
+  window.ricoKeepBrowseDialogOnPlaybackAdvance=function(){
+    return transitionBusy&&
+      (transitionSource==='next'||transitionSource==='silence')&&
+      !!(player.dialogManager&&player.dialogManager.dialogShown==='chooseSidDialog');
+  };
   // TEST203: next SID file is fetched before the fade ends, never advanced.
   var preparedDefaultSid=null;
   // TEST99: equal-power style cosine fade-out, full-volume start for the next SID.
