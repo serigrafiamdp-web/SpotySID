@@ -2936,7 +2936,7 @@
   var HAT_TUNE1_END_SECONDS=108;  // User-confirmed final length (TEST249 PASS)
   var HAT_TUNE2_END_SECONDS=310; // TEST253 PASS: YouTube demo 07:15 - 02:05 = 05:10
   var HAT_TUNE3_END_SECONDS=210; // TEST257: 03:30 total; 5s fade starts at 03:25
-  var HAT_CALIBRATION_SECONDS=360; // TEST252: temporary 06:00 for tune 4
+  var HAT_TUNE4_END_SECONDS=25; // TEST258: 06:00 to 05:35 countdown = 00:25, direct/no fade
   function hatTuneNumber(source){
     if(!source||source.sub!==0)return 0;
     // Prefer identity from the exact HVSC archive, shared by musician/group.
@@ -2989,12 +2989,12 @@
     var override=source?manualSongTimers.get(source.key):null;
     // TEST249 PASS: tune 1 01:48 direct. TEST253 PASS: tune 2 05:10
     // (five-second fade). TEST257: tune 3 03:30 with five-second fade.
-    // Tune 4 stays 06:00 provisional. Manual overrides win.
+    // Tune 4 lasts 00:25, with direct handoff/no fade. Manual overrides win.
     var hatNumber=hatTuneNumber(source);
     var hatDuration=hatNumber===1?HAT_TUNE1_END_SECONDS:
       (hatNumber===2?HAT_TUNE2_END_SECONDS:
       (hatNumber===3?HAT_TUNE3_END_SECONDS:
-      (hatNumber===4?HAT_CALIBRATION_SECONDS:null)));
+      (hatNumber===4?HAT_TUNE4_END_SECONDS:null)));
     updateAutoTime(override===undefined||override===null?
       (hatDuration===null?180:hatDuration):override);
     if(hatDuration!==null||!source||!source.shard||
@@ -3019,7 +3019,7 @@
   player.getAutoDurationSeconds=function(){
     // TEST257: tune 3 uses 03:30 and starts a five-second fade at 03:25.
     // Tune 1 is still PASS at 01:48 without fade; tune 2
-    // is PASS with 05:10 and a 5-second fade; tune 4 stays 06:00 provisional.
+    // is PASS with 05:10 and a 5-second fade; tune 4 is 00:25, no fade.
     var hat=hatTuneNumber(songTimerSource());
     if(hat===1||hat===4)
       return player.autoFallbackSeconds;
@@ -3045,7 +3045,7 @@
   window.RICO_TEST249_HAT_TUNE1={version:249,seconds:HAT_TUNE1_END_SECONDS,
     file:'Fegolhuzz/Hat_tune_1.sid',noFade:true,
     isActive:function(){return isHatTuneOneSource(songTimerSource());}};
-  window.RICO_TEST250_HAT_CALIBRATION={version:254,seconds:360,
+  window.RICO_TEST258_HAT_TUNE4={version:258,seconds:HAT_TUNE4_END_SECONDS,
     tunes:[4],noFade:true,
     activeTune:function(){return hatTuneNumber(songTimerSource());}};
   window.RICO_TEST253_HAT_TUNE2={version:253,seconds:HAT_TUNE2_END_SECONDS,
