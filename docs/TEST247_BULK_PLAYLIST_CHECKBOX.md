@@ -13,9 +13,11 @@ checkmark, hover and focus. Do **not** add a separate toolbar.
    The existing track count displays `N CHECKED`. Uncheck to deselect.
 2. Use one existing row's `+` to add **all checked songs** in their visible
    playlist order to the current `ADD + TO` destination. Duplicate references
-   are skipped, and imported local tracks keep the existing HVSC/NO HVSC
-   matching and archive flow. Only one draft update/render happens at the
-   end. Source playback is not changed.
+   are skipped. For imported local SIDs without verified HVSC/NO HVSC
+   references, use the EXISTING NO HVSC archive in batches with one
+   beta-key authorization for the entire selection (rather than once per
+   SID). Only one draft update/render happens at the end. Source playback is
+   not changed.
 3. Use an existing `↑` or `↓` to move checked songs one slot. Double-click
    works with the existing 10-slot movement. Selections retain their
    relative order. Unchecked songs retain their relative order.
