@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>SpotySid TEST241 | Ray Manta — All the Hits</title>
+  <style>
+    :root{color-scheme:dark}
+    *{box-sizing:border-box}
+    body{font-family:Consolas,Monaco,monospace;background:#10151a;color:#d9ebe8;margin:0;padding:24px 16px;font-size:13px}
+    main{max-width:760px;margin:0 auto}
+    h1{font-size:21px;font-weight:700;color:#70d7c7;margin:0 0 10px}
+    .muted{color:#92a5a9}.meta{margin:8px 0 22px;line-height:1.7}
+    .option{display:flex;align-items:center;gap:12px;border:1px solid #31454a;padding:10px 12px;margin:7px 0;min-height:66px}
+    .option.active{border-color:#70d7c7;background:#142526}
+    .info{flex:1;min-width:0}
+    .name{color:#ecfbf8;font-size:13px;font-weight:bold}
+    .note{color:#93a8aa;font-size:11px;margin-top:5px}
+    button{font-family:inherit;font-size:12px;font-weight:bold;cursor:pointer;min-width:67px;background:#23353a;border:1px solid #70d7c7;color:#bdfff1;border-radius:2px;padding:8px 10px}
+    button:hover{background:#34525a}
+    button:disabled{cursor:default;opacity:.55}
+    .active button{background:#39796d;color:#fff}
+    #stop{background:transparent}
+    #status{min-height:30px;margin:14px 0;font-size:12px;color:#a8e9dc;overflow-wrap:anywhere}
+    .actions{display:flex;align-items:center;gap:10px;margin:17px 0}
+    #time{font-variant-numeric:tabular-nums;color:#70d7c7}
+    footer{color:#81999e;font-size:11px;line-height:1.7;border-top:1px solid #31454a;margin-top:22px;padding-top:13px}
+    a{color:#86d8cd}
+    @media(max-width:440px){body{padding:18px 10px}.option{gap:8px;padding:9px}.name{font-size:12px}button{min-width:60px;padding:7px}}
+  </style>
+</head>
+<body>
+<main>
+  <h1>SpotySid — TEST241</h1>
+  <div class="meta"><strong>RAY MANTA — ALL THE HITS</strong><div class="muted">One original HVSC SID · GoatTracker V2.x · PSID v2 · PAL · MOS8580</div></div>
+  <div id="options" aria-label="Playback variants"></div>
+  <div class="actions"><button id="stop" type="button">STOP</button><span id="time">00:00</span></div>
+  <div id="status" role="status" aria-live="polite">Select A–G to play the same file from 00:00.</div>
+  <footer>
+    Direct, isolated listening comparison. Every PLAY switches the engine and starts the <strong>same verified HVSC file at 00:00</strong>. Nothing is uploaded or saved. The main SpotySid player is not modified.<br>
+    Report which letters sound <strong>correct</strong> or <strong>bad</strong>. These are diagnostic variants, not release-quality fixes.<br>
+    <a href="../index.html">Back to SpotySid</a>
+  </footer>
+</main>
+<script src="../js/backend_tinysid.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script type="module">
+'use strict';
+const ZIP_URL='../library/packs/musicians/R/Ray_Manta.zip';
+const FILE='All_the_Hits.sid';
+const SHA256='e811520fe822d3e60e7b98ea7c122b4aff1dbe0056d85f0087397051cadb2135';
+const VARIANTS=[
+  {id:'A',name:'TinySID — original',note:'Current legacy SpotySid backend',type:'tiny'},
+  {id:'B',name:'reSIDfp — automatic',note:'Use SID file model/clock flags',type:'residfp'},
+  {id:'C',name:'reSIDfp — PAL 8580',note:'Forced 8580 · DigiBoost OFF',type:'residfp',model:'MOS8580',boost:false},
+  {id:'D',name:'reSIDfp — PAL 8580 + DigiBoost',note:'Forced 8580 · DigiBoost ON',type:'residfp',model:'MOS8580',boost:true},
+  {id:'E',name:'reSIDfp — PAL 6581',note:'Diagnostic alternate SID chip (not file default)',type:'residfp',model:'MOS6581',boost:false},
+  {id:'F',name:'reSIDfp — PAL 8580, filter OFF',note:'Separate filter test · DigiBoost OFF',type:'residfp',model:'MOS8580',boost:false,noFilter:true},
+  {id:'G',name:'SIDLite — PAL 8580',note:'Alternative WASM SID engine · DigiBoost OFF',type:'sidlite',model:'MOS8580',boost:false}
+];
+const optionRoot=document.getElementById('options');
+const statusEl=document.getElementById('status');
+const timeEl=document.getElementById('time');
+const rows=new Map();
+for(const variant of VARIANTS){
+  const row=document.createElement('div');row.className='option';
+  const info=document.createElement('div');info.className='info';
+  const name=document.createElement('div');name.className='name';name.textContent=variant.id+' — '+variant.name;
+  const note=document.createElement('div');note.className='note';note.textContent=variant.note;
+  const button=document.createElement('button');button.textContent='PLAY';button.type='button';
+  button.addEventListener('click',()=>start(variant));
+  info.append(name,note);row.append(info,button);optionRoot.append(row);
+  rows.set(variant.id,{row,button});
+}
+let ctx=null,bytes=null,active=null,request=0,seconds=0;
+const BUFFER_SIZE=4096;
+const AudioContextClass=window.AudioContext||window.webkitAudioContext;
+function setStatus(message){statusEl.textContent=message;}
+function setButtons(){
+  rows.forEach((row,id)=>{
+    const selected=active&&active.variant.id===id;
+    row.row.classList.toggle('active',!!selected);
+    row.button.textContent=selected?'PLAYING':'PLAY';
+  });
+}
+function dispose(run){
+  if(!run)return;
+  run.stopped=true;
+  if(run.node){run.node.onaudioprocess=null;try{run.node.disconnect();}catch(_){}}
+  if(run.engine){try{run.engine.dispose();}catch(_){}run.engine=null;}
+}
+function stop(){
+  request++;
+  const prior=active;active=null;dispose(prior);
+  setButtons();timeEl.textContent='00:00';seconds=0;
+  setStatus('Stopped. Select another version.');
+}
+document.getElementById('stop').addEventListener('click',stop);
+function formatTime(sec){
+  const s=Math.max(0,Math.floor(sec));
+  return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');
+}
+async function getFile(){
+  if(bytes)return bytes;
+  if(typeof JSZip==='undefined')throw Error('JSZip not available. Check network/CDN.');
+  const response=await fetch(ZIP_URL);
+  if(!response.ok)throw Error('HVSC ZIP unavailable (HTTP '+response.status+')');
+  const zip=await JSZip.loadAsync(await response.arrayBuffer());
+  const sid=zip.file(FILE);
+  if(!sid)throw Error('SID missing from our HVSC archive.');
+  const data=await sid.async('uint8array');
+  if(data.length!==4569)throw Error('Unexpected SID file size.');
+  if(!crypto||!crypto.subtle)throw Error('Secure context required for file verification.');
+  const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',data)))
+    .map(x=>x.toString(16).padStart(2,'0')).join('');
+  if(hash!==SHA256)throw Error('SID file does not match original HVSC SHA-256.');
+  bytes=data;return bytes;
+}
+async function fillQueue(run,target=12){
+  if(run.filling||run.stopped||!run.engine)return;
+  run.filling=true;
+  try{
+    while(!run.stopped&&run.queue.length<target){
+      const samples=await run.engine.renderFrames(BUFFER_SIZE);
+      if(!(samples instanceof Int16Array)||samples.length!==BUFFER_SIZE)
+        throw Error('Unexpected WASM PCM length.');
+      if(run.stopped)return;
+      run.queue.push(samples);
+    }
+  }catch(err){
+    if(!run.stopped){run.error=err;setStatus('Audio render error: '+err.message);}
+  }finally{run.filling=false;}
+}
+function renderWasm(run,out){
+  let i=0;
+  while(i<out.length){
+    if(!run.frame||run.frameOffset>=run.frame.length){
+      run.frame=run.queue.shift()||null;
+      run.frameOffset=0;
+    }
+    if(!run.frame){out.fill(0,i);break;}
+    const count=Math.min(out.length-i,run.frame.length-run.frameOffset);
+    for(let j=0;j<count;j++)out[i+j]=run.frame[run.frameOffset+j]/32768;
+    i+=count;run.frameOffset+=count;
+  }
+  if(run.queue.length<8&&!run.filling)void fillQueue(run);
+}
+function renderTiny(run,out){
+  let i=0;
+  while(i<out.length){
+    if(run.nativeOffset>=run.nativeCount){
+      const status=SID.computeAudioSamples();
+      if(status!==0){out.fill(0,i);run.error=Error('TinySID playback stopped.');break;}
+      run.nativeCount=SID.getResampledAudio(SID.getAudioBuffer(),SID.getAudioBufferLength());
+      run.nativeOffset=0;
+      if(!run.nativeCount){out.fill(0,i);run.error=Error('TinySID returned no samples.');break;}
+    }
+    const pcm=SID.getResampleBuffer();
+    const count=Math.min(out.length-i,run.nativeCount-run.nativeOffset);
+    for(let j=0;j<count;j++)out[i+j]=pcm[run.nativeOffset+j];
+    run.nativeOffset+=count;i+=count;
+  }
+}
+async function start(variant){
+  const token=++request;
+  const prior=active;active=null;dispose(prior);setButtons();seconds=0;timeEl.textContent='00:00';
+  try{
+    if(!AudioContextClass)throw Error('Web Audio is unavailable.');
+    // Acquire/resume audio on the button gesture, before any network request.
+    if(!ctx)ctx=new AudioContextClass();
+    await ctx.resume();
+    setStatus('Loading original All the Hits SID…');
+    const sid=await getFile();
+    if(token!==request)return;
+    const run={variant,stopped:false,engine:null,node:null,
+      queue:[],frame:null,frameOffset:0,filling:false,
+      nativeOffset:0,nativeCount:0,error:null};
+    active=run;
+    setButtons();
+    setStatus('Preparing '+variant.name+'…');
+    if(variant.type==='tiny'){
+      if(!window.SID||typeof SID.loadMusicData!=='function')throw Error('TinySID engine unavailable.');
+      const result=SID.loadMusicData(ctx.sampleRate,'','',sid);
+      if(result!==0)throw Error('TinySID rejected the file ('+result+').');
+      SID.evalTrackOptions({track:0});
+      SID.enableVoices(7);
+      SID.setFilterEnabled(true);
+    }else{
+      const lib=await import('../lft-test/lft-wasm/index.js');
+      if(token!==request)return;
+      const engine=new lib.SidAudioEngine({engine:variant.type,sampleRate:ctx.sampleRate,
+        stereo:false,cacheSecondsLimit:2});
+      run.engine=engine;
+      const resolved=await engine.getEngineName();
+      if(token!==request)return;
+      if(variant.type==='residfp'&&resolved!=='WasmReSIDfp')throw Error('Wrong engine '+resolved);
+      await engine.loadSidBuffer(sid,0);
+      if(token!==request)return;
+      if(variant.model){
+        await engine.setEmulationConfig({
+          c64Model:'PAL',forceC64Model:true,
+          sidModel:variant.model,forceSidModel:true,
+          digiBoost:!!variant.boost
+        });
+      }
+      if(token!==request)return;
+      if(variant.noFilter)engine.setFilterEnabled(0,false);
+      await fillQueue(run,14);
+      if(run.error)throw run.error;
+      if(token!==request)return;
+    }
+    const node=ctx.createScriptProcessor(BUFFER_SIZE,0,1);
+    run.node=node;
+    node.onaudioprocess=(event)=>{
+      const out=event.outputBuffer.getChannelData(0);
+      if(run.stopped){out.fill(0);return;}
+      if(run.variant.type==='tiny')renderTiny(run,out);
+      else renderWasm(run,out);
+      seconds+=out.length/ctx.sampleRate;
+      if(Math.floor(seconds)!==Math.floor(seconds-out.length/ctx.sampleRate))
+        timeEl.textContent=formatTime(seconds);
+    };
+    if(token!==request)return;
+    node.connect(ctx.destination);
+    setStatus('PLAYING '+variant.id+' — '+variant.name+' · Same original SID · 00:00 start.');
+  }catch(error){
+    if(token!==request)return;
+    const current=active;active=null;dispose(current);setButtons();
+    setStatus('TEST '+variant.id+' FAILED: '+(error&&error.message||String(error)));
+    console.error('TEST241',error);
+  }
+}
+window.addEventListener('pagehide',()=>{stop();if(ctx)void ctx.close();});
+</script>
+</body>
+</html>
