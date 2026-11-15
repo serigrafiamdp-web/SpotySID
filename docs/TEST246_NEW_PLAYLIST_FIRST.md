@@ -74,3 +74,6 @@ is created. Only public playlists can have shareable public links.
 
 TEST246 is implemented in the GitHub repository; real browser/D1 acceptance
 is still pending user confirmation. Do not mark PASS prematurely.
+
+
+**TEST246 — PASS confirmed by user on 2026-11-15.**
