@@ -2984,3 +2984,46 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
 #sidInfoContent .rico-show-metadata-label {
   font-weight:700;
 }
+
+/* TEST245 — SHARE and close controls always use the currently selected
+   oscilloscope palette, including mouse-down, keyboard focus and after copy.
+   Keep the original compact buttons and inherit row inversion on selection. */
+#ricoCommunityItems .rico-community-row > button.rico-community-share,
+#ricoCommunityItems .rico-community-row > button.rico-community-share:hover,
+#ricoCommunityItems .rico-community-row > button.rico-community-share:focus,
+#ricoCommunityItems .rico-community-row > button.rico-community-share:active {
+  color:inherit !important;
+  background:transparent !important;
+  background-image:none !important;
+  border-color:currentColor !important;
+}
+#ricoCommunityItems .rico-community-row > button.rico-community-share:focus-visible {
+  outline:2px solid currentColor !important;
+  outline-offset:2px;
+}
+#ricoLivePlaylistHeader #ricoLiveShare,
+#ricoLivePlaylistHeader #ricoLiveSave,
+#ricoLivePlaylistHeader #ricoLiveClose {
+  color:var(--rico-theme-fg,#fff) !important;
+  background:transparent !important;
+  background-image:none !important;
+  border-color:var(--rico-theme-border,#777) !important;
+}
+#ricoLivePlaylistHeader #ricoLiveShare:hover:not(:disabled),
+#ricoLivePlaylistHeader #ricoLiveSave:hover:not(:disabled),
+#ricoLivePlaylistHeader #ricoLiveClose:hover:not(:disabled),
+#ricoLivePlaylistHeader #ricoLiveShare:active:not(:disabled),
+#ricoLivePlaylistHeader #ricoLiveSave:active:not(:disabled),
+#ricoLivePlaylistHeader #ricoLiveClose:active:not(:disabled) {
+  background:var(--rico-theme-hover,#444) !important;
+  background-image:none !important;
+  color:var(--rico-theme-fg,#fff) !important;
+}
+#ricoLivePlaylistHeader #ricoLiveShare:focus:not(:focus-visible),
+#ricoLivePlaylistHeader #ricoLiveSave:focus:not(:focus-visible),
+#ricoLivePlaylistHeader #ricoLiveClose:focus:not(:focus-visible) {
+  outline:none;
+}
+#ricoLivePlaylistHeader #ricoLiveClose {
+  border:0 !important;
+}
