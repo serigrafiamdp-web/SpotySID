@@ -7,8 +7,8 @@
   var pixels=new Uint8Array(LENGTH),undoStack=[],MAX_UNDO=30;
   var activeTool='pencil',drawing=false,lastPoint=null;
   var selection=null,selectionAnchor=null;
-  var overlay=null,panel=null,head=null,surface=null,stage=null,picture=null,grid=null,toolbar=null;
-  var pictureCtx=null,gridCtx=null,scale=4;
+  var overlay=null,panel=null,surface=null,stage=null,picture=null,grid=null,toolbar=null;
+  var pictureCtx=null,gridCtx=null,scale=4,manualScale=null;
   var dragState=null,dragX=0,dragY=0;
 
   function themeColor(){
@@ -55,6 +55,11 @@
       '...##.......','..##........','.####.......','######......',
       '.####..#####','..##..#....#','...##......#','.........##.',
       '.........#..','..........#.','....######..','............'
+    ],
+    close:[
+      '##........##','.##......##.','..##....##..','...##..##...',
+      '....####....','.....##.....','.....##.....','....####....',
+      '...##..##...','..##....##..','.##......##.','##........##'
     ]
   };
   function iconFor(tool){
@@ -152,18 +157,35 @@
   }
   function resizeCanvas(){
     if(!stage||!surface)return;
-    // TEST268: four C64 pixels of BLACK breathing room on every side
-    // (16 physical screen pixels at 4× zoom). Padding is outside the
-    // actual 256×64 artwork; no canvas pixels or proportions are changed.
-    var marginPixels=4;
-    var available=Math.max(1,stage.clientWidth-2);
-    scale=Math.max(1,Math.min(4,Math.floor(available/(WIDTH+marginPixels*2))));
-    stage.style.padding=(scale*marginPixels)+'px';
+    // TEST269: 4 SCREEN pixels of black space between the artwork and
+    // the single colored frame, independent of the zoom scale.
+    // 256×64 source pixels always remain untouched and square.
+    var available=Math.max(1,stage.clientWidth-8);
+    scale=manualScale===null
+      ?Math.max(1,Math.min(4,Math.floor(available/WIDTH)))
+      :manualScale;
     var w=WIDTH*scale,h=HEIGHT*scale;
     surface.style.width=w+'px';surface.style.height=h+'px';
     picture.style.width=w+'px';picture.style.height=h+'px';
     grid.style.width=w+'px';grid.style.height=h+'px';
     drawGrid();paint();
+  }
+  function zoomWithWheel(event){
+    if(!overlay||overlay.hidden)return;
+    event.preventDefault();
+    event.stopPropagation();
+    if(event.deltaY===0)return;
+    var next=Math.max(1,Math.min(8,scale+(event.deltaY<0?1:-1)));
+    if(next===scale)return;
+    // Keep the artwork pixel under the pointer in roughly the same place.
+    var before=picture.getBoundingClientRect();
+    var sourceX=(event.clientX-before.left)/scale;
+    var sourceY=(event.clientY-before.top)/scale;
+    manualScale=next;
+    resizeCanvas();
+    var after=picture.getBoundingClientRect();
+    stage.scrollLeft+=after.left+sourceX*next-event.clientX;
+    stage.scrollTop+=after.top+sourceY*next-event.clientY;
   }
   function point(event){
     var rect=picture.getBoundingClientRect();
@@ -258,8 +280,8 @@
   function endPanelDrag(event){
     if(!dragState||event.pointerId!==dragState.id)return;
     dragState=null;
-    if(head.hasPointerCapture&&head.hasPointerCapture(event.pointerId))
-      head.releasePointerCapture(event.pointerId);
+    if(panel.hasPointerCapture&&panel.hasPointerCapture(event.pointerId))
+      panel.releasePointerCapture(event.pointerId);
   }
   function centerPanel(){
     dragX=0;dragY=0;
@@ -273,24 +295,22 @@
     panel=document.createElement('div');panel.className='rico-tile-panel';
     panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','false');
     panel.setAttribute('aria-label','CREATE TILE ARTWORK');
-    head=document.createElement('div');head.className='rico-tile-head';
-    var title=document.createElement('strong');title.textContent='CREATE TILE ARTWORK';
-    var closeButton=button('×',close);closeButton.setAttribute('aria-label','Close artwork editor');
-    head.appendChild(title);head.appendChild(closeButton);
-    // TEST266: drag the title bar, excluding the X, without covering the
-    // player or modifying the artwork's 256×64 source pixels.
-    head.addEventListener('pointerdown',function(event){
-      if(event.button!==0||event.target.closest('button'))return;
+    // TEST269: no header or title. Drag from the black, unused tool-strip
+    // area or the frame, never from the canvas or from a tool button.
+    panel.addEventListener('pointerdown',function(event){
+      if(event.button!==0||
+         (event.target!==panel&&event.target!==toolbar&&event.target!==stage))
+        return;
       var rect=panel.getBoundingClientRect();
       dragState={id:event.pointerId,x:event.clientX,y:event.clientY,
         left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,
         offsetX:dragX,offsetY:dragY};
-      if(head.setPointerCapture)head.setPointerCapture(event.pointerId);
+      if(panel.setPointerCapture)panel.setPointerCapture(event.pointerId);
       event.preventDefault();
     });
-    head.addEventListener('pointermove',movePanel);
-    head.addEventListener('pointerup',endPanelDrag);
-    head.addEventListener('pointercancel',endPanelDrag);
+    panel.addEventListener('pointermove',movePanel);
+    panel.addEventListener('pointerup',endPanelDrag);
+    panel.addEventListener('pointercancel',endPanelDrag);
     // TEST267: Deluxe Paint-style compact icon tray LEFT of the C64 grid.
     toolbar=document.createElement('div');toolbar.className='rico-tile-tools';
     ['pencil','eraser','fill','select'].forEach(function(tool){
@@ -303,6 +323,9 @@
     var undoButton=toolButton('undo','UNDO',undo);
     undoButton.dataset.ricoTileUndo='true';
     toolbar.appendChild(undoButton);
+    var closeButton=toolButton('close','CLOSE',close);
+    closeButton.dataset.ricoTileClose='true';
+    toolbar.appendChild(closeButton);
     stage=document.createElement('div');stage.className='rico-tile-stage';
     surface=document.createElement('div');surface.className='rico-tile-surface';
     picture=document.createElement('canvas');picture.width=WIDTH;picture.height=HEIGHT;
@@ -316,12 +339,13 @@
     stage.appendChild(surface);
     var workspace=document.createElement('div');workspace.className='rico-tile-workspace';
     workspace.appendChild(toolbar);workspace.appendChild(stage);
-    panel.appendChild(head);panel.appendChild(workspace);
+    panel.appendChild(workspace);
     overlay.appendChild(panel);document.body.appendChild(overlay);
     picture.addEventListener('pointerdown',pointerDown);
     picture.addEventListener('pointermove',pointerMove);
     picture.addEventListener('pointerup',pointerEnd);
     picture.addEventListener('pointercancel',pointerEnd);
+    stage.addEventListener('wheel',zoomWithWheel,{passive:false});
     window.addEventListener('resize',function(){
       if(!overlay.hidden){centerPanel();resizeCanvas();}
     });
@@ -355,8 +379,10 @@
       if(window.sidPlayer&&typeof window.sidPlayer.showSIDInfo==='function')
         window.sidPlayer.showSIDInfo(false);
       overlay.hidden=false;
+      manualScale=null;
       centerPanel();
       resizeCanvas();
+      stage.scrollLeft=0;stage.scrollTop=0;
     }
   };
 })();
