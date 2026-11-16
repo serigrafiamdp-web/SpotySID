@@ -10,10 +10,8 @@
   if(!player||typeof player.render!=='function'||!window.C64CharROM||
      window.C64CharROM.length!==4096)return;
   var ROM=window.C64CharROM;
-  var atlas=null,atlasColor='',glyphCache=new Map(),lastPaint=0;
+  var atlas=null,atlasColor='',lastPaint=0;
   var lastIsPetscii=null,observer=null,domQueued=false;
-  var BITS=new Uint8Array(256);
-  for(var v=1;v<256;v++)BITS[v]=BITS[v>>1]+(v&1);
 
   function enabled(){
     return player.colorModes[player.colorModeIndex] &&
@@ -21,7 +19,7 @@
   }
   function drawAtlas(color){
     if(atlas&&atlasColor===color)return;
-    atlasColor=color;glyphCache.clear();
+    atlasColor=color;
     atlas=document.createElement('canvas');
     atlas.width=32*8;atlas.height=16*8;
     var g=atlas.getContext('2d',{alpha:true});
@@ -58,50 +56,17 @@
     for(var i=0;i<value.length;i++)
       blit(ctx,codeOf(value[i]),x+i*w,y,w,h);
   }
-  // TEST284: only graphical PETSCII codes are valid for the OSCILLOSCOPE.
-  // Full 512-character C64 ROM remains available; deliberately exclude
-  // alphabet, numbers and their inverse variants from the wave itself.
-  // These codes include authentic diagonals 77 (\) and 78 (/), verticals
-  // 66/71/72/84/89/93/101/103, horizontal bars 64/68/69/70/82/99/100.
-  var graphicCodes=[];
-  for(var id=0;id<512;id++){
-    var code=id&255;
-    if((code>=64&&code<=127)||(code>=192&&code<=255))
-      graphicCodes.push(id);
-  }
-  function bestGlyph(rows){
-    // Match a rasterized signal segment to ONE genuine 8x8 ROM glyph.
-    // Rasterized masks are templates only; visible output is a full C64
-    // character blitted from the ROM atlas, not points/lines on the canvas.
-    var key=rows.join(',');
-    if(glyphCache.has(key))return glyphCache.get(key);
-    var painted=rows.reduce(function(sum,b){return sum+BITS[b]},0);
-    if(!painted)return 32;
-    var bestId=64,bestScore=Infinity;
-    for(var n=0;n<graphicCodes.length;n++){
-      var id=graphicCodes[n],base=id*8,missing=0,extra=0;
-      for(var y=0;y<8;y++){
-        var wanted=rows[y],glyph=ROM[base+y];
-        missing+=BITS[wanted&(~glyph&255)];
-        extra+=BITS[glyph&(~wanted&255)];
-      }
-      // Preserve the drawn edge of the SID wave: missing ink hurts much
-      // more than modest overdraw. A nearly full block is not a line.
-      var score=missing*6+extra*1.35;
-      // Strongly prefer the authentic slash/backslash and bars when their
-      // shapes match, instead of incidental checkerboard/letter-like blocks.
-      if(id===77||id===78)score-=1.7;
-      if(id===64||id===66||id===68||id===69||id===70||
-         id===71||id===72||id===82||id===84||id===89||id===93||
-         id===99||id===100||id===101||id===103||id===106)score-=1.4;
-      if(score<bestScore){bestScore=score;bestId=id;}
-    }
-    // Badly matching wave segments still use real graphic codes; no text
-    // or random alphabet character is ever introduced in the scope.
-    if(glyphCache.size>3600)glyphCache.clear();
-    glyphCache.set(key,bestId);
-    return bestId;
-  }
+  // TEST285 — True PETSCII path construction, NEVER bitmap similarity.
+  // Every visible tile is a genuine unmodified C64 ROM glyph selected only
+  // by the DIRECTION and CONTINUITY of the SID's audio signal.
+  // C64 uppercase/graphics charset character codes (8x8 ROM):
+  var SCOPE_GLYPH=Object.freeze({
+    horizontal:64,      // two-row horizontal bar
+    vertical:93,        // centered two-column vertical bar
+    rising:78,          // / rising on screen (toward the upper rows)
+    falling:77,         // \ falling on screen (toward the lower rows)
+    junction:91         // authentic vertical/horizontal intersection
+  });
   function paintPetscii(){
     var cv=player.canvas,ctx=player.context;
     if(!cv||!ctx||typeof SID==='undefined'||
@@ -111,44 +76,41 @@
     var width=cv.width,height=cv.height;
     if(width<=0||height<=0)return;
 
-    // PC resolution: NO 40x25 restriction. Every visible glyph retains its
-    // 8:8 aspect ratio. As the display grows, MORE characters are rendered,
-    // not stretched. At 1920px, ~160 columns vs the old fixed 40.
-    var targetCell=12;
-    var cols=Math.max(1,Math.ceil(width/targetCell));
-    var rows=Math.max(1,Math.ceil(height/targetCell));
+    // PC renderer: text cells are large and square, not 40x25 or tiny
+    // 12px glyphs. 24px means 80 REAL C64 glyphs across a 1920px display.
+    var cellSize=24;
+    var cols=Math.max(1,Math.ceil(width/cellSize));
+    var rows=Math.max(1,Math.ceil(height/cellSize));
     var cellW=width/cols,cellH=height/rows;
     ctx.imageSmoothingEnabled=false;
     ctx.fillStyle=palette.background;
     ctx.fillRect(0,0,width,height);
+
     var channels=player.sidHasSamples?4:3;
     var bufferSize=882*2;
     var count=Math.floor(bufferSize/2.8);
-    var totalX=cols*8;
-
     for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
       if(!buffer)continue;
-      var minRow=Math.floor(channel*rows/channels);
-      var maxRow=Math.floor((channel+1)*rows/channels)-1;
-      if(maxRow<minRow)continue;
+      var top=Math.floor(channel*rows/channels);
+      var bottom=Math.floor((channel+1)*rows/channels)-1;
+      if(bottom<top)continue;
 
-      // Stabilize the beginning of the waveform at a positive zero-crossing,
-      // as the original SID scope does; do not replace real audio with a
-      // synthetic triangle, pulse or sawtooth.
+      // Keep a stable real SID waveform window; use zero crossing to
+      // reduce horizontal jumping, not replace the source with a fake wave.
       var offset=0,searchStart=Math.floor(count/2);
       var searchEnd=Math.min(bufferSize-count,searchStart+count);
-      var prevSample=SID.readFloatSample(buffer,searchStart);
+      var previous=SID.readFloatSample(buffer,searchStart);
       for(var k=searchStart+1;k<=searchEnd;k++){
-        var nextSample=SID.readFloatSample(buffer,k);
-        if(prevSample<=0&&nextSample>0){
-          offset=Math.max(0,Math.min(bufferSize-count,k-Math.floor(count/8)));
+        var next=SID.readFloatSample(buffer,k);
+        if(previous<=0&&next>0){
+          offset=Math.max(0,Math.min(bufferSize-count,
+            k-Math.floor(count/8)));
           break;
         }
-        prevSample=nextSample;
+        previous=next;
       }
-      var samples=new Float32Array(count);
-      var min=Infinity,max=-Infinity;
+      var samples=new Float32Array(count),min=Infinity,max=-Infinity;
       for(var i=0;i<count;i++){
         var sample=SID.readFloatSample(buffer,offset+i);
         if(!player.isPlaying&&!player.isPaused)sample=0;
@@ -157,47 +119,64 @@
         if(sample<min)min=sample;
         if(sample>max)max=sample;
       }
-      var bandTop=minRow*8,bandBottom=(maxRow+1)*8-1;
-      var center=(bandTop+bandBottom)/2;
-      var dynamicRange=max-min;
-      var scale=dynamicRange>0.000001?
-        (bandBottom-bandTop)*0.78/dynamicRange:0;
-      var middle=(max+min)/2;
-      function sampleAt(x){
-        var position=x*(count-1)/Math.max(1,totalX-1);
-        var index=Math.floor(position),fraction=position-index;
-        var a=samples[index],b=samples[Math.min(count-1,index+1)];
-        // An abrupt SID pulse edge (or sawtooth reset) is a step, NOT an
-        // interpolated diagonal. Smooth ramps still interpolate naturally.
-        var discontinuity=dynamicRange>0.000001 &&
-          Math.abs(b-a)>dynamicRange*0.27;
-        var value=discontinuity?(fraction<0.5?a:b):a+(b-a)*fraction;
-        return Math.max(bandTop,Math.min(bandBottom,
-          Math.round(center+(value-middle)*scale)));
+      var range=max-min,mid=(min+max)/2;
+      var center=(top+bottom)/2;
+      var heightInRows=Math.max(0,bottom-top-1);
+      var gain=range>0.000001?heightInRows*0.88/range:0;
+      function valueAt(position){
+        var p=Math.max(0,Math.min(count-1,position));
+        var aIndex=Math.floor(p),fraction=p-aIndex;
+        var a=samples[aIndex],b=samples[Math.min(count-1,aIndex+1)];
+        // Preserve abrupt chip transitions: never interpolate a square
+        // pulse or sawtooth reset into an invented diagonal segment.
+        var abrupt=range>0.000001&&Math.abs(b-a)>range*0.35;
+        return abrupt?(fraction<0.5?a:b):a+(b-a)*fraction;
       }
-      var lastY=sampleAt(0);
+      function yAt(position){
+        return Math.max(top,Math.min(bottom,
+          center+(valueAt(position)-mid)*gain));
+      }
+      function tile(id,col,row){
+        if(row<top||row>bottom)return;
+        blit(ctx,id,col*cellW,row*cellH,cellW,cellH);
+      }
+
       for(var col=0;col<cols;col++){
-        var masks=new Map();
-        function put(x,y){
-          if(y<bandTop||y>bandBottom)return;
-          var row=Math.floor(y/8),inside=y%8;
-          var bits=masks.get(row);
-          if(!bits){bits=new Uint8Array(8);masks.set(row,bits);}
-          bits[inside]|=(128>>(x&7));
+        var from=col*(count-1)/cols;
+        var to=(col+1)*(count-1)/cols;
+        var y0=yAt(from),y1=yAt(to),delta=y1-y0;
+        // A true abrupt discontinuity is a large SINGLE sample jump.
+        // A steep continuous triangle is not classified as a pulse step.
+        var aIndex=Math.max(0,Math.floor(from));
+        var bIndex=Math.min(count-1,Math.ceil(to));
+        var largestJump=0;
+        for(var j=aIndex+1;j<=bIndex;j++){
+          var jump=Math.abs(samples[j]-samples[j-1]);
+          if(jump>largestJump)largestJump=jump;
         }
-        for(var lx=0;lx<8;lx++){
-          var x=col*8+lx,y=sampleAt(x);
-          // Connect successive wave values in TEXT-CELL templates. Nearly
-          // flat runs become horizontal bars. Steep edges produce vertical
-          // ROM bars; triangular/sawtooth slopes use the two diagonal ROM
-          // characters (77 & 78) and neighboring graphic codes.
-          var low=Math.min(lastY,y),high=Math.max(lastY,y);
-          for(var yy=low;yy<=high;yy++)put(lx,yy);
-          lastY=y;
+        var hardEdge=range>0.000001&&largestJump>range*0.35;
+        if(hardEdge){
+          // C64 vertical character forms the rising/falling pulse edge.
+          // A real intersection joins its horizontal plateau at both ends.
+          var aRow=Math.round(y0),bRow=Math.round(y1);
+          var first=Math.min(aRow,bRow),last=Math.max(aRow,bRow);
+          for(var r=first;r<=last;r++){
+            tile((r===aRow||r===bRow)?
+              SCOPE_GLYPH.junction:SCOPE_GLYPH.vertical,col,r);
+          }
+        }else if(Math.abs(delta)<0.35){
+          // Continuous high and low plateaus use ONLY horizontal bars.
+          tile(SCOPE_GLYPH.horizontal,col,Math.round((y0+y1)/2));
+        }else{
+          // Each continuous ramp is made out of the TWO real PETSCII
+          // diagonals. Multiple rows in a steep ramp are still diagonals,
+          // never random C64 letters or calculated fake character pixels.
+          var diagonal=delta<0?SCOPE_GLYPH.rising:SCOPE_GLYPH.falling;
+          var startRow=Math.round(Math.min(y0,y1));
+          var endRow=Math.round(Math.max(y0,y1));
+          if(startRow===endRow)tile(diagonal,col,startRow);
+          else for(var r=startRow;r<=endRow;r++)tile(diagonal,col,r);
         }
-        masks.forEach(function(bits,row){
-          blit(ctx,bestGlyph(bits),col*cellW,row*cellH,cellW,cellH);
-        });
       }
     }
   }
