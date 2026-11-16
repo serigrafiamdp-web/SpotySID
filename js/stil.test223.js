@@ -6,6 +6,7 @@
   var player=window.sidPlayer;
   if(!player)return;
   var stilCache=new Map(),profiles=new Map(),messages=new Map(),serial=0;
+  var publishingArtists=new Set();
   var DRAFT_PREFIX='spotysid:artist-drafts:v1:';
   var PROFILE_API='https://ricos-sid-community.serigrafiamdp.workers.dev/artist-profiles';
   var API_ROOT='https://ricos-sid-community.serigrafiamdp.workers.dev';
@@ -418,38 +419,69 @@
     return String(entry&&entry.author||player.songInfo&&player.songInfo.songAuthor||
       'Unknown artist').trim().slice(0,120);
   }
+  // TEST275: one PUBLISH/REPUBLISH stores the whole artist STIL+ profile,
+  // including every numbered TILEWORK (pixel data + reverse mode).
+  // Official HVSC STIL files are never read, rewritten or uploaded.
   async function publish(key,label){
+    if(publishingArtists.has(key))return;
     var state=profiles.get(key);
     if(!key||!state||state.loading){
-      messages.set(key,'CHECKING PROFILE');update();return;
+      messages.set(key,'CHECKING PROFILE');
+      if(player.sidInfoVisible&&currentArtistKey()===key)update();
+      return;
     }
     if(state.unavailable){
-      messages.set(key,'SERVER UPDATE REQUIRED · DRAFTS REMAIN LOCAL');
-      update();return;
+      messages.set(key,'SERVER UNAVAILABLE · TILEWORKS STILL LOCAL');
+      if(player.sidInfoVisible&&currentArtistKey()===key)update();
+      return;
     }
-    var profile=Object.assign({artistName:state.profile&&state.profile.artistName||label},readDrafts(key));
+    var profile=Object.assign(
+      {artistName:state.profile&&state.profile.artistName||label},
+      readDrafts(key)
+    );
+    var count=profile.tileworks.length;
     if(!profile.links.length&&!profile.csdb.length&&!profile.artwork.length&&
-       !profile.tileworks.length&&!Object.keys(profile.stilOverrides).length){
-      messages.set(key,'ADD INFORMATION BEFORE PUBLISHING');update();return;
+       !count&&!Object.keys(profile.stilOverrides).length){
+      messages.set(key,'ADD INFORMATION BEFORE PUBLISHING');
+      if(player.sidInfoVisible&&currentArtistKey()===key)update();
+      return;
     }
-    if(state.revision>0&&JSON.stringify(profile)===JSON.stringify(state.profile)){
-      messages.set(key,'NO CHANGES TO REPUBLISH');update();return;
+    // No publish if the remote record already equals the complete STIL+
+    // payload (including the exact TILEWORK IDs, ordering and bitmaps).
+    if(state.revision>0&&
+       JSON.stringify(profile)===JSON.stringify(
+         Object.assign({artistName:state.profile.artistName},cloneDraft(state.profile))
+       )){
+      messages.set(key,'NO CHANGES TO REPUBLISH · '+count+' TILEWORKS');
+      if(player.sidInfoVisible&&currentArtistKey()===key)update();
+      return;
     }
-    // Public writes are never attempted with a missing or unconfigured Worker.
     try{
       var capabilitiesResponse=await fetch(API_ROOT+'/capabilities',{cache:'no-store'});
       if(!capabilitiesResponse.ok)throw Error('SERVER UNAVAILABLE');
       var capabilities=await capabilitiesResponse.json();
-      if(!capabilities.artistProfiles)throw Error('SERVER UPDATE REQUIRED');
-      if(profile.tileworks.length&&!capabilities.artistTileworks)
-        throw Error('TILEWORK PUBLISH REQUIRES SERVER UPDATE');
+      if(!capabilities.artistProfiles)throw Error('STIL+ SERVER UPDATE REQUIRED');
+      if(count&&!capabilities.artistTileworks)
+        throw Error('TILEWORKS SAVED LOCAL · CLOUD UPDATE REQUIRED');
     }catch(error){
-      messages.set(key,error.message||'SERVER UPDATE REQUIRED');update();return;
+      messages.set(key,error.message||'SERVER UNAVAILABLE · DRAFT KEPT');
+      if(player.sidInfoVisible&&currentArtistKey()===key)update();
+      return;
     }
-    var beta=window.prompt('BETA KEY required to '+(state.revision?'REPUBLISH':'PUBLISH')+' artist information:');
+    var beta=window.prompt('BETA KEY required to '+
+      (state.revision?'REPUBLISH':'PUBLISH')+' STIL+ artist information:');
     if(beta===null)return;
-    if(!beta){messages.set(key,'BETA KEY REQUIRED');update();return;}
-    messages.set(key,'PUBLISHING');update();
+    if(!beta){
+      messages.set(key,'BETA KEY REQUIRED');
+      if(player.sidInfoVisible&&currentArtistKey()===key)update();
+      return;
+    }
+    publishingArtists.add(key);
+    // Preserve edits occurring while the network requests are in flight.
+    var draftBefore=null;
+    try{draftBefore=localStorage.getItem(DRAFT_PREFIX+key);}catch(error){}
+    messages.set(key,'PUBLISHING STIL+ · '+count+' TILEWORKS');
+    if(player.sidInfoVisible&&currentArtistKey()===key)update();
     try{
       var response=await fetch(PROFILE_API,{
         method:state.revision?'PUT':'POST',
@@ -458,23 +490,47 @@
           key:key,expectedRevision:state.revision,profile:profile})
       });
       if(!response.ok){
-        var err=await response.json().catch(function(){return {};});
-        throw Error(err.error||'PUBLISH FAILED ('+response.status+')');
+        var problem=await response.text();
+        var reason='';
+        try{reason=JSON.parse(problem).error||'';}catch(error){
+          reason=problem.slice(0,90);
+        }
+        throw Error(reason||'PUBLISH FAILED ('+response.status+')');
       }
       var receipt=await response.json();
-      if(receipt.format!=='ricos-artist-profile-receipt')throw Error('SAVE NOT VERIFIED');
-      var check=await fetch(PROFILE_API+'?key='+encodeURIComponent(key),{cache:'no-store'});
-      if(!check.ok)throw Error('SAVE NOT VERIFIED');
+      if(!receipt||receipt.format!=='ricos-artist-profile-receipt'||
+         !Number.isSafeInteger(receipt.revision))
+        throw Error('SERVER SAVE NOT VERIFIED · DRAFT KEPT');
+      var check=await fetch(PROFILE_API+'?key='+encodeURIComponent(key),
+        {cache:'no-store'});
+      if(!check.ok)throw Error('READBACK FAILED · DRAFT KEPT');
       var confirmed=await check.json();
-      if(confirmed.revision!==receipt.revision||
-         JSON.stringify(confirmed.profile)!==JSON.stringify(profile))
-        throw Error('SAVE NOT VERIFIED; KEEP YOUR LOCAL DRAFT');
-      profiles.set(key,{loading:false,revision:confirmed.revision,profile:confirmed.profile});
-      try{localStorage.removeItem(DRAFT_PREFIX+key);}catch(error){}
-      messages.set(key,state.revision?'REPUBLISHED · VERIFIED':'PUBLISHED · VERIFIED');
-      if(player.sidInfoVisible&&currentArtistKey()===key)update();
+      // Match the canonical server payload field-by-field after its sanitizer.
+      // This confirms every TILEWORK bitmap, id, label and reverse flag.
+      var verifiedProfile=Object.assign(
+        {artistName:confirmed.profile&&confirmed.profile.artistName},
+        cloneDraft(confirmed.profile)
+      );
+      if(confirmed.format!=='ricos-artist-profile'||confirmed.key!==key||
+         confirmed.revision!==receipt.revision||
+         JSON.stringify(verifiedProfile)!==JSON.stringify(profile))
+        throw Error('SERVER DATA MISMATCH · DRAFT KEPT');
+      profiles.set(key,{loading:false,revision:confirmed.revision,
+        profile:confirmed.profile});
+      // Removing an old draft would erase artwork saved while the request
+      // was pending. Clear it ONLY if it has not changed in the meantime.
+      var draftAfter=null;
+      try{draftAfter=localStorage.getItem(DRAFT_PREFIX+key);}catch(error){}
+      if(draftAfter===draftBefore){
+        try{localStorage.removeItem(DRAFT_PREFIX+key);}catch(error){}
+      }
+      messages.set(key,(state.revision?'REPUBLISHED':'PUBLISHED')+
+        ' · VERIFIED · '+count+' TILEWORKS');
     }catch(error){
-      messages.set(key,error.message||'PUBLISH FAILED · LOCAL DRAFT PRESERVED');
+      messages.set(key,error.message||
+        'PUBLISH FAILED · TILEWORKS PRESERVED LOCAL');
+    }finally{
+      publishingArtists.delete(key);
       if(player.sidInfoVisible&&currentArtistKey()===key)update();
     }
   }
@@ -484,7 +540,7 @@
     var button=el('button','rico-show-publish-button',
       state&&state.revision>0?'REPUBLISH':'PUBLISH');
     button.type='button';
-    button.disabled=!key||!!(state&&state.loading);
+    button.disabled=!key||publishingArtists.has(key)||!!(state&&state.loading);
     button.addEventListener('click',function(){publish(key,label);});
     section.appendChild(button);
     var status=el('div','rico-show-publish-status',
