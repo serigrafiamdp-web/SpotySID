@@ -315,12 +315,20 @@
     });
     section.appendChild(list);
     if(kind==='artwork'){
-      // TEST272: list this artist's TILEWORK 1, 2, 3… in STIL+.
-      // Viewers will be built separately; for now this is a compact title list.
+      // TEST273: each saved artist TILEWORK is a compact re-openable
+      // link in STIL+, not just a label. Future viewers remain separate.
       var tileList=el('div','rico-stil-tilework-list');
       readDrafts(key).tileworks.forEach(function(work){
-        var row=el('div','rico-stil-tilework-row',work.label);
-        tileList.appendChild(row);
+        var link=el('button','rico-stil-tilework-link',work.label);
+        link.type='button';
+        link.setAttribute('aria-label','Edit '+work.label);
+        link.addEventListener('click',function(){
+          if(!window.RicoTileArtwork||!window.RicoStilPlusTileworks)return;
+          var context=window.RicoStilPlusTileworks.capture();
+          if(context&&context.key===key)
+            window.RicoTileArtwork.open(context,work);
+        });
+        tileList.appendChild(link);
       });
       section.appendChild(tileList);
       var createTile=el('button','rico-show-add','CREATE TILE ARTWORK');
