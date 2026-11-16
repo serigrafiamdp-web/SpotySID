@@ -3315,16 +3315,18 @@ html[data-rico-lcd="2tone"] :is(
      ) {
   color:var(--rico-theme-bg) !important;
 }
-/* TEST290 — LCD selected rows invert their text; buttons must share that
-   inverted surface rather than the default light button fill. */
-html[data-rico-lcd="2tone"] #ricoCommunityItems .rico-community-row.rico-community-selected button {
-  background-color:var(--rico-theme-fg) !important;
-  color:var(--rico-theme-bg) !important;
-  border-color:var(--rico-theme-bg) !important;
+/* TEST291 — LCD 2-tone: the inverted row comes from :hover,
+   :focus-visible OR .rico-community-selected. Previous CSS handled only
+   the selected class, so hovering a row made button ink disappear against
+   the light generic button background. Keep nested controls on the same
+   inverted surface as their parent; invert only the button under the cursor. */
+html[data-rico-lcd="2tone"] #ricoCommunityItems .rico-community-row:is(:hover,:focus-visible,.rico-community-selected) button {
+  background:transparent !important;
+  color:inherit !important;
+  border-color:currentColor !important;
 }
-html[data-rico-lcd="2tone"] #ricoCommunityItems .rico-community-row.rico-community-selected button:hover:not(:disabled),
-html[data-rico-lcd="2tone"] #ricoCommunityItems .rico-community-row.rico-community-selected button:focus-visible:not(:disabled) {
-  background-color:var(--rico-theme-bg) !important;
+html[data-rico-lcd="2tone"] #ricoCommunityItems .rico-community-row:is(:hover,:focus-visible,.rico-community-selected) button:is(:hover,:focus-visible):not(:disabled) {
+  background:var(--rico-theme-bg) !important;
   color:var(--rico-theme-fg) !important;
   border-color:var(--rico-theme-bg) !important;
 }
