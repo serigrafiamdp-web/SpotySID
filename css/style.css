@@ -3401,3 +3401,19 @@ html[data-rico-petscii="on"] :is(
 }
 /* No modal dimming (TEST279) and no PETSCII overlay on any other color. */
 html:not([data-rico-petscii="on"]) .rico-petscii-label {display:none !important;}
+
+
+/* TEST282 FIX1 — PETSCII canvas labels must replace, not overlap, theme
+   colored text; retain the existing absolute positioning of dialog titles. */
+html[data-rico-petscii="on"] :is(
+  #sidControls,#ricoLivePlaylistHeader,#ricoRemixBar,#ricoHelpDialog,
+  #ricoCommunityTabs,#ricoCommunityItems,#chooseSidDialog,
+  .rico-beta-dialog,#sidInfoContent,.dialog
+) .rico-petscii-labeled,
+html[data-rico-petscii="on"] .dialog .title > div:first-child.rico-petscii-labeled {
+  color:transparent !important;
+  text-shadow:none !important;
+}
+html[data-rico-petscii="on"] .dialog .title > div:first-child.rico-petscii-labeled {
+  position:absolute !important;
+}
