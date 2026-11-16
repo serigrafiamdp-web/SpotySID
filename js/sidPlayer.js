@@ -27,7 +27,10 @@ var SidPlayer = function() {
     // TEST278: reflective LCD like an early handheld calculator / Game & Watch.
     // Dark liquid-crystal segments on a muted grey-green glass background.
     // Shared CSS variables recolor the oscilloscope, windows, menus and TILEWORK.
-    { name: 'Game & Watch LCD', line: '#3D4A3A', fill: '#3D4A3A', background: '#9EAF87' }
+    { name: 'Game & Watch LCD', line: '#3D4A3A', fill: '#3D4A3A', background: '#9EAF87' },
+    // TEST282 — full PETSCII render mode; the real 512-glyph ROM selects
+    // character tiles for the oscilloscope and for short UI labels.
+    { name: 'PETSCII C64', line: '#a6a6ff', fill: '#a6a6ff', background: '#3836a6' }
   ];
   // TEST24: choose a fresh theme on every opening (no persistent preference).
   this.colorModeIndex = Math.floor(Math.random() * this.colorModes.length);
@@ -2083,6 +2086,9 @@ SidPlayer.prototype = {
     // TEST280: this palette alone uses exactly TWO colors everywhere.
     // No mixed-color panels or translucent fills, including oscilloscope waves.
     var lcdTwoTone = palette.name === 'Game & Watch LCD';
+    var petsciiMode = palette.name === 'PETSCII C64';
+    if(petsciiMode)root.setAttribute('data-rico-petscii','on');
+    else root.removeAttribute('data-rico-petscii');
     if(lcdTwoTone){
       root.setAttribute('data-rico-lcd','2tone');
       root.style.setProperty('--rico-theme-panel', palette.background);
