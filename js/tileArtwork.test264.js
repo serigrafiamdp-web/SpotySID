@@ -123,7 +123,7 @@
     // not the source bitmap, so mouse-left still paints and right still erases.
     pictureCtx.fillStyle=reverseMode?themeColor():themeBackground();
     pictureCtx.fillRect(0,0,WIDTH,HEIGHT);
-    pictureCtx.fillStyle=reverseMode?themeBackground():themeColor();
+    pictureCtx.fillStyle=reverseMode?'#000000':themeColor();
     for(var y=0;y<HEIGHT;y++){
       for(var x=0;x<WIDTH;x++)if(pixels[y*WIDTH+x])
         pictureCtx.fillRect(x,y,1,1);
@@ -140,7 +140,7 @@
     var w=WIDTH*scale,h=HEIGHT*scale;
     grid.width=w;grid.height=h;
     gridCtx.clearRect(0,0,w,h);
-    gridCtx.fillStyle=reverseMode?themeBackground():themeColor();
+    gridCtx.fillStyle=reverseMode?'#000000':themeColor();
     // Each one-pixel cell is visible; the 8×8 C64 character grid is stronger.
     for(var x=1;x<WIDTH;x++){
       gridCtx.globalAlpha=x%8===0?0.24:0.07;
@@ -162,7 +162,7 @@
     var box=normalizedSelection();
     if(!gridCtx||!box)return;
     gridCtx.save();
-    gridCtx.strokeStyle=reverseMode?themeBackground():themeColor();
+    gridCtx.strokeStyle=reverseMode?'#000000':themeColor();
     gridCtx.lineWidth=1;gridCtx.globalAlpha=0.95;
     gridCtx.setLineDash([4,3]);
     gridCtx.strokeRect(box.x1*scale+0.5,box.y1*scale+0.5,
