@@ -3175,8 +3175,24 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
 }
 #sidInfoContent .rico-stil-tilework-list:empty {display:none;}
 #sidInfoContent .rico-stil-tilework-row {
+  display:flex;align-items:center;justify-content:flex-start;
+  gap:6px;min-width:0;
   color:var(--rico-theme-fg,#fff);
-  padding:2px 0;letter-spacing:0;overflow-wrap:anywhere;
+  padding:1px 0;letter-spacing:0;overflow-wrap:anywhere;
+}
+/* TEST274: compact per-artwork X, using the active SpotySid palette. */
+#sidInfoContent .rico-stil-tilework-row button.rico-stil-tilework-remove {
+  flex:0 0 16px;width:16px;height:16px;min-height:16px;
+  padding:0 !important;margin:0 !important;
+  border:1px solid var(--rico-theme-border,#777) !important;
+  border-radius:0 !important;
+  background:var(--rico-theme-bg,#000) !important;
+  color:var(--rico-theme-fg,#fff) !important;
+  font:11px/13px Tahoma,Arial,Verdana,sans-serif !important;
+  text-align:center;cursor:pointer;
+}
+#sidInfoContent .rico-stil-tilework-row button.rico-stil-tilework-remove:hover {
+  background:var(--rico-theme-hover,#333) !important;
 }
 /* TEST273: link-shaped buttons reopen artwork in the same editor.
    No new viewer, no native browser navigation. */
