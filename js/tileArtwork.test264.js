@@ -6,8 +6,9 @@
   var WIDTH=256,HEIGHT=64,LENGTH=WIDTH*HEIGHT;
   var pixels=new Uint8Array(LENGTH),undoStack=[],MAX_UNDO=30;
   var activeTool='pencil',drawing=false,lastPoint=null;
-  var overlay=null,surface=null,stage=null,picture=null,grid=null,toolbar=null;
+  var overlay=null,panel=null,head=null,surface=null,stage=null,picture=null,grid=null,toolbar=null;
   var pictureCtx=null,gridCtx=null,scale=4;
+  var dragState=null,dragX=0,dragY=0;
 
   function themeColor(){
     var css=getComputedStyle(document.documentElement);
@@ -138,21 +139,59 @@
     pixels=undoStack.pop();paint();syncUndo();
   }
   function close(){
-    drawing=false;lastPoint=null;
+    drawing=false;lastPoint=null;dragState=null;
     if(overlay)overlay.hidden=true;
+  }
+  function movePanel(event){
+    if(!dragState||event.pointerId!==dragState.id)return;
+    event.preventDefault();
+    // Keep the window within the viewport without moving the canvas itself.
+    var dx=event.clientX-dragState.x,dy=event.clientY-dragState.y;
+    var margin=4;
+    dx=Math.max(margin-dragState.left,
+      Math.min(window.innerWidth-margin-dragState.right,dx));
+    dy=Math.max(margin-dragState.top,
+      Math.min(window.innerHeight-margin-dragState.bottom,dy));
+    dragX=dragState.offsetX+dx;
+    dragY=dragState.offsetY+dy;
+    panel.style.transform='translate('+dragX+'px,'+dragY+'px)';
+  }
+  function endPanelDrag(event){
+    if(!dragState||event.pointerId!==dragState.id)return;
+    dragState=null;
+    if(head.hasPointerCapture&&head.hasPointerCapture(event.pointerId))
+      head.releasePointerCapture(event.pointerId);
+  }
+  function centerPanel(){
+    dragX=0;dragY=0;
+    if(panel)panel.style.transform='translate(0px,0px)';
   }
   function create(){
     overlay=document.createElement('div');
     overlay.id='ricoTileArtworkOverlay';
     overlay.className='rico-tile-overlay';
     overlay.hidden=true;
-    var panel=document.createElement('div');panel.className='rico-tile-panel';
+    panel=document.createElement('div');panel.className='rico-tile-panel';
     panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','false');
     panel.setAttribute('aria-label','CREATE TILE ARTWORK');
-    var head=document.createElement('div');head.className='rico-tile-head';
+    head=document.createElement('div');head.className='rico-tile-head';
     var title=document.createElement('strong');title.textContent='CREATE TILE ARTWORK';
     var closeButton=button('×',close);closeButton.setAttribute('aria-label','Close artwork editor');
     head.appendChild(title);head.appendChild(closeButton);
+    // TEST266: drag the title bar, excluding the X, without covering the
+    // player or modifying the artwork's 256×64 source pixels.
+    head.addEventListener('pointerdown',function(event){
+      if(event.button!==0||event.target.closest('button'))return;
+      var rect=panel.getBoundingClientRect();
+      dragState={id:event.pointerId,x:event.clientX,y:event.clientY,
+        left:rect.left,right:rect.right,top:rect.top,bottom:rect.bottom,
+        offsetX:dragX,offsetY:dragY};
+      if(head.setPointerCapture)head.setPointerCapture(event.pointerId);
+      event.preventDefault();
+    });
+    head.addEventListener('pointermove',movePanel);
+    head.addEventListener('pointerup',endPanelDrag);
+    head.addEventListener('pointercancel',endPanelDrag);
     toolbar=document.createElement('div');toolbar.className='rico-tile-tools';
     ['pencil','eraser','fill'].forEach(function(tool){
       var b=button(tool.toUpperCase(),function(){selectTool(tool);});
@@ -180,7 +219,23 @@
     picture.addEventListener('pointermove',pointerMove);
     picture.addEventListener('pointerup',pointerEnd);
     picture.addEventListener('pointercancel',pointerEnd);
-    window.addEventListener('resize',function(){if(!overlay.hidden)resizeCanvas();});
+    window.addEventListener('resize',function(){
+      if(!overlay.hidden){centerPanel();resizeCanvas();}
+    });
+    // Palette changes update --rico-theme-fg on the root element.
+    // Canvas pixels and grid are not CSS-colored, so redraw both when it
+    // changes; existing 1-bit artwork data and undo history stay intact.
+    var lastThemeColor=themeColor();
+    var themeObserver=new MutationObserver(function(){
+      if(!overlay||overlay.hidden)return;
+      var next=themeColor();
+      if(next===lastThemeColor)return;
+      lastThemeColor=next;
+      drawGrid();paint();
+    });
+    themeObserver.observe(document.documentElement,{
+      attributes:true,attributeFilter:['style']
+    });
     document.addEventListener('keydown',function(event){
       if(!overlay||overlay.hidden||!panel.contains(document.activeElement))return;
       if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){
@@ -197,6 +252,7 @@
       if(window.sidPlayer&&typeof window.sidPlayer.showSIDInfo==='function')
         window.sidPlayer.showSIDInfo(false);
       overlay.hidden=false;
+      centerPanel();
       resizeCanvas();
     }
   };
