@@ -3088,7 +3088,7 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
   /* TEST265: modeless floating editor; oscilloscope stays visible and the
      undimmed player remains fully clickable outside the editor. */
   position:fixed;inset:0;z-index:999999;
-  display:flex;align-items:flex-end;justify-content:center;
+  display:flex;align-items:center;justify-content:center;
   box-sizing:border-box;padding:12px;
   background:transparent;
   pointer-events:none;
@@ -3106,7 +3106,11 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
 #ricoTileArtworkOverlay .rico-tile-tools {
   display:flex;align-items:center;gap:5px;flex-wrap:wrap;
 }
-#ricoTileArtworkOverlay .rico-tile-head {justify-content:space-between;margin-bottom:8px;}
+#ricoTileArtworkOverlay .rico-tile-head {
+  justify-content:space-between;margin-bottom:8px;
+  cursor:move;touch-action:none;user-select:none;
+}
+#ricoTileArtworkOverlay .rico-tile-head button {cursor:pointer;}
 #ricoTileArtworkOverlay .rico-tile-head strong {font-size:11px;font-weight:bold;letter-spacing:.2px;}
 #ricoTileArtworkOverlay button {
   font:11px Tahoma,Arial,sans-serif !important;cursor:pointer;
