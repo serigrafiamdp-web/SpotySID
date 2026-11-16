@@ -8,6 +8,7 @@
   var activeTool='pencil',drawing=false,lastPoint=null,strokeValue=1;
   var reverseMode=false;
   var selection=null,selectionAnchor=null;
+  var artistContext=null,savedWorkId=null,confirmBox=null,saveNote=null;
   var overlay=null,panel=null,surface=null,stage=null,picture=null,grid=null,toolbar=null;
   // The reference view (4x native pixels) is the MINIMUM zoom. 500% = 20x.
   var pictureCtx=null,gridCtx=null,baseScale=4,scale=4,manualScale=null;
@@ -74,6 +75,11 @@
       '.....##.....','.....##.....','....####....','....####....',
       '############','.##########.','..########..','...######...',
       '...######...','..###..###..','.##......##.','............'
+    ],
+    save:[
+      '.##########.','.#........#.','.#.######.#.','.#.######.#.',
+      '.#.######.#.','.#........#.','.#.######.#.','.#.######.#.',
+      '.#.#....#.#.','.#.#....#.#.','.#.######.#.','.##########.'
     ]
   };
   function iconFor(tool){
@@ -280,9 +286,45 @@
     if(!undoStack.length)return;
     pixels=undoStack.pop();paint();syncUndo();
   }
+  function note(message){
+    if(!saveNote)return;
+    saveNote.textContent=message;saveNote.hidden=!message;
+  }
+  function packArtwork(){
+    var packed=new Uint8Array(LENGTH/8);
+    for(var i=0;i<LENGTH;i++)if(pixels[i])
+      packed[i>>3]|=(128>>(i&7));
+    var binary='';
+    for(var j=0;j<packed.length;j++)binary+=String.fromCharCode(packed[j]);
+    return btoa(binary);
+  }
+  function saveArtwork(){
+    if(!artistContext||!window.RicoStilPlusTileworks){
+      note('ARTIST UNAVAILABLE');return false;
+    }
+    try{
+      var result=window.RicoStilPlusTileworks.save(artistContext,{
+        id:savedWorkId,bits:packArtwork(),reverse:reverseMode
+      });
+      if(!result||!result.ok){
+        note(result&&result.message||'SAVE FAILED');return false;
+      }
+      savedWorkId=result.id;
+      note(result.label+' · SAVED LOCAL');
+      return true;
+    }catch(error){
+      console.warn('STIL+ TILEWORK save failed:',error);
+      note('SAVE FAILED');return false;
+    }
+  }
   function close(){
     drawing=false;lastPoint=null;dragState=null;
+    if(confirmBox)confirmBox.hidden=true;
     if(overlay)overlay.hidden=true;
+  }
+  function confirmClose(){
+    if(!confirmBox)return;
+    confirmBox.hidden=false;
   }
   function movePanel(event){
     if(!dragState||event.pointerId!==dragState.id)return;
@@ -348,7 +390,12 @@
     var undoButton=toolButton('undo','UNDO',undo);
     undoButton.dataset.ricoTileUndo='true';
     toolbar.appendChild(undoButton);
-    var closeButton=toolButton('close','CLOSE',close);
+    // TEST272: floppy saves to the captured STIL+ ARTIST, not the
+    // currently playing SID. Repeated saves update the same TILEWORK.
+    var saveButton=toolButton('save','SAVE TILEWORK',saveArtwork);
+    saveButton.dataset.ricoTileSave='true';
+    toolbar.appendChild(saveButton);
+    var closeButton=toolButton('close','CLOSE',confirmClose);
     closeButton.dataset.ricoTileClose='true';
     toolbar.appendChild(closeButton);
     stage=document.createElement('div');stage.className='rico-tile-stage';
@@ -365,6 +412,27 @@
     var workspace=document.createElement('div');workspace.className='rico-tile-workspace';
     workspace.appendChild(toolbar);workspace.appendChild(stage);
     panel.appendChild(workspace);
+    saveNote=document.createElement('div');
+    saveNote.className='rico-tile-save-note';
+    saveNote.setAttribute('aria-live','polite');saveNote.hidden=true;
+    panel.appendChild(saveNote);
+    // Only two actions, matching the user's minimal exit dialog.
+    confirmBox=document.createElement('div');
+    confirmBox.className='rico-tile-exit-confirm';confirmBox.hidden=true;
+    confirmBox.setAttribute('role','alertdialog');
+    confirmBox.setAttribute('aria-label','SAVE BEFORE EXIT?');
+    var confirmTitle=document.createElement('div');
+    confirmTitle.className='rico-tile-exit-title';
+    confirmTitle.textContent='SAVE BEFORE EXIT?';
+    var confirmButtons=document.createElement('div');
+    confirmButtons.className='rico-tile-exit-actions';
+    var exitSave=button('EXIT & SAVE',function(){
+      if(saveArtwork())close();
+    });
+    var exitOnly=button('EXIT ONLY',close);
+    confirmButtons.appendChild(exitSave);confirmButtons.appendChild(exitOnly);
+    confirmBox.appendChild(confirmTitle);confirmBox.appendChild(confirmButtons);
+    panel.appendChild(confirmBox);
     overlay.appendChild(panel);document.body.appendChild(overlay);
     picture.addEventListener('pointerdown',pointerDown);
     picture.addEventListener('pointermove',pointerMove);
@@ -402,16 +470,27 @@
   // Outside the web page / browser chrome, the OS still controls its menus.
   document.addEventListener('contextmenu',function(event){event.preventDefault();},true);
   window.RicoTileArtwork={
-    open:function(){
+    open:function(context){
       if(!overlay)create();
-      // TEST265: close the STIL sidebar, but keep the editor independent of
-      // playback and fully modeless. It is only closed with its X button.
+      // TEST272: bind once at opening; changing SID/artist while the
+      // editor is open does NOT retarget the saved artwork.
+      if(!overlay.hidden)return;
+      artistContext=context&&typeof context.key==='string'?{
+        key:context.key,artist:context.artist||''
+      }:null;
+      savedWorkId=null;pixels.fill(0);undoStack.length=0;
+      selection=null;selectionAnchor=null;drawing=false;lastPoint=null;
+      reverseMode=false;
+      if(toolbar){
+        var star=toolbar.querySelector('[data-rico-tile-reverse]');
+        if(star)star.setAttribute('aria-pressed','false');
+      }
+      if(confirmBox)confirmBox.hidden=true;
+      note('');syncUndo();
       if(window.sidPlayer&&typeof window.sidPlayer.showSIDInfo==='function')
         window.sidPlayer.showSIDInfo(false);
-      overlay.hidden=false;
-      manualScale=null;
-      centerPanel();
-      resizeCanvas();
+      overlay.hidden=false;manualScale=null;
+      centerPanel();resizeCanvas();
       stage.scrollLeft=0;stage.scrollTop=0;
     }
   };
