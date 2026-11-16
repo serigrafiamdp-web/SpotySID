@@ -65,7 +65,7 @@
     vertical:93,        // centered two-column vertical bar
     rising:78,          // / rising on screen (toward the upper rows)
     falling:77,         // \ falling on screen (toward the lower rows)
-    junction:91         // authentic vertical/horizontal intersection
+    // TEST286: no cross/corner tiles; their extra arms created ghost lines
   });
   function paintPetscii(){
     var cv=player.canvas,ctx=player.context;
@@ -88,7 +88,9 @@
 
     var channels=player.sidHasSamples?4:3;
     var bufferSize=882*2;
-    var count=Math.floor(bufferSize/2.8);
+    // TEST286: fewer audio samples per screen lets whole PETSCII glyphs
+    // describe clean ramps and plateaus rather than tiny aliasing artifacts.
+    var count=Math.min(Math.floor(bufferSize/2.8),Math.max(180,cols*4));
     for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
       if(!buffer)continue;
@@ -120,6 +122,8 @@
         if(sample>max)max=sample;
       }
       var range=max-min,mid=(min+max)/2;
+      // Do not amplify tiny residual samples into a large visual mess.
+      if(range<0.00015)continue;
       var center=(top+bottom)/2;
       var heightInRows=Math.max(0,bottom-top-1);
       var gain=range>0.000001?heightInRows*0.88/range:0;
@@ -156,26 +160,26 @@
         }
         var hardEdge=range>0.000001&&largestJump>range*0.35;
         if(hardEdge){
-          // C64 vertical character forms the rising/falling pulse edge.
-          // A real intersection joins its horizontal plateau at both ends.
-          var aRow=Math.round(y0),bRow=Math.round(y1);
-          var first=Math.min(aRow,bRow),last=Math.max(aRow,bRow);
-          for(var r=first;r<=last;r++){
-            tile((r===aRow||r===bRow)?
-              SCOPE_GLYPH.junction:SCOPE_GLYPH.vertical,col,r);
+          // A pulse step / sawtooth reset is a CLEAN vertical column.
+          // Avoid PETSCII cross tiles at its ends: their side branches
+          // were visible as unwanted background noise in TEST285.
+          var first=Math.round(Math.min(y0,y1));
+          var last=Math.round(Math.max(y0,y1));
+          if(first===last){
+            tile(SCOPE_GLYPH.horizontal,col,first);
+          }else{
+            for(var r=first;r<=last;r++)
+              tile(SCOPE_GLYPH.vertical,col,r);
           }
-        }else if(Math.abs(delta)<0.35){
-          // Continuous high and low plateaus use ONLY horizontal bars.
+        }else if(Math.abs(delta)<0.65){
+          // Stable plateau: one horizontal ROM tile, no decoration.
           tile(SCOPE_GLYPH.horizontal,col,Math.round((y0+y1)/2));
         }else{
-          // Each continuous ramp is made out of the TWO real PETSCII
-          // diagonals. Multiple rows in a steep ramp are still diagonals,
-          // never random C64 letters or calculated fake character pixels.
+          // Rising/falling ramps use a SINGLE authentic PETSCII diagonal
+          // per column. Repeating it on every crossed row generated the
+          // garbled trails and spurious marks in TEST285.
           var diagonal=delta<0?SCOPE_GLYPH.rising:SCOPE_GLYPH.falling;
-          var startRow=Math.round(Math.min(y0,y1));
-          var endRow=Math.round(Math.max(y0,y1));
-          if(startRow===endRow)tile(diagonal,col,startRow);
-          else for(var r=startRow;r<=endRow;r++)tile(diagonal,col,r);
+          tile(diagonal,col,Math.round((y0+y1)/2));
         }
       }
     }
