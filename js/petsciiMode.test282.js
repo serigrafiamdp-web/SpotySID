@@ -81,7 +81,7 @@
       for(var col=0;col<cols;col++)
         blit(ctx,SCOPE_GLYPH.idle,col*cellW,row*cellH,cellW,cellH);
     }
-    for(var channel=0;channel<channels++){
+    for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
       // TEST293: use the SID's noise flag, not sample jaggedness.
       // TinySID may return a 4-bit waveform nibble or raw SID control bits.
