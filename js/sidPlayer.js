@@ -19,7 +19,11 @@ var SidPlayer = function() {
     { name: 'P1 Phosphor', line: '#b3ff83', fill: 'rgba(165,255,105,0.52)', background: '#06170a' },
     { name: 'C64 BASIC', line: '#a6a6ff', fill: 'rgba(166,166,255,0.52)', background: '#3836a6' },
     { name: 'C64 Cyan', line: '#70d7c7', fill: 'rgba(112,215,199,0.55)', background: '#24244f' },
-    { name: 'Retro Magenta', line: '#ff88d0', fill: 'rgba(255,95,183,0.5)', background: '#16091d' }
+    { name: 'Retro Magenta', line: '#ff88d0', fill: 'rgba(255,95,183,0.5)', background: '#16091d' },
+    // TEST277: Commodore vintage calculator — red LED digits over a
+    // near-black smoked display. Shared palette variables skin every dialog,
+    // menu, control, STIL+ panel and TILEWORK; existing themes are unchanged.
+    { name: 'Commodore Calculator', line: '#ff304b', fill: 'rgba(255,48,75,0.56)', background: '#10090c' }
   ];
   // TEST24: choose a fresh theme on every opening (no persistent preference).
   this.colorModeIndex = Math.floor(Math.random() * this.colorModes.length);
