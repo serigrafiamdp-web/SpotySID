@@ -319,6 +319,7 @@
       // link in STIL+, not just a label. Future viewers remain separate.
       var tileList=el('div','rico-stil-tilework-list');
       readDrafts(key).tileworks.forEach(function(work){
+        var row=el('div','rico-stil-tilework-row');
         var link=el('button','rico-stil-tilework-link',work.label);
         link.type='button';
         link.setAttribute('aria-label','Edit '+work.label);
@@ -328,7 +329,27 @@
           if(context&&context.key===key)
             window.RicoTileArtwork.open(context,work);
         });
-        tileList.appendChild(link);
+        // TEST274: a small X beside EACH saved TILEWORK, independent of
+        // the open/edit link. Remove only this local STIL+ artwork entry.
+        var remove=el('button','rico-show-remove rico-stil-tilework-remove','×');
+        remove.type='button';
+        remove.setAttribute('aria-label','Delete '+work.label);
+        remove.addEventListener('click',function(event){
+          event.stopPropagation();
+          var drafts=readDrafts(key);
+          var index=drafts.tileworks.findIndex(function(item){return item.id===work.id;});
+          if(index<0)return;
+          drafts.tileworks.splice(index,1);
+          if(!saveDrafts(key,drafts)){
+            messages.set(key,'LOCAL TILEWORK DELETE FAILED');
+            onSave();
+            return;
+          }
+          messages.set(key,'REMOVED LOCAL · '+work.label+' · PUBLISH TO SHARE');
+          onSave();
+        });
+        row.appendChild(link);row.appendChild(remove);
+        tileList.appendChild(row);
       });
       section.appendChild(tileList);
       var createTile=el('button','rico-show-add','CREATE TILE ARTWORK');
