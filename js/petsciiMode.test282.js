@@ -75,6 +75,12 @@
     // TEST286: fewer audio samples per screen lets whole PETSCII glyphs
     // describe clean ramps and plateaus rather than tiny aliasing artifacts.
     var count=Math.min(Math.floor(bufferSize/2.8),Math.max(180,cols*4));
+    // TEST299: LFT / reSIDfp supplies independent live voice traces and
+    // control registers. TinySID getWave() is stale while LFT is active.
+    var lft=window.RicoLftMode;
+    var lftActive=!!(lft&&typeof lft.active==='function'&&lft.active());
+    var lftRegs=lftActive&&typeof lft.scopeRegisters==='function'
+      ?lft.scopeRegisters():null;
     // TEST294: keep a one-ROM-pixel baseline in channels with no output.
     function drawIdleLine(top,bottom){
       var row=Math.round((top+bottom)/2);
@@ -83,10 +89,14 @@
     }
     for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
-      // TEST293: use the SID's noise flag, not sample jaggedness.
-      // TinySID may return a 4-bit waveform nibble or raw SID control bits.
-      var wave=channel<3&&typeof SID.getWave==='function'?SID.getWave(channel):0;
-      var noiseWave=Number.isFinite(wave)&&
+      // TEST299: take wave/noise flags from the same engine feeding the
+      // scope samples; do not mistake TinySID's old silent state for LFT.
+      var wave=channel>=3?0:
+        (lftActive
+          ? (lftRegs&&lftRegs.length>channel*7+4
+            ? lftRegs[channel*7+4]:null)
+          : (typeof SID.getWave==='function'?SID.getWave(channel):null));
+      var noiseWave=channel<3&&Number.isFinite(wave)&&
         (wave<=15?(wave&8)!==0:(wave&0x80)!==0);
       var top=Math.floor(channel*rows/channels);
       var bottom=Math.floor((channel+1)*rows/channels)-1;
@@ -134,7 +144,10 @@
       var maxDeviation=heightInRows*0.24;
       // A silent voice (or an isolated spike without sustained amplitude)
       // uses only the one-pixel C64 horizontal glyph.
-      var inactive=!player.isPlaying||(channel<3&&wave===0);
+      // Do not gate LFT on TinySID state. Its audio trace already tells
+      // whether the channel has audible waveform activity.
+      var inactive=!player.isPlaying||
+        (channel<3&&!lftActive&&wave===0);
       if(inactive||range<0.00015||range*gain<2.75){
         drawIdleLine(top,bottom);
         continue;
