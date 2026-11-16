@@ -27,7 +27,7 @@ var SidPlayer = function() {
     // TEST278: reflective LCD like an early handheld calculator / Game & Watch.
     // Dark liquid-crystal segments on a muted grey-green glass background.
     // Shared CSS variables recolor the oscilloscope, windows, menus and TILEWORK.
-    { name: 'Game & Watch LCD', line: '#3D4A3A', fill: '#3D4A3A', background: '#A8B39A' }
+    { name: 'Game & Watch LCD', line: '#3D4A3A', fill: '#3D4A3A', background: '#9EAF87' }
   ];
   // TEST24: choose a fresh theme on every opening (no persistent preference).
   this.colorModeIndex = Math.floor(Math.random() * this.colorModes.length);
