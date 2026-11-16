@@ -73,7 +73,8 @@
   }
   function toolButton(tool,label,action){
     var b=button('',action);
-    b.className='rico-tile-icon-button';b.title=label;
+    b.className='rico-tile-icon-button';
+    // Names stay accessible without the browser's native white hover tooltip.
     b.setAttribute('aria-label',label);
     b.appendChild(iconFor(tool));
     return b;
