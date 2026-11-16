@@ -152,8 +152,13 @@
   }
   function resizeCanvas(){
     if(!stage||!surface)return;
-    var available=Math.max(256,stage.clientWidth-2);
-    scale=Math.max(1,Math.min(4,Math.floor(available/WIDTH)));
+    // TEST268: four C64 pixels of BLACK breathing room on every side
+    // (16 physical screen pixels at 4× zoom). Padding is outside the
+    // actual 256×64 artwork; no canvas pixels or proportions are changed.
+    var marginPixels=4;
+    var available=Math.max(1,stage.clientWidth-2);
+    scale=Math.max(1,Math.min(4,Math.floor(available/(WIDTH+marginPixels*2))));
+    stage.style.padding=(scale*marginPixels)+'px';
     var w=WIDTH*scale,h=HEIGHT*scale;
     surface.style.width=w+'px';surface.style.height=h+'px';
     picture.style.width=w+'px';picture.style.height=h+'px';
