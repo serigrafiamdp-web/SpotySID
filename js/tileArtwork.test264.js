@@ -5,10 +5,12 @@
   if(window.RicoTileArtwork)return;
   var WIDTH=256,HEIGHT=64,LENGTH=WIDTH*HEIGHT;
   var pixels=new Uint8Array(LENGTH),undoStack=[],MAX_UNDO=30;
-  var activeTool='pencil',drawing=false,lastPoint=null;
+  var activeTool='pencil',drawing=false,lastPoint=null,strokeValue=1;
+  var reverseMode=false;
   var selection=null,selectionAnchor=null;
   var overlay=null,panel=null,surface=null,stage=null,picture=null,grid=null,toolbar=null;
-  var pictureCtx=null,gridCtx=null,scale=4,manualScale=null;
+  // The reference view (4x native pixels) is the MINIMUM zoom. 500% = 20x.
+  var pictureCtx=null,gridCtx=null,baseScale=4,scale=4,manualScale=null;
   var dragState=null,dragX=0,dragY=0;
 
   function themeColor(){
@@ -60,6 +62,11 @@
       '##........##','.##......##.','..##....##..','...##..##...',
       '....####....','.....##.....','.....##.....','....####....',
       '...##..##...','..##....##..','.##......##.','##........##'
+    ],
+    star:[
+      '.....##.....','.....##.....','....####....','....####....',
+      '############','.##########.','..########..','...######...',
+      '...######...','..###..###..','.##......##.','............'
     ]
   };
   function iconFor(tool){
@@ -105,20 +112,28 @@
   }
   function paint(){
     if(!pictureCtx)return;
-    pictureCtx.fillStyle='#000000';
+    // Logical bit 0 = background, bit 1 = ink. Star reverses their colors,
+    // not the source bitmap, so mouse-left still paints and right still erases.
+    pictureCtx.fillStyle=reverseMode?themeColor():'#000000';
     pictureCtx.fillRect(0,0,WIDTH,HEIGHT);
-    pictureCtx.fillStyle=themeColor();
+    pictureCtx.fillStyle=reverseMode?'#000000':themeColor();
     for(var y=0;y<HEIGHT;y++){
       for(var x=0;x<WIDTH;x++)if(pixels[y*WIDTH+x])
         pictureCtx.fillRect(x,y,1,1);
     }
+  }
+  function toggleReverseMode(){
+    reverseMode=!reverseMode;
+    var control=toolbar&&toolbar.querySelector('[data-rico-tile-reverse]');
+    if(control)control.setAttribute('aria-pressed',String(reverseMode));
+    drawGrid();paint();
   }
   function drawGrid(){
     if(!gridCtx)return;
     var w=WIDTH*scale,h=HEIGHT*scale;
     grid.width=w;grid.height=h;
     gridCtx.clearRect(0,0,w,h);
-    gridCtx.fillStyle=themeColor();
+    gridCtx.fillStyle=reverseMode?'#000000':themeColor();
     // Each one-pixel cell is visible; the 8×8 C64 character grid is stronger.
     for(var x=1;x<WIDTH;x++){
       gridCtx.globalAlpha=x%8===0?0.24:0.07;
@@ -140,7 +155,7 @@
     var box=normalizedSelection();
     if(!gridCtx||!box)return;
     gridCtx.save();
-    gridCtx.strokeStyle=themeColor();
+    gridCtx.strokeStyle=reverseMode?'#000000':themeColor();
     gridCtx.lineWidth=1;gridCtx.globalAlpha=0.95;
     gridCtx.setLineDash([4,3]);
     gridCtx.strokeRect(box.x1*scale+0.5,box.y1*scale+0.5,
@@ -157,13 +172,9 @@
   }
   function resizeCanvas(){
     if(!stage||!surface)return;
-    // TEST269: 4 SCREEN pixels of black space between the artwork and
-    // the single colored frame, independent of the zoom scale.
-    // 256×64 source pixels always remain untouched and square.
-    var available=Math.max(1,stage.clientWidth-8);
-    scale=manualScale===null
-      ?Math.max(1,Math.min(4,Math.floor(available/WIDTH)))
-      :manualScale;
+    // TEST270: fixed-size editor viewport; only its CONTENT zooms.
+    // 4× = user's minimum reference; 20× = 500% of that reference.
+    scale=manualScale===null?baseScale:manualScale;
     var w=WIDTH*scale,h=HEIGHT*scale;
     surface.style.width=w+'px';surface.style.height=h+'px';
     picture.style.width=w+'px';picture.style.height=h+'px';
@@ -175,7 +186,7 @@
     event.preventDefault();
     event.stopPropagation();
     if(event.deltaY===0)return;
-    var next=Math.max(1,Math.min(8,scale+(event.deltaY<0?1:-1)));
+    var next=Math.max(baseScale,Math.min(baseScale*5,scale+(event.deltaY<0?1:-1)));
     if(next===scale)return;
     // Keep the artwork pixel under the pointer in roughly the same place.
     var before=picture.getBoundingClientRect();
@@ -195,7 +206,7 @@
       y:Math.max(0,Math.min(HEIGHT-1,y))};
   }
   function putPixel(x,y){
-    pixels[y*WIDTH+x]=activeTool==='eraser'?0:1;
+    pixels[y*WIDTH+x]=strokeValue;
   }
   function drawLine(from,to){
     var x=from.x,y=from.y,dx=Math.abs(to.x-x),dy=Math.abs(to.y-y);
@@ -208,8 +219,8 @@
       if(twice<dx){err+=dx;y+=sy;}
     }
   }
-  function fillAt(x,y){
-    var start=y*WIDTH+x,source=pixels[start],target=1;
+  function fillAt(x,y,target){
+    var start=y*WIDTH+x,source=pixels[start];
     if(source===target)return false;
     pushUndo();
     var queue=new Int32Array(LENGTH),head=0,tail=0;
@@ -225,8 +236,11 @@
     paint();return true;
   }
   function pointerDown(event){
-    if(event.button!==0)return;
+    if(event.button!==0&&event.button!==2)return;
     event.preventDefault();
+    // Both palette modes: left paints ink, right restores background.
+    // The ERASER icon also erases with the left button.
+    strokeValue=event.button===2||activeTool==='eraser'?0:1;
     var p=point(event);
     if(activeTool==='select'){
       selectionAnchor=p;
@@ -236,7 +250,7 @@
       return;
     }
     if(selection){selection=null;drawGrid();}
-    if(activeTool==='fill'){fillAt(p.x,p.y);return;}
+    if(activeTool==='fill'){fillAt(p.x,p.y,strokeValue);return;}
     pushUndo();drawing=true;lastPoint=p;putPixel(p.x,p.y);paint();
     if(picture.setPointerCapture)picture.setPointerCapture(event.pointerId);
   }
@@ -320,6 +334,10 @@
     });
     var invertButton=toolButton('invert','INVERT',invertPixels);
     toolbar.appendChild(invertButton);
+    var starButton=toolButton('star','REVERSE COLORS',toggleReverseMode);
+    starButton.dataset.ricoTileReverse='true';
+    starButton.setAttribute('aria-pressed',String(reverseMode));
+    toolbar.appendChild(starButton);
     var undoButton=toolButton('undo','UNDO',undo);
     undoButton.dataset.ricoTileUndo='true';
     toolbar.appendChild(undoButton);
@@ -345,6 +363,8 @@
     picture.addEventListener('pointermove',pointerMove);
     picture.addEventListener('pointerup',pointerEnd);
     picture.addEventListener('pointercancel',pointerEnd);
+    // Prevent the browser's context menu while drawing with the right button.
+    picture.addEventListener('contextmenu',function(event){event.preventDefault();});
     stage.addEventListener('wheel',zoomWithWheel,{passive:false});
     window.addEventListener('resize',function(){
       if(!overlay.hidden){centerPanel();resizeCanvas();}
@@ -371,6 +391,9 @@
     },true);
     selectTool(activeTool);syncUndo();
   }
+  // TEST270: disable the native context menu within the SpotySid page.
+  // Outside the web page / browser chrome, the OS still controls its menus.
+  document.addEventListener('contextmenu',function(event){event.preventDefault();},true);
   window.RicoTileArtwork={
     open:function(){
       if(!overlay)create();
