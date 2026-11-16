@@ -47,6 +47,7 @@
     vertical:93,        // centered two-column vertical bar
     rising:78,          // / rising on screen (toward the upper rows)
     falling:77,         // \ falling on screen (toward the lower rows)
+    noise:42,           // genuine C64 '*' character for SID noise waveform
     // TEST286: no cross/corner tiles; their extra arms created ghost lines
   });
   function paintPetscii(){
@@ -76,6 +77,11 @@
     for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
       if(!buffer)continue;
+      // TEST293: use the SID's noise flag, not sample jaggedness.
+      // TinySID may return a 4-bit waveform nibble or raw SID control bits.
+      var wave=channel<3&&typeof SID.getWave==='function'?SID.getWave(channel):0;
+      var noiseWave=Number.isFinite(wave)&&
+        (wave<=15?(wave&8)!==0:(wave&0x80)!==0);
       var top=Math.floor(channel*rows/channels);
       var bottom=Math.floor((channel+1)*rows/channels)-1;
       if(bottom<top)continue;
@@ -135,6 +141,11 @@
         var from=col*(count-1)/cols;
         var to=(col+1)*(count-1)/cols;
         var y0=yAt(from),y1=yAt(to),delta=y1-y0;
+        if(noiseWave){
+          // Actual SID noise amplitude determines the '*' tile position.
+          tile(SCOPE_GLYPH.noise,col,Math.round(yAt((from+to)/2)));
+          continue;
+        }
         // A true abrupt discontinuity is a large SINGLE sample jump.
         // A steep continuous triangle is not classified as a pulse step.
         var aIndex=Math.max(0,Math.floor(from));
