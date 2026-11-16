@@ -3315,6 +3315,19 @@ html[data-rico-lcd="2tone"] :is(
      ) {
   color:var(--rico-theme-bg) !important;
 }
+/* TEST290 — LCD selected rows invert their text; buttons must share that
+   inverted surface rather than the default light button fill. */
+html[data-rico-lcd="2tone"] #ricoCommunityItems .rico-community-row.rico-community-selected button {
+  background-color:var(--rico-theme-fg) !important;
+  color:var(--rico-theme-bg) !important;
+  border-color:var(--rico-theme-bg) !important;
+}
+html[data-rico-lcd="2tone"] #ricoCommunityItems .rico-community-row.rico-community-selected button:hover:not(:disabled),
+html[data-rico-lcd="2tone"] #ricoCommunityItems .rico-community-row.rico-community-selected button:focus-visible:not(:disabled) {
+  background-color:var(--rico-theme-bg) !important;
+  color:var(--rico-theme-fg) !important;
+  border-color:var(--rico-theme-bg) !important;
+}
 html[data-rico-lcd="2tone"] :is(
   #ricoLivePlaylist,#ricoCommunityPanel,.dialog,#ricoRemixEditor,
   #ricoImportSidWindow,#ricoHelpDialog,#ricoTileArtworkOverlay
