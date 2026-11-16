@@ -487,6 +487,26 @@ function sanitizeProfileLinks(items,kind){
   }
   return clean;
 }
+// TEST272: optional 1-bit C64 TILEWORK arrays stored in SpotySid artist
+// profiles. This does not read or write the official HVSC STIL in any way.
+function sanitizeTileworks(items){
+  if(items===undefined)return [];
+  if(!Array.isArray(items))return null;
+  const result=[],ids=new Set(),labels=new Set();
+  for(const item of items){
+    if(!item||typeof item.id!=='string'||
+       !/^tw-[A-Za-z0-9-]{4,80}$/.test(item.id)||
+       typeof item.label!=='string'||
+       !/^TILEWORK [1-9][0-9]*$/.test(item.label)||
+       item.label.length>45||typeof item.bits!=='string'||
+       item.bits.length!==2732||!/^[A-Za-z0-9+/]{2731}=$/.test(item.bits)||
+       typeof item.reverse!=='boolean')return null;
+    if(ids.has(item.id)||labels.has(item.label))return null;
+    ids.add(item.id);labels.add(item.label);
+    result.push({id:item.id,label:item.label,bits:item.bits,reverse:item.reverse});
+  }
+  return result;
+}
 function sanitizeArtistProfile(key,profile){
   if(!profile||typeof profile!=='object'||Array.isArray(profile)||
      typeof profile.artistName!=='string'||!profile.artistName.trim()||
@@ -494,7 +514,8 @@ function sanitizeArtistProfile(key,profile){
   const links=sanitizeProfileLinks(profile.links,'links');
   const csdb=sanitizeProfileLinks(profile.csdb,'csdb');
   const artwork=sanitizeProfileLinks(profile.artwork,'artwork');
-  if(!links||!csdb||!artwork)return null;
+  const tileworks=sanitizeTileworks(profile.tileworks);
+  if(!links||!csdb||!artwork||!tileworks)return null;
   const overrides=profile.stilOverrides;
   if(!overrides||typeof overrides!=='object'||Array.isArray(overrides))return null;
   const notes=Object.entries(overrides);
@@ -508,7 +529,7 @@ function sanitizeArtistProfile(key,profile){
       return null;
     out[path]=content;
   }
-  return {artistName:profile.artistName.trim(),links,csdb,artwork,stilOverrides:out};
+  return {artistName:profile.artistName.trim(),links,csdb,artwork,tileworks,stilOverrides:out};
 }
 async function artistProfiles(request,env,url,origin){
   if(!env.DB)return text('Artist profile database unavailable',503,origin);
@@ -613,6 +634,7 @@ export default {
       playlistReorder:true,sidCollectionReorder:true,
       playlistTrackAdditions:true,catalogOrder:true,noHvscArchive:true,
       artistProfiles:!!(env.DB&&env.BETA_EDIT_KEY),
+      artistTileworks:!!(env.DB&&env.BETA_EDIT_KEY),
       sidUploadProvider:sidUploadProvider(env)||null,
       sidUploadLimit:sidUploadProvider(env)==='github'?15:40,
       configured:!!env.BETA_EDIT_KEY},200,origin);
