@@ -3178,6 +3178,19 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
   color:var(--rico-theme-fg,#fff);
   padding:2px 0;letter-spacing:0;overflow-wrap:anywhere;
 }
+/* TEST273: link-shaped buttons reopen artwork in the same editor.
+   No new viewer, no native browser navigation. */
+#sidInfoContent button.rico-stil-tilework-link {
+  display:block;width:fit-content;max-width:100%;
+  padding:2px 0 !important;margin:0 !important;
+  min-height:0 !important;
+  border:0 !important;border-radius:0 !important;
+  background:transparent !important;box-shadow:none !important;
+  color:var(--rico-theme-fg,#fff) !important;
+  font:10px/1.35 Tahoma,Arial,Verdana,sans-serif !important;
+  text-align:left;text-decoration:underline;
+  text-underline-offset:2px;cursor:pointer;
+}
 #ricoTileArtworkOverlay .rico-tile-save-note {
   position:absolute;right:5px;bottom:4px;z-index:3;
   padding:2px 4px;background:var(--rico-theme-bg,#000);
