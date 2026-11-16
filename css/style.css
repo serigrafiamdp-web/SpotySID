@@ -3242,3 +3242,18 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
   background:var(--rico-theme-fg,#fff) !important;
   color:var(--rico-theme-bg,#000) !important;
 }
+
+
+/* TEST279 — No theme loses brightness while a dialog is open.
+   Keep the existing dialog/backdrop elements to preserve focus, layering
+   and click interception, but remove the translucent black scrim.
+   Applies to all current and future oscilloscope color palettes. */
+#dialogBackground {
+  background:transparent !important;
+  background-color:transparent !important;
+  opacity:0 !important;
+}
+.rico-beta-overlay {
+  background:transparent !important;
+  background-color:transparent !important;
+}
