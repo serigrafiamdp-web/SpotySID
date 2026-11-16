@@ -3257,3 +3257,77 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
   background:transparent !important;
   background-color:transparent !important;
 }
+
+
+/* TEST280 — Game Boy / Game & Watch LCD: only TWO opaque grey-green tones.
+   This selector activates solely for COLOR 10 and cannot change other themes.
+   The current palette variables are assigned by applyOscilloscopeColors().
+   No mixed shades for panels/hover; inverse UI states swap just these colors.
+   Keep backdrop transparency from TEST279 (no dimming of the oscilloscope). */
+html[data-rico-lcd="2tone"] {
+  color-scheme:light;
+}
+html[data-rico-lcd="2tone"] body,
+html[data-rico-lcd="2tone"] :is(
+  #sidControls,#sidInfo,#sidInfoContent,#songInfo,
+  #ricoLivePlaylist,#ricoLivePlaylistHeader,#ricoLivePlaylistItems,
+  #ricoRemixBar,#ricoRemixEditor,#ricoImportSidWindow,
+  #ricoHvscPanel,#ricoLibraryBuilder,#ricoCommunityPanel,
+  #chooseSidInfo,#ricoHelpDialog,
+  #ricoTileArtworkOverlay .rico-tile-panel,
+  .dialog,.dialog .title,.dialog .content,.dialog .buttons,
+  .rico-beta-dialog
+) {
+  background-color:var(--rico-theme-bg) !important;
+  color:var(--rico-theme-fg) !important;
+  border-color:var(--rico-theme-fg) !important;
+}
+html[data-rico-lcd="2tone"] :is(
+  #sidControls,#sidInfo,#sidInfoContent,#ricoLivePlaylist,
+  #ricoRemixBar,#ricoRemixEditor,#ricoImportSidWindow,
+  #ricoHvscPanel,#ricoLibraryBuilder,#ricoCommunityPanel,
+  #ricoHelpDialog,.dialog,.rico-beta-dialog,#ricoTileArtworkOverlay
+) :is(button,input,textarea,select) {
+  background-color:var(--rico-theme-bg) !important;
+  color:var(--rico-theme-fg) !important;
+  border-color:var(--rico-theme-fg) !important;
+  box-shadow:none !important;
+  text-shadow:none !important;
+}
+html[data-rico-lcd="2tone"] :is(
+  #sidControls,#sidInfoContent,#ricoLivePlaylist,#ricoRemixBar,
+  #ricoRemixEditor,#ricoImportSidWindow,#ricoHvscPanel,
+  #ricoLibraryBuilder,#ricoCommunityPanel,#ricoHelpDialog,
+  .dialog,.rico-beta-dialog,#ricoTileArtworkOverlay
+) :is(button:hover:not(:disabled),button:active:not(:disabled),
+     button[aria-pressed="true"],[aria-selected="true"],
+     .rico-live-active,.rico-community-row.active) {
+  background-color:var(--rico-theme-fg) !important;
+  color:var(--rico-theme-bg) !important;
+  border-color:var(--rico-theme-fg) !important;
+}
+html[data-rico-lcd="2tone"] :is(
+  #ricoLivePlaylist,#ricoCommunityPanel,.dialog,#sidControls,
+  #ricoTileArtworkOverlay
+) :is(.rico-live-active,[aria-selected="true"],
+     button:hover:not(:disabled),button[aria-pressed="true"]) :is(
+       span,strong,b,small,a,svg
+     ) {
+  color:var(--rico-theme-bg) !important;
+}
+html[data-rico-lcd="2tone"] :is(
+  #ricoLivePlaylist,#ricoCommunityPanel,.dialog,#ricoRemixEditor,
+  #ricoImportSidWindow,#ricoHelpDialog,#ricoTileArtworkOverlay
+) :is(.rico-live-row,.rico-community-row,.rico-tile-workspace,
+     .rico-tile-stage,.rico-tile-surface,.rico-tile-exit-confirm) {
+  border-color:var(--rico-theme-fg) !important;
+}
+/* Native controls + scrollbars use ink and LCD glass, never browser accents. */
+html[data-rico-lcd="2tone"] {
+  accent-color:var(--rico-theme-fg);
+  scrollbar-color:var(--rico-theme-fg) var(--rico-theme-bg);
+}
+html[data-rico-lcd="2tone"] input[type="checkbox"],
+html[data-rico-lcd="2tone"] input[type="radio"] {
+  accent-color:var(--rico-theme-fg) !important;
+}
