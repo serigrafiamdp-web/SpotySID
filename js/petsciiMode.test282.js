@@ -157,11 +157,12 @@
   // playback or playlists.
   function candidateNodes(){
     return document.querySelectorAll(
-      '#sidControls button,.dialog .title,.dialog .buttons button,'+
+      '#sidControls button,.dialog .title > div:first-child,.dialog .buttons button,'+
       '#chooseSidDialog button,#ricoLivePlaylistHeader button,'+
       '#ricoRemixBar button,#ricoHelpDialog button,'+
       '#sidInfoContent .rico-show-heading,'+
-      '#ricoCommunityTabs button,#ricoCommunityItems button'
+      '#ricoCommunityTabs button,#ricoCommunityItems button,'+
+      '.rico-beta-dialog strong,#ricoLivePlaylistHeader strong'
     );
   }
   function renderLabel(node){
