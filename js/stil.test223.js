@@ -53,7 +53,7 @@
       return v&&typeof v.id==='string'&&/^tw-[A-Za-z0-9-]{4,80}$/.test(v.id)&&
         typeof v.label==='string'&&/^TILEWORK [1-9][0-9]*$/.test(v.label)&&
         typeof v.bits==='string'&&v.bits.length===2732&&
-        /^[A-Za-z0-9+/]{2730}==$/.test(v.bits)&&typeof v.reverse==='boolean';
+        /^[A-Za-z0-9+/]{2731}=$/.test(v.bits)&&typeof v.reverse==='boolean';
     }).map(function(v){
       return {id:v.id,label:v.label,bits:v.bits,reverse:v.reverse};
     });
@@ -498,7 +498,7 @@
     },
     save:function(context,work){
       if(!context||!context.key||!work||typeof work.bits!=='string'||
-         work.bits.length!==2732||!/^[A-Za-z0-9+/]{2730}==$/.test(work.bits)||
+         work.bits.length!==2732||!/^[A-Za-z0-9+/]{2731}=$/.test(work.bits)||
          typeof work.reverse!=='boolean')
         return {ok:false,message:'INVALID TILEWORK'};
       var key=context.key,drafts=readDrafts(key),existing=null,index=-1;
