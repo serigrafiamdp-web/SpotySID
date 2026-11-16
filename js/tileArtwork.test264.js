@@ -470,20 +470,41 @@
   // Outside the web page / browser chrome, the OS still controls its menus.
   document.addEventListener('contextmenu',function(event){event.preventDefault();},true);
   window.RicoTileArtwork={
-    open:function(context){
+    open:function(context,work){
       if(!overlay)create();
-      // TEST272: bind once at opening; changing SID/artist while the
-      // editor is open does NOT retarget the saved artwork.
-      if(!overlay.hidden)return;
-      artistContext=context&&typeof context.key==='string'?{
-        key:context.key,artist:context.artist||''
-      }:null;
-      savedWorkId=null;pixels.fill(0);undoStack.length=0;
+      // TEST273: reopening a saved TILEWORK restores the same one-bit
+      // pixels, reverse mode and persistent ID. Future SAVE overwrites
+      // that work rather than making TILEWORK N+1.
+      // The artist is frozen at opening, even if playback later changes.
+      if(!overlay.hidden)return false;
+      if(!context||typeof context.key!=='string')return false;
+      var restored=null;
+      if(work){
+        if(typeof work.id!=='string'||typeof work.bits!=='string'||
+           work.bits.length!==2732||
+           !/^[A-Za-z0-9+/]{2731}=$/.test(work.bits)||
+           typeof work.reverse!=='boolean')return false;
+        try{
+          var bytes=atob(work.bits);
+          if(bytes.length!==LENGTH/8)return false;
+          restored=new Uint8Array(LENGTH);
+          for(var i=0;i<LENGTH;i++)
+            restored[i]=(bytes.charCodeAt(i>>3)&(128>>(i&7)))?1:0;
+        }catch(error){
+          console.warn('STIL+ TILEWORK could not be opened:',error);
+          return false;
+        }
+      }
+      artistContext={key:context.key,artist:context.artist||''};
+      savedWorkId=work?work.id:null;
+      pixels.fill(0);
+      if(restored)pixels.set(restored);
+      undoStack.length=0;
       selection=null;selectionAnchor=null;drawing=false;lastPoint=null;
-      reverseMode=false;
+      reverseMode=work?work.reverse:false;
       if(toolbar){
         var star=toolbar.querySelector('[data-rico-tile-reverse]');
-        if(star)star.setAttribute('aria-pressed','false');
+        if(star)star.setAttribute('aria-pressed',String(reverseMode));
       }
       if(confirmBox)confirmBox.hidden=true;
       note('');syncUndo();
@@ -492,6 +513,7 @@
       overlay.hidden=false;manualScale=null;
       centerPanel();resizeCanvas();
       stage.scrollLeft=0;stage.scrollTop=0;
+      return true;
     }
   };
 })();
