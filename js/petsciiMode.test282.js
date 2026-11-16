@@ -58,88 +58,145 @@
     for(var i=0;i<value.length;i++)
       blit(ctx,codeOf(value[i]),x+i*w,y,w,h);
   }
+  // TEST284: only graphical PETSCII codes are valid for the OSCILLOSCOPE.
+  // Full 512-character C64 ROM remains available; deliberately exclude
+  // alphabet, numbers and their inverse variants from the wave itself.
+  // These codes include authentic diagonals 77 (\) and 78 (/), verticals
+  // 66/71/72/84/89/93/101/103, horizontal bars 64/68/69/70/82/99/100.
+  var graphicCodes=[];
+  for(var id=0;id<512;id++){
+    var code=id&255;
+    if((code>=64&&code<=127)||(code>=192&&code<=255))
+      graphicCodes.push(id);
+  }
   function bestGlyph(rows){
-    // Find a *real ROM glyph* whose pixels approximate this segment. Use
-    // every one of the 512 C64 codes as candidate, including the alternate
-    // charset and inverse/graphic codes. Pixel templates are MATCH INPUT,
-    // never drawn as pixels: only the chosen ROM character gets rendered.
+    // Match a rasterized signal segment to ONE genuine 8x8 ROM glyph.
+    // Rasterized masks are templates only; visible output is a full C64
+    // character blitted from the ROM atlas, not points/lines on the canvas.
     var key=rows.join(',');
     if(glyphCache.has(key))return glyphCache.get(key);
-    var painted=rows.reduce(function(s,b){return s+BITS[b]},0);
+    var painted=rows.reduce(function(sum,b){return sum+BITS[b]},0);
     if(!painted)return 32;
-    var bestId=32,bestScore=1e9;
-    for(var id=0;id<512;id++){
-      var missing=0,extra=0;
-      var base=id*8;
+    var bestId=64,bestScore=Infinity;
+    for(var n=0;n<graphicCodes.length;n++){
+      var id=graphicCodes[n],base=id*8,missing=0,extra=0;
       for(var y=0;y<8;y++){
         var wanted=rows[y],glyph=ROM[base+y];
         missing+=BITS[wanted&(~glyph&255)];
         extra+=BITS[glyph&(~wanted&255)];
       }
-      // Prefer recognizable graphic shapes over incidental alphabet glyphs
-      // on ties; but let all 512 participate in real matching.
-      var gfx=(id%256>=64&&id%256<128)||(id%256>=192);
-      var score=missing*4+extra+(gfx?0:0.15);
-      if(score<bestScore){bestScore=score;bestId=id}
+      // Preserve the drawn edge of the SID wave: missing ink hurts much
+      // more than modest overdraw. A nearly full block is not a line.
+      var score=missing*6+extra*1.35;
+      // Strongly prefer the authentic slash/backslash and bars when their
+      // shapes match, instead of incidental checkerboard/letter-like blocks.
+      if(id===77||id===78)score-=1.7;
+      if(id===64||id===66||id===68||id===69||id===70||
+         id===71||id===72||id===82||id===84||id===89||id===93||
+         id===99||id===100||id===101||id===103||id===106)score-=1.4;
+      if(score<bestScore){bestScore=score;bestId=id;}
     }
-    // Some non-axis shapes cannot be represented by a single ROM glyph.
-    // A sparse, deterministic mix of odd PETSCII graphic symbols is
-    // intentional rather than attempting a new hand-drawn pixel image.
-    if(bestScore>24 && (rows[0]+rows[2]*3+rows[5]*5)%9===0){
-      bestId=[95,97,101,110,122,127,161,222,265,352,444,501][
-        (rows[1]+rows[4]+rows[7])%12];
-    }
-    if(glyphCache.size>1500)glyphCache.clear();
+    // Badly matching wave segments still use real graphic codes; no text
+    // or random alphabet character is ever introduced in the scope.
+    if(glyphCache.size>3600)glyphCache.clear();
     glyphCache.set(key,bestId);
     return bestId;
   }
   function paintPetscii(){
     var cv=player.canvas,ctx=player.context;
-    if(!cv||!ctx||typeof SID==='undefined'||typeof SID.getChannelBuffer!=='function')return;
+    if(!cv||!ctx||typeof SID==='undefined'||
+       typeof SID.getChannelBuffer!=='function')return;
     var palette=player.colorModes[player.colorModeIndex];
     drawAtlas(palette.line);
     var width=cv.width,height=cv.height;
-    if(!width||!height)return;
-    var cols=40,rows=25,cellW=width/cols,cellH=height/rows;
+    if(width<=0||height<=0)return;
+
+    // PC resolution: NO 40x25 restriction. Every visible glyph retains its
+    // 8:8 aspect ratio. As the display grows, MORE characters are rendered,
+    // not stretched. At 1920px, ~160 columns vs the old fixed 40.
+    var targetCell=12;
+    var cols=Math.max(1,Math.ceil(width/targetCell));
+    var rows=Math.max(1,Math.ceil(height/targetCell));
+    var cellW=width/cols,cellH=height/rows;
     ctx.imageSmoothingEnabled=false;
     ctx.fillStyle=palette.background;
     ctx.fillRect(0,0,width,height);
-    // TEST283: the oscilloscope is PURE PETSCII graphics, from the
-    // first character column to the last. No header, footer or VOICE text.
-    // Share the entire 25-row height between 3 (or 4) voice bands.
     var channels=player.sidHasSamples?4:3;
     var bufferSize=882*2;
-    var samplesPerChannel=Math.floor(bufferSize/2.8);
+    var count=Math.floor(bufferSize/2.8);
+    var totalX=cols*8;
+
     for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
       if(!buffer)continue;
-      var minY=Math.floor(channel*rows/channels);
-      var maxY=Math.floor((channel+1)*rows/channels)-1;
-      if(maxY<minY)continue;
-      var rowsPer=maxY-minY+1;
-      var center=(minY+(maxY+1))*4;
-      var amplitude=rowsPer*8*(channel===3?0.8:7);
-      // All 40 full character columns are available for each voice.
-      for(var col=0;col<cols;col++){
-        var masks=new Map(),sampleCount=samplesPerChannel;
-        for(var lx=0;lx<8;lx++){
-          var fraction=(col*8+lx)/Math.max(1,cols*8-1);
-          var pos=Math.min(bufferSize-1,Math.floor(fraction*sampleCount));
-          var sample=SID.readFloatSample(buffer,pos);
-          if(!player.isPlaying&&!player.isPaused)sample=0;
-          if(!Number.isFinite(sample))sample=0;
-          // Only the actual source SID waveform determines target location.
-          var vy=Math.round(center+sample*amplitude);
-          vy=Math.max(minY*8,Math.min((maxY+1)*8-1,vy));
-          var rr=Math.floor(vy/8),within=vy%8;
-          if(!masks.has(rr))masks.set(rr,new Uint8Array(8));
-          masks.get(rr)[within]|=(128>>lx);
+      var minRow=Math.floor(channel*rows/channels);
+      var maxRow=Math.floor((channel+1)*rows/channels)-1;
+      if(maxRow<minRow)continue;
+
+      // Stabilize the beginning of the waveform at a positive zero-crossing,
+      // as the original SID scope does; do not replace real audio with a
+      // synthetic triangle, pulse or sawtooth.
+      var offset=0,searchStart=Math.floor(count/2);
+      var searchEnd=Math.min(bufferSize-count,searchStart+count);
+      var prevSample=SID.readFloatSample(buffer,searchStart);
+      for(var k=searchStart+1;k<=searchEnd;k++){
+        var nextSample=SID.readFloatSample(buffer,k);
+        if(prevSample<=0&&nextSample>0){
+          offset=Math.max(0,Math.min(bufferSize-count,k-Math.floor(count/8)));
+          break;
         }
-        masks.forEach(function(bits,rr){
-          // No pixels are drawn to screen: a single complete PETSCII
-          // character is chosen for each occupied character-grid cell.
-          var id=bestGlyph(bits);
-          blit(ctx,id,col*cellW,rr*cellH,cellW,cellH);
+        prevSample=nextSample;
+      }
+      var samples=new Float32Array(count);
+      var min=Infinity,max=-Infinity;
+      for(var i=0;i<count;i++){
+        var sample=SID.readFloatSample(buffer,offset+i);
+        if(!player.isPlaying&&!player.isPaused)sample=0;
+        if(!Number.isFinite(sample))sample=0;
+        samples[i]=sample;
+        if(sample<min)min=sample;
+        if(sample>max)max=sample;
+      }
+      var bandTop=minRow*8,bandBottom=(maxRow+1)*8-1;
+      var center=(bandTop+bandBottom)/2;
+      var dynamicRange=max-min;
+      var scale=dynamicRange>0.000001?
+        (bandBottom-bandTop)*0.78/dynamicRange:0;
+      var middle=(max+min)/2;
+      function sampleAt(x){
+        var position=x*(count-1)/Math.max(1,totalX-1);
+        var index=Math.floor(position),fraction=position-index;
+        var a=samples[index],b=samples[Math.min(count-1,index+1)];
+        // An abrupt SID pulse edge (or sawtooth reset) is a step, NOT an
+        // interpolated diagonal. Smooth ramps still interpolate naturally.
+        var discontinuity=dynamicRange>0.000001 &&
+          Math.abs(b-a)>dynamicRange*0.27;
+        var value=discontinuity?(fraction<0.5?a:b):a+(b-a)*fraction;
+        return Math.max(bandTop,Math.min(bandBottom,
+          Math.round(center+(value-middle)*scale)));
+      }
+      var lastY=sampleAt(0);
+      for(var col=0;col<cols;col++){
+        var masks=new Map();
+        function put(x,y){
+          if(y<bandTop||y>bandBottom)return;
+          var row=Math.floor(y/8),inside=y%8;
+          var bits=masks.get(row);
+          if(!bits){bits=new Uint8Array(8);masks.set(row,bits);}
+          bits[inside]|=(128>>(x&7));
+        }
+        for(var lx=0;lx<8;lx++){
+          var x=col*8+lx,y=sampleAt(x);
+          // Connect successive wave values in TEXT-CELL templates. Nearly
+          // flat runs become horizontal bars. Steep edges produce vertical
+          // ROM bars; triangular/sawtooth slopes use the two diagonal ROM
+          // characters (77 & 78) and neighboring graphic codes.
+          var low=Math.min(lastY,y),high=Math.max(lastY,y);
+          for(var yy=low;yy<=high;yy++)put(lx,yy);
+          lastY=y;
+        }
+        masks.forEach(function(bits,row){
+          blit(ctx,bestGlyph(bits),col*cellW,row*cellH,cellW,cellH);
         });
       }
     }
