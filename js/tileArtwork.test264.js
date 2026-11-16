@@ -147,7 +147,7 @@
     overlay.className='rico-tile-overlay';
     overlay.hidden=true;
     var panel=document.createElement('div');panel.className='rico-tile-panel';
-    panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');
+    panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','false');
     panel.setAttribute('aria-label','CREATE TILE ARTWORK');
     var head=document.createElement('div');head.className='rico-tile-head';
     var title=document.createElement('strong');title.textContent='CREATE TILE ARTWORK';
@@ -180,23 +180,22 @@
     picture.addEventListener('pointermove',pointerMove);
     picture.addEventListener('pointerup',pointerEnd);
     picture.addEventListener('pointercancel',pointerEnd);
-    overlay.addEventListener('pointerdown',function(event){
-      if(event.target===overlay)close();
-    });
     window.addEventListener('resize',function(){if(!overlay.hidden)resizeCanvas();});
     document.addEventListener('keydown',function(event){
-      if(!overlay||overlay.hidden)return;
-      if(event.key==='Escape'){event.preventDefault();close();}
-      else if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){
-        event.preventDefault();undo();
+      if(!overlay||overlay.hidden||!panel.contains(document.activeElement))return;
+      if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){
+        event.preventDefault();event.stopPropagation();undo();
       }
-      event.stopPropagation();
     },true);
     selectTool(activeTool);syncUndo();
   }
   window.RicoTileArtwork={
     open:function(){
       if(!overlay)create();
+      // TEST265: close the STIL sidebar, but keep the editor independent of
+      // playback and fully modeless. It is only closed with its X button.
+      if(window.sidPlayer&&typeof window.sidPlayer.showSIDInfo==='function')
+        window.sidPlayer.showSIDInfo(false);
       overlay.hidden=false;
       resizeCanvas();
     }
