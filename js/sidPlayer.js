@@ -10,6 +10,8 @@ var SidPlayer = function() {
   this.sidHasSamples = false;
   // TEST24: filled waves are the standard mode on each page load.
   this.oscilloscopeMode = 'filled';
+  // TEST289: PETSCII is an independent display switch, not a color palette.
+  this.petsciiEnabled = false;
   this.colorModeIndex = 0;
   this.colorModes = [
     { name: 'Original', line: '#ffffff', fill: 'rgba(255,255,255,0.56)', background: '#000000' },
@@ -1418,6 +1420,14 @@ SidPlayer.prototype = {
       sidPlayer.render();
     });
 
+    // TEST289: PETSCII toggles the text-character oscilloscope ON/OFF
+    // while COLOR keeps its current selected palette (all 11 available).
+    $('#ricoPetsciiButton').on('click', function() {
+      sidPlayer.petsciiEnabled = !sidPlayer.petsciiEnabled;
+      $(this).attr('aria-pressed', sidPlayer.petsciiEnabled ? 'true' : 'false');
+      sidPlayer.render();
+    });
+
     $('#oscilloscopeModeButton').on('click', function() {
       sidPlayer.oscilloscopeMode = sidPlayer.oscilloscopeMode === 'line' ? 'filled' : 'line';
       $(this).text(sidPlayer.oscilloscopeMode === 'filled' ? 'Wave: Filled' : 'Wave: Line');
@@ -2086,9 +2096,9 @@ SidPlayer.prototype = {
     // TEST280: this palette alone uses exactly TWO colors everywhere.
     // No mixed-color panels or translucent fills, including oscilloscope waves.
     var lcdTwoTone = palette.name === 'Game & Watch LCD';
-    var petsciiMode = palette.name === 'PETSCII C64';
-    if(petsciiMode)root.setAttribute('data-rico-petscii','on');
-    else root.removeAttribute('data-rico-petscii');
+    // TEST289: do not replace interface fonts or buttons in PETSCII mode.
+    // The old text skin is deliberately inactive until a font is approved.
+    root.removeAttribute('data-rico-petscii');
     if(lcdTwoTone){
       root.setAttribute('data-rico-lcd','2tone');
       root.style.setProperty('--rico-theme-panel', palette.background);
