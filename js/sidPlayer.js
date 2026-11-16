@@ -27,7 +27,7 @@ var SidPlayer = function() {
     // TEST278: reflective LCD like an early handheld calculator / Game & Watch.
     // Dark liquid-crystal segments on a muted grey-green glass background.
     // Shared CSS variables recolor the oscilloscope, windows, menus and TILEWORK.
-    { name: 'Game & Watch LCD', line: '#343a32', fill: 'rgba(52,58,50,0.72)', background: '#bdc1a6' }
+    { name: 'Game & Watch LCD', line: '#3D4A3A', fill: '#3D4A3A', background: '#A8B39A' }
   ];
   // TEST24: choose a fresh theme on every opening (no persistent preference).
   this.colorModeIndex = Math.floor(Math.random() * this.colorModes.length);
@@ -2080,8 +2080,18 @@ SidPlayer.prototype = {
     root.style.setProperty('--rico-theme-bg', palette.background);
     root.style.setProperty('--rico-theme-fg', palette.line);
     root.style.setProperty('--rico-theme-border', palette.line);
-    root.style.setProperty('--rico-theme-panel', 'color-mix(in srgb, ' + palette.background + ' 80%, ' + palette.line + ' 20%)');
-    root.style.setProperty('--rico-theme-hover', 'color-mix(in srgb, ' + palette.background + ' 65%, ' + palette.line + ' 35%)');
+    // TEST280: this palette alone uses exactly TWO colors everywhere.
+    // No mixed-color panels or translucent fills, including oscilloscope waves.
+    var lcdTwoTone = palette.name === 'Game & Watch LCD';
+    if(lcdTwoTone){
+      root.setAttribute('data-rico-lcd','2tone');
+      root.style.setProperty('--rico-theme-panel', palette.background);
+      root.style.setProperty('--rico-theme-hover', palette.line);
+    }else{
+      root.removeAttribute('data-rico-lcd');
+      root.style.setProperty('--rico-theme-panel', 'color-mix(in srgb, ' + palette.background + ' 80%, ' + palette.line + ' 20%)');
+      root.style.setProperty('--rico-theme-hover', 'color-mix(in srgb, ' + palette.background + ' 65%, ' + palette.line + ' 35%)');
+    }
     // TEST119: keep palette selection numeric, with 1-based index in the
     // current set. Avoid the browser's native white tooltip too.
     $('#oscilloscopeColorButton').text('COLOR ' + (this.colorModeIndex + 1))
