@@ -23,7 +23,11 @@ var SidPlayer = function() {
     // TEST277: Commodore vintage calculator — red LED digits over a
     // near-black smoked display. Shared palette variables skin every dialog,
     // menu, control, STIL+ panel and TILEWORK; existing themes are unchanged.
-    { name: 'Commodore Calculator', line: '#ff304b', fill: 'rgba(255,48,75,0.56)', background: '#10090c' }
+    { name: 'Commodore Calculator', line: '#ff304b', fill: 'rgba(255,48,75,0.56)', background: '#10090c' },
+    // TEST278: reflective LCD like an early handheld calculator / Game & Watch.
+    // Dark liquid-crystal segments on a muted grey-green glass background.
+    // Shared CSS variables recolor the oscilloscope, windows, menus and TILEWORK.
+    { name: 'Game & Watch LCD', line: '#343a32', fill: 'rgba(52,58,50,0.72)', background: '#bdc1a6' }
   ];
   // TEST24: choose a fresh theme on every opening (no persistent preference).
   this.colorModeIndex = Math.floor(Math.random() * this.colorModes.length);
