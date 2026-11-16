@@ -91,7 +91,10 @@
       var top=Math.floor(channel*rows/channels);
       var bottom=Math.floor((channel+1)*rows/channels)-1;
       if(bottom<top)continue;
-      if(!buffer){drawIdleLine(top,bottom);continue;}
+      // TEST298: paused/stopped playback must not visualize stale audio
+      // buffers. On Pause the old isPaused flag remains true, but audio
+      // playback has stopped and the channel must be a clean idle line.
+      if(!player.isPlaying||!buffer){drawIdleLine(top,bottom);continue;}
 
       // Keep a stable real SID waveform window; use zero crossing to
       // reduce horizontal jumping, not replace the source with a fake wave.
@@ -110,7 +113,7 @@
       var samples=new Float32Array(count),min=Infinity,max=-Infinity;
       for(var i=0;i<count;i++){
         var sample=SID.readFloatSample(buffer,offset+i);
-        if(!player.isPlaying&&!player.isPaused)sample=0;
+        if(!player.isPlaying)sample=0;
         if(!Number.isFinite(sample))sample=0;
         samples[i]=sample;
         if(sample<min)min=sample;
@@ -131,8 +134,7 @@
       var maxDeviation=heightInRows*0.24;
       // A silent voice (or an isolated spike without sustained amplitude)
       // uses only the one-pixel C64 horizontal glyph.
-      var inactive=(!player.isPlaying&&!player.isPaused) ||
-        (channel<3&&wave===0);
+      var inactive=!player.isPlaying||(channel<3&&wave===0);
       if(inactive||range<0.00015||range*gain<2.75){
         drawIdleLine(top,bottom);
         continue;
