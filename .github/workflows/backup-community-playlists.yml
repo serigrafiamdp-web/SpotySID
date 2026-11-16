@@ -1,0 +1,54 @@
+# TEST276 — independent off-D1 backup for PUBLIC community playlists.
+# Does not use BETA_EDIT_KEY or any Cloudflare write credential.
+# Every fetched version is retained in Git; never delete old backup files.
+name: SpotySid Community Backup
+
+on:
+  # Starts one initial backup when this workflow is first committed.
+  push:
+    paths:
+      - '.github/workflows/backup-community-playlists.yml'
+      - 'scripts/backup_community_playlists.py'
+  # Four independent snapshots daily; GitHub Actions scheduling may be delayed.
+  schedule:
+    - cron: '17 */6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: spotysid-community-playlist-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out SpotySid repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - name: Archive all public lists and their exact track order
+        run: python3 scripts/backup_community_playlists.py
+      - name: Commit immutable playlist versions and this run's manifest
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backups/community/
+          if git diff --cached --quiet; then
+            echo "No backup changes."
+            exit 0
+          fi
+          git commit -m "Backup public SpotySid playlists [skip ci]"
+          for attempt in 1 2 3; do
+            if git pull --rebase origin main && git push origin HEAD:main; then
+              echo "Independent GitHub backup pushed."
+              exit 0
+            fi
+            sleep 4
+          done
+          echo "::error::Could not push backup snapshots to GitHub"
+          exit 1
