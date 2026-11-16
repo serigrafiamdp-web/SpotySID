@@ -3097,7 +3097,7 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
 }
 #ricoTileArtworkOverlay.rico-tile-overlay[hidden] {display:none !important;}
 #ricoTileArtworkOverlay .rico-tile-panel {
-  box-sizing:border-box;width:min(1120px,100%);max-height:calc(100vh - 24px);
+  box-sizing:border-box;width:min(1180px,100%);max-height:calc(100vh - 24px);
   overflow:hidden;background:#000;border:1px solid var(--rico-theme-border,#999);
   pointer-events:auto;
   color:var(--rico-theme-fg,#fff);padding:9px;
@@ -3141,7 +3141,9 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
 #ricoTileArtworkOverlay .rico-tile-stage {
   flex:1 1 auto;width:auto;min-width:0;overflow:auto;
   box-sizing:border-box;background:#000;
-  border:1px solid var(--rico-theme-border,#777);padding:0;
+  /* Four true C64 pixels of black spacing before the frame at 4× zoom.
+     TEST268 adjusts this pixel margin dynamically for smaller viewports. */
+  border:1px solid var(--rico-theme-border,#777);padding:16px;
 }
 #ricoTileArtworkOverlay .rico-tile-surface {
   position:relative;display:block;box-sizing:content-box;
