@@ -6,6 +6,7 @@
   var WIDTH=256,HEIGHT=64,LENGTH=WIDTH*HEIGHT;
   var pixels=new Uint8Array(LENGTH),undoStack=[],MAX_UNDO=30;
   var activeTool='pencil',drawing=false,lastPoint=null;
+  var selection=null,selectionAnchor=null;
   var overlay=null,panel=null,head=null,surface=null,stage=null,picture=null,grid=null,toolbar=null;
   var pictureCtx=null,gridCtx=null,scale=4;
   var dragState=null,dragX=0,dragY=0;
@@ -20,6 +21,61 @@
     var b=document.createElement('button');
     b.type='button';b.textContent=label;
     b.addEventListener('click',action);
+    return b;
+  }
+  // Small, original 12×12 single-bit tool glyphs — classic paint-tool look.
+  // They inherit the selected SpotySid palette through CSS currentColor.
+  var toolGlyphs={
+    pencil:[
+      '..........##','.........###','........##.#','.......##.#.',
+      '......##.#..','.....##.#...','....##.#....','...##.#.....',
+      '..##.#......','.##.#.......','###.........','##..........'
+    ],
+    eraser:[
+      '............','......####..','.....######.','....##...###',
+      '...##...###.','..##...###..','.##...###...','##...###....',
+      '########....','.######.....','............','............'
+    ],
+    fill:[
+      '.....##.....','.....##.....','..#..##.....','..#.#..#....',
+      '...#....#...','..#......#..','..#......#..','...#....#...',
+      '....####....','.....##..#..','.........###','..........#.'
+    ],
+    select:[
+      '##..##..##..','#..........#','............','............',
+      '#..........#','............','............','............',
+      '#..........#','............','............','##..##..##..'
+    ],
+    invert:[
+      '############','#.....#####.','#.....#####.','#.....#####.',
+      '#.....#####.','#.....#####.','#.....#####.','#.....#####.',
+      '#.....#####.','#.....#####.','#.....#####.','############'
+    ],
+    undo:[
+      '...##.......','..##........','.####.......','######......',
+      '.####..#####','..##..#....#','...##......#','.........##.',
+      '.........#..','..........#.','....######..','............'
+    ]
+  };
+  function iconFor(tool){
+    var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+    svg.setAttribute('viewBox','0 0 12 12');svg.setAttribute('width','20');
+    svg.setAttribute('height','20');svg.setAttribute('aria-hidden','true');
+    svg.style.imageRendering='pixelated';
+    var rows=toolGlyphs[tool],path='';
+    rows.forEach(function(row,y){
+      for(var x=0;x<12;x++)if(row.charAt(x)==='#')
+        path+='M'+x+' '+y+'h1v1h-1z';
+    });
+    var shape=document.createElementNS('http://www.w3.org/2000/svg','path');
+    shape.setAttribute('d',path);shape.setAttribute('fill','currentColor');
+    svg.appendChild(shape);return svg;
+  }
+  function toolButton(tool,label,action){
+    var b=button('',action);
+    b.className='rico-tile-icon-button';b.title=label;
+    b.setAttribute('aria-label',label);
+    b.appendChild(iconFor(tool));
     return b;
   }
   function pushUndo(){
@@ -38,7 +94,8 @@
     toolbar.querySelectorAll('[data-rico-tile-tool]').forEach(function(b){
       b.setAttribute('aria-pressed',String(b.dataset.ricoTileTool===tool));
     });
-    if(picture)picture.style.cursor=tool==='fill'?'cell':'crosshair';
+    if(picture)picture.style.cursor=tool==='fill'?'cell':
+      tool==='select'?'crosshair':'crosshair';
   }
   function paint(){
     if(!pictureCtx)return;
@@ -66,6 +123,31 @@
       gridCtx.fillRect(0,y*scale,w,1);
     }
     gridCtx.globalAlpha=1;
+    drawSelection();
+  }
+  function normalizedSelection(){
+    if(!selection)return null;
+    return {x1:Math.min(selection.x1,selection.x2),y1:Math.min(selection.y1,selection.y2),
+      x2:Math.max(selection.x1,selection.x2),y2:Math.max(selection.y1,selection.y2)};
+  }
+  function drawSelection(){
+    var box=normalizedSelection();
+    if(!gridCtx||!box)return;
+    gridCtx.save();
+    gridCtx.strokeStyle=themeColor();
+    gridCtx.lineWidth=1;gridCtx.globalAlpha=0.95;
+    gridCtx.setLineDash([4,3]);
+    gridCtx.strokeRect(box.x1*scale+0.5,box.y1*scale+0.5,
+      (box.x2-box.x1+1)*scale-1,(box.y2-box.y1+1)*scale-1);
+    gridCtx.restore();
+  }
+  function invertPixels(){
+    var box=normalizedSelection()||{x1:0,y1:0,x2:WIDTH-1,y2:HEIGHT-1};
+    pushUndo();
+    for(var y=box.y1;y<=box.y2;y++)
+      for(var x=box.x1;x<=box.x2;x++)
+        pixels[y*WIDTH+x]^=1;
+    paint();
   }
   function resizeCanvas(){
     if(!stage||!surface)return;
@@ -118,6 +200,14 @@
     if(event.button!==0)return;
     event.preventDefault();
     var p=point(event);
+    if(activeTool==='select'){
+      selectionAnchor=p;
+      selection={x1:p.x,y1:p.y,x2:p.x,y2:p.y};
+      drawing=true;drawGrid();
+      if(picture.setPointerCapture)picture.setPointerCapture(event.pointerId);
+      return;
+    }
+    if(selection){selection=null;drawGrid();}
     if(activeTool==='fill'){fillAt(p.x,p.y);return;}
     pushUndo();drawing=true;lastPoint=p;putPixel(p.x,p.y);paint();
     if(picture.setPointerCapture)picture.setPointerCapture(event.pointerId);
@@ -126,11 +216,14 @@
     if(!drawing)return;
     event.preventDefault();
     var p=point(event);
+    if(activeTool==='select'&&selectionAnchor){
+      selection.x2=p.x;selection.y2=p.y;drawGrid();return;
+    }
     if(lastPoint&&lastPoint.x===p.x&&lastPoint.y===p.y)return;
     drawLine(lastPoint||p,p);lastPoint=p;paint();
   }
   function pointerEnd(event){
-    drawing=false;lastPoint=null;
+    drawing=false;lastPoint=null;selectionAnchor=null;
     if(picture&&picture.hasPointerCapture&&picture.hasPointerCapture(event.pointerId))
       picture.releasePointerCapture(event.pointerId);
   }
@@ -192,16 +285,18 @@
     head.addEventListener('pointermove',movePanel);
     head.addEventListener('pointerup',endPanelDrag);
     head.addEventListener('pointercancel',endPanelDrag);
+    // TEST267: Deluxe Paint-style compact icon tray LEFT of the C64 grid.
     toolbar=document.createElement('div');toolbar.className='rico-tile-tools';
-    ['pencil','eraser','fill'].forEach(function(tool){
-      var b=button(tool.toUpperCase(),function(){selectTool(tool);});
+    ['pencil','eraser','fill','select'].forEach(function(tool){
+      var b=toolButton(tool,tool.toUpperCase(),function(){selectTool(tool);});
       b.dataset.ricoTileTool=tool;
       toolbar.appendChild(b);
     });
-    var undoButton=button('UNDO',undo);undoButton.dataset.ricoTileUndo='true';
+    var invertButton=toolButton('invert','INVERT',invertPixels);
+    toolbar.appendChild(invertButton);
+    var undoButton=toolButton('undo','UNDO',undo);
+    undoButton.dataset.ricoTileUndo='true';
     toolbar.appendChild(undoButton);
-    var info=document.createElement('span');info.textContent='32×8 CHARS · 256×64 PX · HI-RES';
-    info.className='rico-tile-info';toolbar.appendChild(info);
     stage=document.createElement('div');stage.className='rico-tile-stage';
     surface=document.createElement('div');surface.className='rico-tile-surface';
     picture=document.createElement('canvas');picture.width=WIDTH;picture.height=HEIGHT;
@@ -213,7 +308,9 @@
     gridCtx=grid.getContext('2d');
     surface.appendChild(picture);surface.appendChild(grid);
     stage.appendChild(surface);
-    panel.appendChild(head);panel.appendChild(toolbar);panel.appendChild(stage);
+    var workspace=document.createElement('div');workspace.className='rico-tile-workspace';
+    workspace.appendChild(toolbar);workspace.appendChild(stage);
+    panel.appendChild(head);panel.appendChild(workspace);
     overlay.appendChild(panel);document.body.appendChild(overlay);
     picture.addEventListener('pointerdown',pointerDown);
     picture.addEventListener('pointermove',pointerMove);
