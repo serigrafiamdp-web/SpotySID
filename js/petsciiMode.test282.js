@@ -76,9 +76,10 @@
     var width=cv.width,height=cv.height;
     if(width<=0||height<=0)return;
 
-    // PC renderer: text cells are large and square, not 40x25 or tiny
-    // 12px glyphs. 24px means 80 REAL C64 glyphs across a 1920px display.
-    var cellSize=24;
+    // TEST287: use middle-sized, square PETSCII cells on PC displays.
+    // At 1920px, ~107 original ROM glyphs fit horizontally at 18px.
+    // The clean, deterministic TEST286 waveform renderer is unchanged.
+    var cellSize=18;
     var cols=Math.max(1,Math.ceil(width/cellSize));
     var rows=Math.max(1,Math.ceil(height/cellSize));
     var cellW=width/cols,cellH=height/rows;
