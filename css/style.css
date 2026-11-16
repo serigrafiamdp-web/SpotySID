@@ -3100,7 +3100,9 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
   box-sizing:border-box;width:min(1180px,100%);max-height:calc(100vh - 24px);
   overflow:hidden;background:#000;border:1px solid var(--rico-theme-border,#999);
   pointer-events:auto;
-  color:var(--rico-theme-fg,#fff);padding:9px;
+  /* TEST268B: no extra black gutter beyond the RIGHT/BOTTOM color frame.
+     The only new breathing space is INSIDE the gridded stage border. */
+  color:var(--rico-theme-fg,#fff);padding:9px 0 0 9px;
 }
 #ricoTileArtworkOverlay .rico-tile-head {
   display:flex;align-items:center;gap:5px;
@@ -3109,7 +3111,7 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
   display:flex;align-items:flex-start;gap:7px;width:100%;min-width:0;
 }
 #ricoTileArtworkOverlay .rico-tile-head {
-  justify-content:space-between;margin-bottom:8px;
+  justify-content:space-between;margin-bottom:8px;padding-right:9px;
   cursor:move;touch-action:none;user-select:none;
 }
 #ricoTileArtworkOverlay .rico-tile-head button {cursor:pointer;}
@@ -3144,6 +3146,7 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
   /* Four true C64 pixels of black spacing before the frame at 4× zoom.
      TEST268 adjusts this pixel margin dynamically for smaller viewports. */
   border:1px solid var(--rico-theme-border,#777);padding:16px;
+  margin:0; /* border flush with the editor's right/bottom frame */
 }
 #ricoTileArtworkOverlay .rico-tile-surface {
   position:relative;display:block;box-sizing:content-box;
