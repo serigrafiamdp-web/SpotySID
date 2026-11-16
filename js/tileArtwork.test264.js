@@ -19,6 +19,13 @@
     if(!color||color==='transparent')color=getComputedStyle(document.body).color;
     return color||'#ffffff';
   }
+  function themeBackground(){
+    // The C64 BASIC and C64 Cyan palettes use colored canvas backgrounds.
+    // Do not replace them with black: match the actual oscilloscope backdrop.
+    var color=getComputedStyle(document.documentElement)
+      .getPropertyValue('--rico-theme-bg').trim();
+    return color&&color!=='transparent'?color:'#000000';
+  }
   function button(label,action){
     var b=document.createElement('button');
     b.type='button';b.textContent=label;
@@ -114,9 +121,9 @@
     if(!pictureCtx)return;
     // Logical bit 0 = background, bit 1 = ink. Star reverses their colors,
     // not the source bitmap, so mouse-left still paints and right still erases.
-    pictureCtx.fillStyle=reverseMode?themeColor():'#000000';
+    pictureCtx.fillStyle=reverseMode?themeColor():themeBackground();
     pictureCtx.fillRect(0,0,WIDTH,HEIGHT);
-    pictureCtx.fillStyle=reverseMode?'#000000':themeColor();
+    pictureCtx.fillStyle=reverseMode?themeBackground():themeColor();
     for(var y=0;y<HEIGHT;y++){
       for(var x=0;x<WIDTH;x++)if(pixels[y*WIDTH+x])
         pictureCtx.fillRect(x,y,1,1);
@@ -133,7 +140,7 @@
     var w=WIDTH*scale,h=HEIGHT*scale;
     grid.width=w;grid.height=h;
     gridCtx.clearRect(0,0,w,h);
-    gridCtx.fillStyle=reverseMode?'#000000':themeColor();
+    gridCtx.fillStyle=reverseMode?themeBackground():themeColor();
     // Each one-pixel cell is visible; the 8×8 C64 character grid is stronger.
     for(var x=1;x<WIDTH;x++){
       gridCtx.globalAlpha=x%8===0?0.24:0.07;
@@ -155,7 +162,7 @@
     var box=normalizedSelection();
     if(!gridCtx||!box)return;
     gridCtx.save();
-    gridCtx.strokeStyle=reverseMode?'#000000':themeColor();
+    gridCtx.strokeStyle=reverseMode?themeBackground():themeColor();
     gridCtx.lineWidth=1;gridCtx.globalAlpha=0.95;
     gridCtx.setLineDash([4,3]);
     gridCtx.strokeRect(box.x1*scale+0.5,box.y1*scale+0.5,
@@ -372,12 +379,12 @@
     // Palette changes update --rico-theme-fg on the root element.
     // Canvas pixels and grid are not CSS-colored, so redraw both when it
     // changes; existing 1-bit artwork data and undo history stay intact.
-    var lastThemeColor=themeColor();
+    var lastThemeColor=themeColor(),lastThemeBackground=themeBackground();
     var themeObserver=new MutationObserver(function(){
       if(!overlay||overlay.hidden)return;
-      var next=themeColor();
-      if(next===lastThemeColor)return;
-      lastThemeColor=next;
+      var next=themeColor(),nextBg=themeBackground();
+      if(next===lastThemeColor&&nextBg===lastThemeBackground)return;
+      lastThemeColor=next;lastThemeBackground=nextBg;
       drawGrid();paint();
     });
     themeObserver.observe(document.documentElement,{
