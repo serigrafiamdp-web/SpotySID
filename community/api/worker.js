@@ -605,6 +605,40 @@ async function artistProfiles(request,env,url,origin){
   }
 }
 
+// TEST276 — APPEND-ONLY COMMUNITY PLAYLIST BACKUP JOURNAL.
+// Not exposed by the public API or authorized by the shared beta key.
+// Old snapshots remain available to an administrator via Cloudflare D1.
+// D1.batch() is transactional: each playlist write is committed together
+// with a fresh record of the resulting state (or pre-delete state).
+async function preparePlaylistBackups(env){
+  if(!env.DB)throw Error('No D1 database');
+  await env.DB.prepare(
+    'CREATE TABLE IF NOT EXISTS playlist_backup_versions ('+
+    'version_id INTEGER PRIMARY KEY AUTOINCREMENT,'+
+    'playlist_id TEXT NOT NULL,payload TEXT NOT NULL,'+
+    'event TEXT NOT NULL,captured_at INTEGER NOT NULL,'+
+    'track_count INTEGER NOT NULL)'
+  ).run();
+  await env.DB.prepare(
+    'CREATE INDEX IF NOT EXISTS playlist_backup_versions_by_playlist '+
+    'ON playlist_backup_versions(playlist_id,version_id DESC)'
+  ).run();
+  // Initial safety net for existing lists. Seed each ID only once; never
+  // replace or delete historical records, even if a playlist was deleted.
+  await env.DB.prepare(
+    'INSERT INTO playlist_backup_versions(playlist_id,payload,event,captured_at,track_count) '+
+    "SELECT p.id,p.payload,'baseline',?,p.track_count FROM playlists p "+
+    'WHERE NOT EXISTS (SELECT 1 FROM playlist_backup_versions b WHERE b.playlist_id=p.id)'
+  ).bind(Date.now()).run();
+}
+function backupCurrentPlaylist(env,id,expectedPayload,event,now){
+  // Run immediately AFTER a successful conditional update inside DB.batch.
+  return env.DB.prepare(
+    'INSERT INTO playlist_backup_versions(playlist_id,payload,event,captured_at,track_count) '+
+    'SELECT id,payload,?,?,track_count FROM playlists WHERE id=? AND payload=?'
+  ).bind(event,now,id,expectedPayload);
+}
+
 export default {
  async fetch(request,env){
   const origin=request.headers.get('Origin')||'';
@@ -657,10 +691,33 @@ export default {
   if(origin!==ORIGIN)return text('Origin not allowed',403,origin);
   // Every persistent write, including metadata and deletion, requires server authorization.
   if(!(await hasValidBetaKey(request,env)))return text('Invalid beta key or server beta key not configured',403,origin);
+  // Fail closed: never accept a public playlist mutation without backup.
+  try{await preparePlaylistBackups(env);}catch(error){
+    console.error('Playlist backup storage unavailable',error);
+    return text('BACKUP UNAVAILABLE · PLAYLIST NOT MODIFIED',503,origin);
+  }
   if(isDelete){
-    const row=await env.DB.prepare('SELECT id FROM playlists WHERE id=?').bind(updateMatch[1]).first();
+    const row=await env.DB.prepare('SELECT id,payload FROM playlists WHERE id=?')
+      .bind(updateMatch[1]).first();
     if(!row)return text('Playlist not found',404,origin);
-    await env.DB.prepare('DELETE FROM playlists WHERE id=?').bind(row.id).run();
+    const time=Date.now();
+    let results;
+    try{
+      results=await env.DB.batch([
+        env.DB.prepare(
+          'INSERT INTO playlist_backup_versions(playlist_id,payload,event,captured_at,track_count) '+
+          "SELECT id,payload,'before-delete',?,track_count FROM playlists "+
+          'WHERE id=? AND payload=?'
+        ).bind(time,row.id,row.payload),
+        env.DB.prepare('DELETE FROM playlists WHERE id=? AND payload=?')
+          .bind(row.id,row.payload)
+      ]);
+    }catch(error){
+      console.error('Backed-up playlist delete failed',error);
+      return text('BACKUP FAILED · PLAYLIST NOT DELETED',503,origin);
+    }
+    if(results[0].meta?.changes!==1||results[1].meta?.changes!==1)
+      return text('Playlist changed; reload before deleting',409,origin);
     return json({deleted:true,id:row.id},200,origin);
   }
   if((Number(request.headers.get('Content-Length'))||0)>180000)return text('Payload too large',413,origin);
@@ -678,10 +735,20 @@ export default {
     prior.name=data.name.trim();
     prior.createdBy=data.createdBy.trim();
     prior.updatedAt=new Date().toISOString();
-    const result=await env.DB.prepare(
-      'UPDATE playlists SET title=?,creator=?,payload=? WHERE id=? AND payload=?')
-      .bind(prior.name,prior.createdBy,JSON.stringify(prior),record.id,record.payload).run();
-    if(result.meta?.changes!==1)return text('Playlist changed; reload before editing',409,origin);
+    const updatedPayload=JSON.stringify(prior);
+    let changes;
+    try{
+      changes=await env.DB.batch([
+        env.DB.prepare('UPDATE playlists SET title=?,creator=?,payload=? WHERE id=? AND payload=?')
+          .bind(prior.name,prior.createdBy,updatedPayload,record.id,record.payload),
+        backupCurrentPlaylist(env,record.id,updatedPayload,'metadata',Date.now())
+      ]);
+    }catch(error){
+      console.error('Backed-up playlist metadata edit failed',error);
+      return text('BACKUP FAILED · PLAYLIST NOT MODIFIED',503,origin);
+    }
+    if(changes[0].meta?.changes!==1||changes[1].meta?.changes!==1)
+      return text('Playlist changed; reload before editing',409,origin);
     return json({id:record.id,title:prior.name,createdBy:prior.createdBy,tracks:prior.tracks.length,updated:true},200,origin);
   }
   if(!data||data.format!=='ricos-sid-playlist'||data.version!==2||
@@ -728,10 +795,20 @@ export default {
       return text('No playlist changes to save',400,origin);
     const payload={...original,tracks,updatedAt:new Date(now).toISOString()};
     // Optimistic concurrency: old payload must still match, to avoid stale overwrites.
-    const write=await env.DB.prepare(
-      'UPDATE playlists SET track_count=?,payload=? WHERE id=? AND payload=?')
-      .bind(tracks.length,JSON.stringify(payload),record.id,record.payload).run();
-    if(write.meta?.changes!==1)return text('Playlist changed; reload before editing',409,origin);
+    const updatedPayload=JSON.stringify(payload);
+    let changes;
+    try{
+      changes=await env.DB.batch([
+        env.DB.prepare('UPDATE playlists SET track_count=?,payload=? WHERE id=? AND payload=?')
+          .bind(tracks.length,updatedPayload,record.id,record.payload),
+        backupCurrentPlaylist(env,record.id,updatedPayload,'update',now)
+      ]);
+    }catch(error){
+      console.error('Backed-up playlist track update failed',error);
+      return text('BACKUP FAILED · PLAYLIST NOT MODIFIED',503,origin);
+    }
+    if(changes[0].meta?.changes!==1||changes[1].meta?.changes!==1)
+      return text('Playlist changed; reload before editing',409,origin);
     return json({id:record.id,title:record.title,createdBy:record.creator,tracks:tracks.length,updated:true},200,origin);
   }
   const ip=request.headers.get('CF-Connecting-IP')||'unknown';
@@ -742,11 +819,21 @@ export default {
   const id=crypto.randomUUID();
   const payload={format:'ricos-sid-playlist',version:2,id,name:data.name.trim(),
     createdBy:data.createdBy.trim(),createdAt:new Date(now).toISOString(),tracks};
-  await env.DB.batch([
-    env.DB.prepare('INSERT INTO playlists(id,title,creator,track_count,payload,created_at) VALUES(?,?,?,?,?,?)')
-      .bind(id,payload.name,payload.createdBy,tracks.length,JSON.stringify(payload),now),
-    env.DB.prepare('INSERT INTO submissions(ip_hash,created_ms) VALUES(?,?)').bind(ipHash,now)
-  ]);
+  try{
+    const results=await env.DB.batch([
+      env.DB.prepare('INSERT INTO playlists(id,title,creator,track_count,payload,created_at) VALUES(?,?,?,?,?,?)')
+        .bind(id,payload.name,payload.createdBy,tracks.length,JSON.stringify(payload),now),
+      env.DB.prepare('INSERT INTO submissions(ip_hash,created_ms) VALUES(?,?)').bind(ipHash,now),
+      env.DB.prepare(
+        'INSERT INTO playlist_backup_versions(playlist_id,payload,event,captured_at,track_count) VALUES(?,?,?,?,?)'
+      ).bind(id,JSON.stringify(payload),'create',now,tracks.length)
+    ]);
+    if(results[0].meta?.changes!==1||results[2].meta?.changes!==1)
+      return text('BACKUP FAILED · PLAYLIST SAVE NOT VERIFIED',503,origin);
+  }catch(error){
+    console.error('Backed-up playlist creation failed',error);
+    return text('BACKUP FAILED · PLAYLIST NOT CREATED',503,origin);
+  }
   return json({id,title:payload.name,createdBy:payload.createdBy,tracks:tracks.length},201,origin);
  }
 };
