@@ -11,11 +11,11 @@
      window.C64CharROM.length!==4096)return;
   var ROM=window.C64CharROM;
   var atlas=null,atlasColor='',lastPaint=0;
-  var lastIsPetscii=null,observer=null,domQueued=false;
+  var lastIsPetscii=null;
 
   function enabled(){
-    return player.colorModes[player.colorModeIndex] &&
-      player.colorModes[player.colorModeIndex].name==='PETSCII C64';
+    // TEST289: independent PETSCII button works with every COLOR palette.
+    return player.petsciiEnabled === true;
   }
   function drawAtlas(color){
     if(atlas&&atlasColor===color)return;
@@ -38,24 +38,6 @@
     var gx=(id%32)*8,gy=Math.floor(id/32)*8;
     ctx.drawImage(atlas,gx,gy,8,8,x,y,w,h);
   }
-  function codeOf(letter){
-    var c=(letter||' ').toUpperCase().charCodeAt(0)||32;
-    // Screen codes used by the C64 upper-case / graphic charset.
-    if(c>=65&&c<=90)return c-64;
-    if(c===64)return 0;          // @
-    if(c>=32&&c<=63)return c;   // digits + punctuation + space
-    if(c===91)return 27;        // [
-    if(c===93)return 29;        // ]
-    if(c===95)return 100;       // graphical underscore line
-    if(c===124)return 66;      // vertical border glyph
-    return 35;                 // unmatched character -> graphics #
-  }
-  function petText(ctx,txt,x,y,w,h){
-    var value=String(txt||'').normalize('NFD')
-      .replace(/[\u0300-\u036f]/g,'').toUpperCase();
-    for(var i=0;i<value.length;i++)
-      blit(ctx,codeOf(value[i]),x+i*w,y,w,h);
-  }
   // TEST285 — True PETSCII path construction, NEVER bitmap similarity.
   // Every visible tile is a genuine unmodified C64 ROM glyph selected only
   // by the DIRECTION and CONTINUITY of the SID's audio signal.
@@ -76,10 +58,9 @@
     var width=cv.width,height=cv.height;
     if(width<=0||height<=0)return;
 
-    // TEST288: use 15px square PETSCII cells on PC displays.
-    // At 1920px, 128 original ROM glyphs fit horizontally.
-    // The clean, deterministic TEST286 waveform renderer is unchanged.
-    var cellSize=15;
+    // TEST289: 14px square PETSCII glyphs (approx. 138 columns at 1920px).
+    // Use the exact current COLOR palette for ink and background.
+    var cellSize=14;
     var cols=Math.max(1,Math.ceil(width/cellSize));
     var rows=Math.max(1,Math.ceil(height/cellSize));
     var cellW=width/cols,cellH=height/rows;
@@ -127,7 +108,9 @@
       if(range<0.00015)continue;
       var center=(top+bottom)/2;
       var heightInRows=Math.max(0,bottom-top-1);
-      var gain=range>0.000001?heightInRows*0.88/range:0;
+      // TEST289: peak-to-peak height ~48% of a voice band rather than 88%.
+      // Keep visible margins on top and bottom, even for pulse transitions.
+      var gain=range>0.000001?heightInRows*0.48/range:0;
       function valueAt(position){
         var p=Math.max(0,Math.min(count-1,position));
         var aIndex=Math.floor(p),fraction=p-aIndex;
@@ -186,70 +169,17 @@
     }
   }
 
-  // Add a real ROM-character facade to short textual interface controls.
-  // Original DOM labels and their click/keyboard/focus semantics are retained.
-  // When COLOR 11 is deselected, facades disappear with no DOM mutation to
-  // playback or playlists.
-  function candidateNodes(){
-    return document.querySelectorAll(
-      '#sidControls button,.dialog .title > div:first-child,.dialog .buttons button,'+
-      '#chooseSidDialog button,#ricoLivePlaylistHeader button,'+
-      '#ricoRemixBar button,#ricoHelpDialog button,'+
-      '#sidInfoContent .rico-show-heading,'+
-      '#ricoCommunityTabs button,#ricoCommunityItems button,'+
-      '.rico-beta-dialog strong,#ricoLivePlaylistHeader strong'
-    );
-  }
-  function renderLabel(node){
-    // Avoid buttons with nested icons / rich HTML; keep those accessible.
-    if(node.querySelector('svg,img,input,select,textarea'))return;
-    var raw=String(node.textContent||'').replace(/\s+/g,' ').trim();
-    if(!raw||raw.length>44)return;
-    if(node.dataset.petsciiRendered===raw&&node.querySelector('.rico-petscii-label'))return;
-    var old=node.querySelector('.rico-petscii-label');
-    if(old)old.remove();
-    var width=raw.length*8;
-    var cv=document.createElement('canvas'),g=cv.getContext('2d');
-    cv.className='rico-petscii-label';
-    cv.width=width;cv.height=8;
-    g.imageSmoothingEnabled=false;
-    petText(g,raw,0,0,8,8);
-    cv.setAttribute('aria-hidden','true');
-    node.classList.add('rico-petscii-labeled');
-    node.dataset.petsciiRendered=raw;
-    node.appendChild(cv);
-  }
-  function refreshLabels(){
-    domQueued=false;
-    if(!enabled())return;
-    var nodes=candidateNodes(),max=Math.min(nodes.length,220);
-    for(var i=0;i<max;i++)renderLabel(nodes[i]);
-  }
-  function queueLabels(){
-    if(domQueued||!enabled())return;
-    domQueued=true;
-    requestAnimationFrame(refreshLabels);
-  }
-  function syncMode(){
-    var active=enabled();
-    if(lastIsPetscii===active)return;
-    lastIsPetscii=active;lastPaint=0;
-    if(active){
-      drawAtlas(player.colorModes[player.colorModeIndex].line);
-      queueLabels();
-    }else{
-      // Keep document labels intact and restore CSS normal theme.
-      document.querySelectorAll('.rico-petscii-label').forEach(function(cv){cv.remove()});
-      document.querySelectorAll('.rico-petscii-labeled').forEach(function(node){
-        node.classList.remove('rico-petscii-labeled');
-        delete node.dataset.petsciiRendered;
-      });
-    }
-  }
+  // TEST289: interface text remains native (same font and same layout).
+  // No label canvas, DOM observer, or theme-specific font overrides here.
   var originalRender=player.render;
   player.render=function(){
-    syncMode();
-    if(enabled()){
+    var active=enabled();
+    if(lastIsPetscii!==active){
+      lastIsPetscii=active;
+      // Paint immediately on toggle, including if the first frame is <40ms.
+      lastPaint=-Infinity;
+    }
+    if(active){
       var now=performance.now();
       if(now-lastPaint>=40){
         lastPaint=now;
@@ -258,21 +188,14 @@
       if(typeof this.updateVoiceInfo==='function')this.updateVoiceInfo();
       return;
     }
+    // Switching PETSCII OFF restores the existing native waveform renderer.
     return originalRender.apply(this,arguments);
   };
-  observer=new MutationObserver(function(items){
-    if(!enabled())return;
-    // Ignore modifications created inside character facades themselves.
-    if(items.every(function(item){
-      return item.target&&item.target.closest&&item.target.closest('.rico-petscii-label');
-    }))return;
-    queueLabels();
-  });
-  observer.observe(document.body,{subtree:true,childList:true,characterData:true});
   window.RicoPetsciiMode={
     enabled:enabled,
     glyphCount:ROM.length/8,
-    refresh:queueLabels,
+    // Retain a harmless refresh method for compatibility; UI font unchanged.
+    refresh:function(){lastPaint=-Infinity;},
     scopeGlyphs:SCOPE_GLYPH
   };
 })();
