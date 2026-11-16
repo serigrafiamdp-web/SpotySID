@@ -3331,3 +3331,73 @@ html[data-rico-lcd="2tone"] input[type="checkbox"],
 html[data-rico-lcd="2tone"] input[type="radio"] {
   accent-color:var(--rico-theme-fg) !important;
 }
+
+
+/* TEST282 — PETSCII C64 CHARACTERS, never freeform pixel strokes.
+   Only COLOR 11 enables this skin. Buttons/window labels are painted from
+   the genuine 512-glyph 8x8 C64 ROM by petsciiMode.test282.js. All clickable
+   elements retain their normal accessible DOM and keyboard interactions. */
+html[data-rico-petscii="on"] {
+  color-scheme:dark;
+}
+html[data-rico-petscii="on"] :is(
+  body,#sidControls,#sidInfo,#sidInfoContent,#songInfo,
+  #ricoLivePlaylist,#ricoLivePlaylistHeader,#ricoLivePlaylistItems,
+  #ricoRemixBar,#ricoRemixEditor,#ricoImportSidWindow,#ricoHvscPanel,
+  #ricoLibraryBuilder,#ricoCommunityPanel,#ricoHelpDialog,
+  #chooseSidDialog,#chooseSidInfo,.dialog,.dialog .content,
+  .dialog .title,.dialog .buttons,.rico-beta-dialog,
+  #ricoTileArtworkOverlay .rico-tile-panel
+) {
+  font-family:"Courier New",Courier,monospace !important;
+  background-color:var(--rico-theme-bg) !important;
+  color:var(--rico-theme-fg) !important;
+  border-color:var(--rico-theme-border) !important;
+  text-shadow:none !important;
+}
+html[data-rico-petscii="on"] :is(
+  #sidControls,#sidInfoContent,#ricoLivePlaylist,#ricoCommunityPanel,
+  #ricoRemixBar,#ricoRemixEditor,#ricoImportSidWindow,
+  #ricoHelpDialog,#chooseSidDialog,.dialog,#ricoTileArtworkOverlay
+) :is(button,input,select,textarea) {
+  font-family:"Courier New",Courier,monospace !important;
+  text-transform:uppercase !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  text-shadow:none !important;
+}
+html[data-rico-petscii="on"] .rico-petscii-labeled {
+  position:relative !important;
+  color:transparent !important;
+  text-shadow:none !important;
+}
+html[data-rico-petscii="on"] .rico-petscii-label {
+  position:absolute !important;
+  left:50%;top:50%;transform:translate(-50%,-50%);
+  display:block !important;
+  width:auto;max-width:calc(100% - 4px);
+  height:12px;max-height:calc(100% - 2px);
+  image-rendering:pixelated;image-rendering:crisp-edges;
+  pointer-events:none !important;z-index:3;
+  background:transparent !important;object-fit:contain;
+}
+html[data-rico-petscii="on"] :is(
+  #ricoCommunityItems,#ricoLivePlaylistItems,#sidInfoContent
+) :is(.rico-community-row,.rico-live-row,.rico-show-section) {
+  border-bottom:1px dashed var(--rico-theme-fg) !important;
+}
+html[data-rico-petscii="on"] :is(
+  #sidControls,#ricoLivePlaylist,.dialog,#chooseSidDialog,
+  #ricoHelpDialog,#ricoRemixEditor,#ricoImportSidWindow
+) {
+  border-style:solid !important;
+}
+html[data-rico-petscii="on"] :is(
+  #sidControls,#ricoLivePlaylist,.dialog,#chooseSidDialog,
+  #ricoHelpDialog,#ricoRemixEditor,#ricoImportSidWindow
+) :is(button:focus-visible,input:focus-visible,select:focus-visible) {
+  outline:2px dashed var(--rico-theme-fg) !important;
+  outline-offset:1px;
+}
+/* No modal dimming (TEST279) and no PETSCII overlay on any other color. */
+html:not([data-rico-petscii="on"]) .rico-petscii-label {display:none !important;}
