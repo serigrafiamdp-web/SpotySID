@@ -116,22 +116,31 @@
         if(sample<min)min=sample;
         if(sample>max)max=sample;
       }
-      var range=max-min,mid=(min+max)/2;
+      // TEST297: isolated residual impulses were producing 14px vertical
+      // ticks and specks on otherwise silent channels. Detect the sustained
+      // signal using central percentiles instead of the two extreme samples.
+      var ordered=Array.prototype.slice.call(samples).sort(function(a,b){return a-b;});
+      var low=ordered[Math.floor((count-1)*0.05)];
+      var high=ordered[Math.ceil((count-1)*0.95)];
+      var range=high-low,mid=(low+high)/2;
       var center=(top+bottom)/2;
       var heightInRows=Math.max(0,bottom-top-1);
       // TEST292: stable gain retains real SID amplitude instead of
       // renormalizing each frame, capped at 48% of the voice band.
       var gain=heightInRows*10;
       var maxDeviation=heightInRows*0.24;
-      // TEST296: avoid drawing leftover sample noise as isolated bars/dots.
-      // Only show wave glyphs if the sound makes a meaningful vertical
-      // displacement at the actual 14px character resolution.
+      // A silent voice (or an isolated spike without sustained amplitude)
+      // uses only the one-pixel C64 horizontal glyph.
       var inactive=(!player.isPlaying&&!player.isPaused) ||
         (channel<3&&wave===0);
-      if(inactive||range<0.00015||range*gain<1.5){
+      if(inactive||range<0.00015||range*gain<2.75){
         drawIdleLine(top,bottom);
         continue;
       }
+      // Ignore outlier impulses during drawing, too, so they cannot be
+      // mistaken for abrupt square-wave transitions.
+      for(var s=0;s<count;s++)
+        samples[s]=Math.max(low,Math.min(high,samples[s]));
       function valueAt(position){
         var p=Math.max(0,Math.min(count-1,position));
         var aIndex=Math.floor(p),fraction=p-aIndex;
@@ -154,9 +163,9 @@
         var from=col*(count-1)/cols;
         var to=(col+1)*(count-1)/cols;
         var y0=yAt(from),y1=yAt(to),delta=y1-y0;
-        // TEST296: a signal variation smaller than a screen character
-        // is a clean thin baseline, not a fake square-wave edge.
-        if(Math.max(Math.abs(y0-center),Math.abs(y1-center))<0.75){
+        // A sub-character variation is a continuous thin baseline,
+        // never a vertical bar/cross or stray dot.
+        if(Math.max(Math.abs(y0-center),Math.abs(y1-center))<1.25){
           tile(SCOPE_GLYPH.idle,col,Math.round(center));
           continue;
         }
