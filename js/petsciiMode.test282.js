@@ -104,31 +104,26 @@
     ctx.imageSmoothingEnabled=false;
     ctx.fillStyle=palette.background;
     ctx.fillRect(0,0,width,height);
+    // TEST283: the oscilloscope is PURE PETSCII graphics, from the
+    // first character column to the last. No header, footer or VOICE text.
+    // Share the entire 25-row height between 3 (or 4) voice bands.
     var channels=player.sidHasSamples?4:3;
-    var first=player.sidInfoVisible?Math.max(0,Math.ceil(220/cellW)):0;
-    var bands=rows-2; // keep two text rows for the C64-like header/footer
-    var rowsPer=bands/channels;
-    petText(ctx,'SPOTYSID  -  PETSCII  -  512 CHARS',1*cellW,0,cellW,cellH);
-    var pointsAcross=Math.max(1,(cols-first)*8);
     var bufferSize=882*2;
     var samplesPerChannel=Math.floor(bufferSize/2.8);
     for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
       if(!buffer)continue;
-      var top=1+channel*rowsPer;
-      var minY=Math.ceil(top),maxY=Math.floor(top+rowsPer-1);
+      var minY=Math.floor(channel*rows/channels);
+      var maxY=Math.floor((channel+1)*rows/channels)-1;
       if(maxY<minY)continue;
-      var center=(top+rowsPer/2)*8;
+      var rowsPer=maxY-minY+1;
+      var center=(minY+(maxY+1))*4;
       var amplitude=rowsPer*8*(channel===3?0.8:7);
-      // Col 0 is a ROM-written channel label, preserving a text UI.
-      var label='VOICE '+String(channel+1);
-      petText(ctx,label,first*cellW,minY*cellH,cellW,cellH);
-      var xStart=Math.min(cols-1,first+9);
-      var visibleCols=cols-xStart;
-      for(var col=xStart;col<cols;col++){
+      // All 40 full character columns are available for each voice.
+      for(var col=0;col<cols;col++){
         var masks=new Map(),sampleCount=samplesPerChannel;
         for(var lx=0;lx<8;lx++){
-          var fraction=((col-xStart)*8+lx)/Math.max(1,visibleCols*8-1);
+          var fraction=(col*8+lx)/Math.max(1,cols*8-1);
           var pos=Math.min(bufferSize-1,Math.floor(fraction*sampleCount));
           var sample=SID.readFloatSample(buffer,pos);
           if(!player.isPlaying&&!player.isPaused)sample=0;
@@ -148,7 +143,6 @@
         });
       }
     }
-    petText(ctx,'*** C64 CHARACTER OSCILLOSCOPE ***',1*cellW,(rows-1)*cellH,cellW,cellH);
   }
 
   // Add a real ROM-character facade to short textual interface controls.
