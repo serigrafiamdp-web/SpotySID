@@ -123,13 +123,16 @@
     if(picture)picture.style.cursor=tool==='fill'?'cell':
       tool==='select'?'crosshair':'crosshair';
   }
+  // TEST280: the LCD palette must use only glass/ink, including STAR inverse.
+  function lcdTwoTone(){return document.documentElement.getAttribute('data-rico-lcd')==='2tone';}
+  function reverseInkColor(){return lcdTwoTone()?themeBackground():'#000000';}
   function paint(){
     if(!pictureCtx)return;
     // Logical bit 0 = background, bit 1 = ink. Star reverses their colors,
     // not the source bitmap, so mouse-left still paints and right still erases.
     pictureCtx.fillStyle=reverseMode?themeColor():themeBackground();
     pictureCtx.fillRect(0,0,WIDTH,HEIGHT);
-    pictureCtx.fillStyle=reverseMode?'#000000':themeColor();
+    pictureCtx.fillStyle=reverseMode?reverseInkColor():themeColor();
     for(var y=0;y<HEIGHT;y++){
       for(var x=0;x<WIDTH;x++)if(pixels[y*WIDTH+x])
         pictureCtx.fillRect(x,y,1,1);
@@ -146,14 +149,16 @@
     var w=WIDTH*scale,h=HEIGHT*scale;
     grid.width=w;grid.height=h;
     gridCtx.clearRect(0,0,w,h);
-    gridCtx.fillStyle=reverseMode?'#000000':themeColor();
-    // Each one-pixel cell is visible; the 8×8 C64 character grid is stronger.
+    gridCtx.fillStyle=reverseMode?reverseInkColor():themeColor();
+    // With LCD two-tone no semi-transparent grey grid: only 8×8 pixel borders.
+    var lcdGrid=lcdTwoTone();
+    // Each one-pixel cell is visible in the other palettes; 8×8 grid is stronger.
     for(var x=1;x<WIDTH;x++){
-      gridCtx.globalAlpha=x%8===0?0.24:0.07;
+      gridCtx.globalAlpha=lcdGrid?(x%8===0?1:0):(x%8===0?0.24:0.07);
       gridCtx.fillRect(x*scale,0,1,h);
     }
     for(var y=1;y<HEIGHT;y++){
-      gridCtx.globalAlpha=y%8===0?0.24:0.07;
+      gridCtx.globalAlpha=lcdGrid?(y%8===0?1:0):(y%8===0?0.24:0.07);
       gridCtx.fillRect(0,y*scale,w,1);
     }
     gridCtx.globalAlpha=1;
@@ -168,8 +173,8 @@
     var box=normalizedSelection();
     if(!gridCtx||!box)return;
     gridCtx.save();
-    gridCtx.strokeStyle=reverseMode?'#000000':themeColor();
-    gridCtx.lineWidth=1;gridCtx.globalAlpha=0.95;
+    gridCtx.strokeStyle=reverseMode?reverseInkColor():themeColor();
+    gridCtx.lineWidth=1;gridCtx.globalAlpha=lcdTwoTone()?1:0.95;
     gridCtx.setLineDash([4,3]);
     gridCtx.strokeRect(box.x1*scale+0.5,box.y1*scale+0.5,
       (box.x2-box.x1+1)*scale-1,(box.y2-box.y1+1)*scale-1);
