@@ -268,6 +268,6 @@
     enabled:enabled,
     glyphCount:ROM.length/8,
     refresh:queueLabels,
-    getMatch:bestGlyph
+    scopeGlyphs:SCOPE_GLYPH
   };
 })();
