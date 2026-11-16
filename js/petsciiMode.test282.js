@@ -48,6 +48,7 @@
     rising:78,          // / rising on screen (toward the upper rows)
     falling:77,         // \ falling on screen (toward the lower rows)
     noise:42,           // genuine C64 '*' character for SID noise waveform
+    idle:100            // authentic C64 ROM: one-pixel full-width horizontal line
     // TEST286: no cross/corner tiles; their extra arms created ghost lines
   });
   function paintPetscii(){
@@ -74,9 +75,14 @@
     // TEST286: fewer audio samples per screen lets whole PETSCII glyphs
     // describe clean ramps and plateaus rather than tiny aliasing artifacts.
     var count=Math.min(Math.floor(bufferSize/2.8),Math.max(180,cols*4));
-    for(var channel=0;channel<channels;channel++){
+    // TEST294: keep a one-ROM-pixel baseline in channels with no output.
+    function drawIdleLine(top,bottom){
+      var row=Math.round((top+bottom)/2);
+      for(var col=0;col<cols;col++)
+        blit(ctx,SCOPE_GLYPH.idle,col*cellW,row*cellH,cellW,cellH);
+    }
+    for(var channel=0;channel<channels++){
       var buffer=SID.getChannelBuffer(channel+1);
-      if(!buffer)continue;
       // TEST293: use the SID's noise flag, not sample jaggedness.
       // TinySID may return a 4-bit waveform nibble or raw SID control bits.
       var wave=channel<3&&typeof SID.getWave==='function'?SID.getWave(channel):0;
@@ -85,6 +91,7 @@
       var top=Math.floor(channel*rows/channels);
       var bottom=Math.floor((channel+1)*rows/channels)-1;
       if(bottom<top)continue;
+      if(!buffer){drawIdleLine(top,bottom);continue;}
 
       // Keep a stable real SID waveform window; use zero crossing to
       // reduce horizontal jumping, not replace the source with a fake wave.
@@ -110,8 +117,8 @@
         if(sample>max)max=sample;
       }
       var range=max-min,mid=(min+max)/2;
-      // Do not amplify tiny residual samples into a large visual mess.
-      if(range<0.00015)continue;
+      // Real silence: show a fine centered PETSCII baseline, never a blank band.
+      if(range<0.00015){drawIdleLine(top,bottom);continue;}
       var center=(top+bottom)/2;
       var heightInRows=Math.max(0,bottom-top-1);
       // TEST292: stable gain based on actual SID output, not each frame's
