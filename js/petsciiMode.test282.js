@@ -171,7 +171,7 @@
             for(var r=first;r<=last;r++)
               tile(SCOPE_GLYPH.vertical,col,r);
           }
-        }else if(Math.abs(delta)<0.65){
+        }else if(Math.abs(delta)<0.14){
           // Stable plateau: one horizontal ROM tile, no decoration.
           tile(SCOPE_GLYPH.horizontal,col,Math.round((y0+y1)/2));
         }else{
