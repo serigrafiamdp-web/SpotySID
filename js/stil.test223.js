@@ -300,6 +300,16 @@
       row.appendChild(remove);list.appendChild(row);
     });
     section.appendChild(list);
+    if(kind==='artwork'){
+      // TEST264: separate hi-res pixel editor prototype; existing URL artwork
+      // and published artist profiles remain unchanged.
+      var createTile=el('button','rico-show-add','CREATE TILE ARTWORK');
+      createTile.type='button';
+      createTile.addEventListener('click',function(){
+        if(window.RicoTileArtwork)window.RicoTileArtwork.open();
+      });
+      section.appendChild(createTile);
+    }
     addForm(section,kind,key,onSave);
     hub.appendChild(section);
   }
