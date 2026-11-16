@@ -3080,3 +3080,58 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
   outline:2px solid var(--rico-theme-fg,#fff);
   outline-offset:2px;
 }
+
+
+/* TEST264 — CREATE TILE ARTWORK, 32×8 C64 hi-res character tiles.
+   Does not affect SID playback, original artwork URLs, or app dialogs. */
+#ricoTileArtworkOverlay.rico-tile-overlay {
+  position:fixed;inset:0;z-index:999999;
+  display:flex;align-items:center;justify-content:center;
+  box-sizing:border-box;padding:12px;
+  background:rgba(0,0,0,.75);
+  color:var(--rico-theme-fg,#fff);
+  font:11px/1.3 Tahoma,Arial,sans-serif;
+}
+#ricoTileArtworkOverlay.rico-tile-overlay[hidden] {display:none !important;}
+#ricoTileArtworkOverlay .rico-tile-panel {
+  box-sizing:border-box;width:min(1080px,100%);max-height:calc(100vh - 24px);
+  overflow:hidden;background:#000;border:1px solid var(--rico-theme-border,#999);
+  color:var(--rico-theme-fg,#fff);padding:9px;
+}
+#ricoTileArtworkOverlay .rico-tile-head,
+#ricoTileArtworkOverlay .rico-tile-tools {
+  display:flex;align-items:center;gap:5px;flex-wrap:wrap;
+}
+#ricoTileArtworkOverlay .rico-tile-head {justify-content:space-between;margin-bottom:8px;}
+#ricoTileArtworkOverlay .rico-tile-head strong {font-size:11px;font-weight:bold;letter-spacing:.2px;}
+#ricoTileArtworkOverlay button {
+  font:11px Tahoma,Arial,sans-serif !important;cursor:pointer;
+  border:1px solid var(--rico-theme-border,#999) !important;
+  background:#000 !important;color:var(--rico-theme-fg,#fff) !important;
+  padding:3px 7px !important;min-height:23px;border-radius:0 !important;
+  box-shadow:none !important;
+}
+#ricoTileArtworkOverlay button[aria-pressed="true"] {
+  background:var(--rico-theme-fg,#fff) !important;color:#000 !important;
+}
+#ricoTileArtworkOverlay button:disabled {opacity:.38;cursor:default;}
+#ricoTileArtworkOverlay .rico-tile-tools {margin:0 0 9px;}
+#ricoTileArtworkOverlay .rico-tile-info {
+  margin-left:auto;font-size:10px;white-space:nowrap;opacity:.75;
+}
+#ricoTileArtworkOverlay .rico-tile-stage {
+  width:100%;overflow:auto;box-sizing:border-box;background:#000;
+  border:1px solid var(--rico-theme-border,#777);padding:0;
+}
+#ricoTileArtworkOverlay .rico-tile-surface {
+  position:relative;display:block;box-sizing:content-box;
+  background:#000;margin:0 auto;
+}
+#ricoTileArtworkOverlay canvas {
+  display:block;position:absolute;inset:0;image-rendering:pixelated;
+  border:none !important;margin:0 !important;padding:0 !important;
+}
+#ricoTileArtworkOverlay .rico-tile-pixels {
+  cursor:crosshair;touch-action:none;
+}
+#ricoTileArtworkOverlay .rico-tile-grid {pointer-events:none;}
