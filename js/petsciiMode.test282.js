@@ -117,15 +117,21 @@
         if(sample>max)max=sample;
       }
       var range=max-min,mid=(min+max)/2;
-      // Real silence: show a fine centered PETSCII baseline, never a blank band.
-      if(range<0.00015){drawIdleLine(top,bottom);continue;}
       var center=(top+bottom)/2;
       var heightInRows=Math.max(0,bottom-top-1);
-      // TEST292: stable gain based on actual SID output, not each frame's
-      // min/max. An envelope getting quieter now draws a smaller waveform.
-      // Keep the TEST289 maximum height of 48% of the voice band.
+      // TEST292: stable gain retains real SID amplitude instead of
+      // renormalizing each frame, capped at 48% of the voice band.
       var gain=heightInRows*10;
       var maxDeviation=heightInRows*0.24;
+      // TEST296: avoid drawing leftover sample noise as isolated bars/dots.
+      // Only show wave glyphs if the sound makes a meaningful vertical
+      // displacement at the actual 14px character resolution.
+      var inactive=(!player.isPlaying&&!player.isPaused) ||
+        (channel<3&&wave===0);
+      if(inactive||range<0.00015||range*gain<1.5){
+        drawIdleLine(top,bottom);
+        continue;
+      }
       function valueAt(position){
         var p=Math.max(0,Math.min(count-1,position));
         var aIndex=Math.floor(p),fraction=p-aIndex;
@@ -148,6 +154,12 @@
         var from=col*(count-1)/cols;
         var to=(col+1)*(count-1)/cols;
         var y0=yAt(from),y1=yAt(to),delta=y1-y0;
+        // TEST296: a signal variation smaller than a screen character
+        // is a clean thin baseline, not a fake square-wave edge.
+        if(Math.max(Math.abs(y0-center),Math.abs(y1-center))<0.75){
+          tile(SCOPE_GLYPH.idle,col,Math.round(center));
+          continue;
+        }
         if(noiseWave){
           // Actual SID noise amplitude determines the '*' tile position.
           tile(SCOPE_GLYPH.noise,col,Math.round(yAt((from+to)/2)));
