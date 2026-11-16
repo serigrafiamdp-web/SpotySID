@@ -38,7 +38,7 @@
   function currentArtistKey(){
     var entry=currentEntry();return artistKey(entry,getPath(entry));
   }
-  function emptyDrafts(){return {links:[],csdb:[],artwork:[],stilOverrides:{}};}
+  function emptyDrafts(){return {links:[],csdb:[],artwork:[],tileworks:[],stilOverrides:{}};}
   function cloneDraft(data){
     var result=emptyDrafts();
     if(!data||typeof data!=='object')return result;
@@ -46,6 +46,16 @@
       if(Array.isArray(data[kind]))result[kind]=data[kind].filter(function(v){
         return v&&typeof v.label==='string'&&typeof v.url==='string';
       }).map(function(v){return {label:v.label,url:v.url};});
+    });
+    // TEST272: compact per-artist C64 tileworks, separate from official STIL.
+    // Each work stores exactly 2048 bytes of hi-res 1-bit pixels as base64.
+    if(Array.isArray(data.tileworks))result.tileworks=data.tileworks.filter(function(v){
+      return v&&typeof v.id==='string'&&/^tw-[A-Za-z0-9-]{4,80}$/.test(v.id)&&
+        typeof v.label==='string'&&/^TILEWORK [1-9][0-9]*$/.test(v.label)&&
+        typeof v.bits==='string'&&v.bits.length===2732&&
+        /^[A-Za-z0-9+/]{2730}==$/.test(v.bits)&&typeof v.reverse==='boolean';
+    }).map(function(v){
+      return {id:v.id,label:v.label,bits:v.bits,reverse:v.reverse};
     });
     if(data.stilOverrides&&typeof data.stilOverrides==='object'&&
        !Array.isArray(data.stilOverrides)){
@@ -71,6 +81,10 @@
         newer[kind].forEach(function(v){
           if(!known.has(v.url)){base[kind].push(v);known.add(v.url);}
         });
+      });
+      var knownWorks=new Set(base.tileworks.map(function(item){return item.id;}));
+      newer.tileworks.forEach(function(item){
+        if(!knownWorks.has(item.id)){base.tileworks.push(item);knownWorks.add(item.id);}
       });
       Object.assign(base.stilOverrides,newer.stilOverrides);
       return base;
@@ -301,12 +315,20 @@
     });
     section.appendChild(list);
     if(kind==='artwork'){
-      // TEST264: separate hi-res pixel editor prototype; existing URL artwork
-      // and published artist profiles remain unchanged.
+      // TEST272: list this artist's TILEWORK 1, 2, 3… in STIL+.
+      // Viewers will be built separately; for now this is a compact title list.
+      var tileList=el('div','rico-stil-tilework-list');
+      readDrafts(key).tileworks.forEach(function(work){
+        var row=el('div','rico-stil-tilework-row',work.label);
+        tileList.appendChild(row);
+      });
+      section.appendChild(tileList);
       var createTile=el('button','rico-show-add','CREATE TILE ARTWORK');
-      createTile.type='button';
+      createTile.type='button';createTile.disabled=!key;
       createTile.addEventListener('click',function(){
-        if(window.RicoTileArtwork)window.RicoTileArtwork.open();
+        if(!window.RicoTileArtwork||!window.RicoStilPlusTileworks)return;
+        var context=window.RicoStilPlusTileworks.capture();
+        if(context)window.RicoTileArtwork.open(context);
       });
       section.appendChild(createTile);
     }
@@ -378,7 +400,7 @@
     }
     var profile=Object.assign({artistName:state.profile&&state.profile.artistName||label},readDrafts(key));
     if(!profile.links.length&&!profile.csdb.length&&!profile.artwork.length&&
-       !Object.keys(profile.stilOverrides).length){
+       !profile.tileworks.length&&!Object.keys(profile.stilOverrides).length){
       messages.set(key,'ADD INFORMATION BEFORE PUBLISHING');update();return;
     }
     if(state.revision>0&&JSON.stringify(profile)===JSON.stringify(state.profile)){
@@ -390,6 +412,8 @@
       if(!capabilitiesResponse.ok)throw Error('SERVER UNAVAILABLE');
       var capabilities=await capabilitiesResponse.json();
       if(!capabilities.artistProfiles)throw Error('SERVER UPDATE REQUIRED');
+      if(profile.tileworks.length&&!capabilities.artistTileworks)
+        throw Error('TILEWORK PUBLISH REQUIRES SERVER UPDATE');
     }catch(error){
       messages.set(key,error.message||'SERVER UPDATE REQUIRED');update();return;
     }
@@ -465,6 +489,36 @@
     content.scrollTop=scroll;
     fetchProfile(key);
   }
+  // TEST272: capture the artist when CREATE is clicked, not when SAVE is
+  // clicked; switching tracks/playlists while drawing cannot retarget the art.
+  window.RicoStilPlusTileworks={
+    capture:function(){
+      var entry=currentEntry(),key=artistKey(entry,getPath(entry));
+      return key?{key:key,artist:artistLabel(entry)}:null;
+    },
+    save:function(context,work){
+      if(!context||!context.key||!work||typeof work.bits!=='string'||
+         work.bits.length!==2732||!/^[A-Za-z0-9+/]{2730}==$/.test(work.bits)||
+         typeof work.reverse!=='boolean')
+        return {ok:false,message:'INVALID TILEWORK'};
+      var key=context.key,drafts=readDrafts(key),existing=null,index=-1;
+      if(work.id)index=drafts.tileworks.findIndex(function(item){return item.id===work.id;});
+      if(index>=0)existing=drafts.tileworks[index];
+      var lastNumber=drafts.tileworks.reduce(function(n,item){
+        var match=/^TILEWORK ([1-9][0-9]*)$/.exec(item.label);
+        return Math.max(n,match?Number(match[1]):0);
+      },0);
+      var id=existing?existing.id:
+        'tw-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,10);
+      var label=existing?existing.label:'TILEWORK '+(lastNumber+1);
+      var item={id:id,label:label,bits:work.bits,reverse:work.reverse};
+      if(index>=0)drafts.tileworks[index]=item;else drafts.tileworks.push(item);
+      if(!saveDrafts(key,drafts))return {ok:false,message:'LOCAL SAVE FAILED'};
+      messages.set(key,'SAVED LOCAL · '+label+' · PUBLISH TO SHARE');
+      if(player.sidInfoVisible&&currentArtistKey()===key)update();
+      return {ok:true,id:id,label:label};
+    }
+  };
   var originalDisplay=player.displaySongInfo;
   player.displaySongInfo=function(){
     var value=originalDisplay.apply(this,arguments);
