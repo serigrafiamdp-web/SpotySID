@@ -108,9 +108,11 @@
       if(range<0.00015)continue;
       var center=(top+bottom)/2;
       var heightInRows=Math.max(0,bottom-top-1);
-      // TEST289: peak-to-peak height ~48% of a voice band rather than 88%.
-      // Keep visible margins on top and bottom, even for pulse transitions.
-      var gain=range>0.000001?heightInRows*0.48/range:0;
+      // TEST292: stable gain based on actual SID output, not each frame's
+      // min/max. An envelope getting quieter now draws a smaller waveform.
+      // Keep the TEST289 maximum height of 48% of the voice band.
+      var gain=heightInRows*10;
+      var maxDeviation=heightInRows*0.24;
       function valueAt(position){
         var p=Math.max(0,Math.min(count-1,position));
         var aIndex=Math.floor(p),fraction=p-aIndex;
@@ -121,8 +123,8 @@
         return abrupt?(fraction<0.5?a:b):a+(b-a)*fraction;
       }
       function yAt(position){
-        return Math.max(top,Math.min(bottom,
-          center+(valueAt(position)-mid)*gain));
+        var deviation=(valueAt(position)-mid)*gain;
+        return center+Math.max(-maxDeviation,Math.min(maxDeviation,deviation));
       }
       function tile(id,col,row){
         if(row<top||row>bottom)return;
