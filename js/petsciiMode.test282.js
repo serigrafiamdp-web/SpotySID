@@ -76,10 +76,10 @@
     var width=cv.width,height=cv.height;
     if(width<=0||height<=0)return;
 
-    // TEST287: use middle-sized, square PETSCII cells on PC displays.
-    // At 1920px, ~107 original ROM glyphs fit horizontally at 18px.
+    // TEST288: use 15px square PETSCII cells on PC displays.
+    // At 1920px, 128 original ROM glyphs fit horizontally.
     // The clean, deterministic TEST286 waveform renderer is unchanged.
-    var cellSize=18;
+    var cellSize=15;
     var cols=Math.max(1,Math.ceil(width/cellSize));
     var rows=Math.max(1,Math.ceil(height/cellSize));
     var cellW=width/cols,cellH=height/rows;
