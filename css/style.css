@@ -3095,8 +3095,10 @@ body.rico-choose-open #sidControls {z-index:700 !important;}
 }
 #ricoTileArtworkOverlay.rico-tile-overlay[hidden] {display:none !important;}
 #ricoTileArtworkOverlay .rico-tile-panel {
-  /* TEST270: editor frame NEVER resizes when the pixel zoom changes. */
-  box-sizing:border-box;width:min(1064px,calc(100vw - 24px));
+  /* TEST328: compact editor viewport (600px instead of 1064px).
+     The 256×64 pixel canvas keeps its 4x base zoom and scrolls INSIDE;
+     retain the 266px height to keep all nine 26px tool buttons visible. */
+  box-sizing:border-box;width:min(600px,calc(100vw - 24px));
   height:min(266px,calc(100vh - 24px));overflow:hidden;
   position:relative;
   background:var(--rico-theme-bg,#000);color:var(--rico-theme-fg,#fff);
