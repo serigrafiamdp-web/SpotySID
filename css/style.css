@@ -3626,16 +3626,30 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   pointer-events:none;
 }
 
-/* TEST333 — Keyboard cursor: visible on the selected playlist or song.
-   Draw inside the existing row; no added spacing, buttons or third color. */
+/* TEST334 — keyboard and mouse share the exact same row highlight.
+   Preserve the inverted currently playing song; no extra borders/colors. */
 #ricoCommunityItems .rico-community-row.rico-keyboard-current,
 #sidList .rico-game-row.rico-keyboard-current,
+#ricoHvscItems .rico-hvsc-row.rico-keyboard-current {
+  background:var(--rico-theme-fg,#fff) !important;
+  color:var(--rico-theme-bg,#000) !important;
+  outline:none !important;
+}
 #sidList .rico-local-row.rico-keyboard-current,
-#ricoHvscItems .rico-hvsc-row.rico-keyboard-current,
 #ricoHvscItems .rico-csdb-rank-head.rico-keyboard-current,
 #ricoHvscItems .rico-csdb-track button.rico-keyboard-current,
 #ricoOurItems .rico-our-collection-row.rico-keyboard-current,
-#ricoLivePlaylistItems .rico-live-row.rico-keyboard-current {
-  outline:2px solid var(--rico-theme-fg,#fff) !important;
-  outline-offset:-2px !important;
+#ricoLivePlaylistItems .rico-live-row.rico-keyboard-current:not(.rico-live-active) {
+  background:var(--rico-theme-hover,#555) !important;
+  color:var(--rico-theme-fg,#fff) !important;
+  outline:none !important;
+}
+/* Previously the selected next SID had a different thin outline. It now
+   uses the same filled highlight as hovering or keyboard navigation. */
+#ricoLivePlaylistItems .rico-live-row.rico-live-selected:not(.rico-live-active) {
+  background:var(--rico-theme-hover,#555) !important;
+  outline:none !important;
+}
+#ricoLivePlaylistItems .rico-live-row.rico-keyboard-current.rico-live-active {
+  outline:none !important;
 }
