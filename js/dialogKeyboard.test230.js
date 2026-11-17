@@ -261,7 +261,13 @@
     event.preventDefault();event.stopImmediatePropagation();
     showKeyboardRow(rows[next]);
   },true);
-  // A mouse selection or navigating elsewhere releases the keyboard cursor.
+  // TEST334: as soon as the user moves the mouse, the mouse's normal
+  // :hover highlight becomes the ONE visible cursor. Avoid a second row
+  // remaining highlighted by an older keyboard selection.
+  document.addEventListener('pointermove',function(event){
+    if(keyboardRow&&event.pointerType!=='touch')clearKeyboardRow();
+  },true);
+  // A mouse selection or navigating elsewhere also releases the keyboard cursor.
   document.addEventListener('pointerdown',function(event){
     if(keyboardRow&&keyboardRow!==event.target&&
        !keyboardRow.contains(event.target))clearKeyboardRow();
