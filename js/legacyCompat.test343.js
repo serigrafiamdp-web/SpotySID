@@ -11,9 +11,16 @@
   catch (ignore) {}
   var oscpu=String(navigator.oscpu||'');
   var reportedXP=/Windows NT 5\.[12]\b|Windows XP/i.test(ua+' '+oscpu);
-  var forced=override==='1'||override==='on';
-  var disabled=override==='0'||override==='off';
-  var enabled=!disabled&&(reportedXP||forced);
+  // TEST346: Supermium reports NT 10/Win 11 on real XP installations.
+  // A deliberate per-browser selection is safer than guessing the OS.
+  var XP_PREFERENCE_KEY='spotysid.legacyOS.confirmedXP.v1';
+  var savedXP=false;
+  try { savedXP=window.localStorage.getItem(XP_PREFERENCE_KEY)==='1'; }
+  catch (ignore) { /* storage can be disabled */ }
+  var forcedByUrl=override==='1'||override==='on';
+  var disabledByUrl=override==='0'||override==='off';
+  var forced=forcedByUrl||(!disabledByUrl&&savedXP);
+  var enabled=!disabledByUrl&&(reportedXP||forced);
   var browser=/Supermium/i.test(ua)?'Supermium':
     /Edg\//i.test(ua)?'Edge':/Firefox\//i.test(ua)?'Firefox':
     /Chrome\//i.test(ua)?'Chromium/Chrome-compatible':'Other/unknown';
@@ -22,11 +29,13 @@
     browserReported:browser,
     windowsXPReported:reportedXP,
     forced:forced,
+    savedXP:savedXP,
+    overrideSource:forcedByUrl?'url':disabledByUrl?'url-off':savedXP?'saved':'browser',
     bufferSamples:enabled?8192:4096,
     scopeMaxFps:enabled?20:0
   };
   window.SpotySidLegacy=profile;
-  if(window.console&&console.info)console.info('SpotySid TEST345 compatibility',profile);
+  if(window.console&&console.info)console.info('SpotySid TEST346 compatibility',profile);
   // TEST345: report the OS/version offered by browser APIs rather than
   // silently pretending that every Chromium/NT 10.0 User-Agent is Windows 11.
   // Supermium can deliberately spoof both UA and Client Hints even on XP.
@@ -37,14 +46,53 @@
     if(!node)return;
     node.textContent=text;
     node.title=reason+(profile.enabled?
-      ' | XP-compatible audio mode ON.':' | XP-compatible audio mode OFF.');
+      ' | XP-compatible audio mode ON.':' | XP-compatible audio mode OFF.')+
+      (profile.enabled?' Click to return to automatic detection.':
+        ' Click here if this computer really runs Windows XP.');
+    node.setAttribute('aria-label',node.title);
+  }
+  function installOsSelection(){
+    var node=document.getElementById('ricoWindowsVersion');
+    if(!node)return;
+    function chooseXP(){
+      // This is an explicit local preference, never a hardware detection.
+      var targetXP=!profile.enabled;
+      var stored=false;
+      try{
+        if(targetXP)window.localStorage.setItem(XP_PREFERENCE_KEY,'1');
+        else window.localStorage.removeItem(XP_PREFERENCE_KEY);
+        stored=true;
+      }catch(ignore){ /* use URL fallback when storage is blocked */ }
+      // Remove old query overrides when preference is available, preserving
+      // playlist share links and all other URL parameters.
+      var url;
+      try{
+        url=new URL(window.location.href);
+        url.searchParams.delete('xp');
+        if(!stored)url.searchParams.set('xp',targetXP?'1':'0');
+        window.location.assign(url.href);
+      }catch(error){
+        // Even on an older browser, never switch buffer size mid-playback.
+        window.location.search='xp='+(targetXP?'1':'0');
+      }
+    }
+    node.addEventListener('click',chooseXP,false);
+    node.addEventListener('keydown',function(event){
+      if(event.key==='Enter'||event.key===' '||event.key==='Spacebar'){
+        event.preventDefault();
+        chooseXP();
+      }
+    },false);
   }
   function readVersion(){
+    installOsSelection();
     var label='WIN ?',reason='Windows version not verifiable from browser metadata';
     var nt=/Windows NT (\d+)\.(\d+)/i.exec(oscpu+' '+ua);
     if(forced){
       label='XP';
-      reason='XP mode explicitly selected (?xp=1); physical OS not independently verified';
+      reason=forcedByUrl?
+        'XP profile selected by ?xp=1 (not independently detected)':
+        'Windows XP manually confirmed and saved for this browser (not independently detected)';
     }else if(reportedXP){
       label='XP';
       reason='Windows XP/NT 5.x reported in browser metadata';
@@ -67,10 +115,10 @@
             if(!data||data.platform!=='Windows')return;
             var major=parseInt(String(data.platformVersion||'').split('.')[0],10);
             if(!isFinite(major))return;
-            if(major>=13)syncVersion('11',
-              'Browser Client Hints report Windows 11 (not independently verified; Supermium may spoof XP)');
-            else if(major>=1&&major<=10)syncVersion('10',
-              'Browser Client Hints report Windows 10 (not independently verified; Supermium may spoof XP)');
+            if(major>=13)syncVersion('11?',
+              'Browser reports Windows 11, but Supermium can spoof this on Windows XP (unverified)');
+            else if(major>=1&&major<=10)syncVersion('10?',
+              'Browser reports Windows 10, but Supermium can spoof this on Windows XP (unverified)');
           }).catch(function(){ /* keep the honest 10/11? or WIN ? */ });
         }
       }catch(ignore){ /* Client Hints not available */ }
