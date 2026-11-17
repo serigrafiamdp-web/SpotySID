@@ -3577,3 +3577,16 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
 #ricoLivePlaylist #ricoLivePlaylistItems > .rico-live-row {
   border-bottom-color:var(--rico-theme-border,#fff) !important;
 }
+
+/* TEST322 — HI-RES / PETSCII / PIXEL cycle shares a single fixed-size button.
+   PETSCII and PIXEL are the two ON states, so TEST316 handles inverse ink.
+   Do not change the bottom toolbar height or any other button dimensions. */
+#sidControls #oscilloscopeVisualButtons #ricoPetsciiButton {
+  width:62px !important;
+  min-width:62px !important;
+  max-width:62px !important;
+  flex:0 0 62px;
+  padding-left:0 !important;
+  padding-right:0 !important;
+  text-align:center;
+}
