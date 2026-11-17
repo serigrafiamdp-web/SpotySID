@@ -558,7 +558,7 @@
       else restoreFullVolume();
       if(transitionSource==='next'||transitionSource==='silence')followPlayingRowOnce=true;
       transitionSource=null;
-      renderLivePlaylist();
+      renderPlaybackStatus();
       if(wasPlaylistHandoff&&playlistStartResolver){
         var confirmPlaylistStart=playlistStartResolver;
         playlistStartResolver=null;
@@ -582,7 +582,7 @@
       else player.loadSID('sids/'+item.file);
       player.setPath(item.id);
       player.initFileSelection();
-      renderLivePlaylist();
+      renderPlaybackStatus();
     }
   }
   function prepareSidDuringFade(index,entry,generation){
@@ -639,7 +639,7 @@
     if(transitionBusy){
       if(transitionAwaitingStart){
         $('#ricoLiveStatus').text('Loading the next SID; select another song once it starts.');
-        renderLivePlaylist();return;
+        renderPlaybackStatus();return;
       }
       // Another click changes NEXT without starting another fade or timer.
       if(index===player.sidListIndex){
@@ -651,11 +651,11 @@
         prepareSidDuringFade(index,entry,transitionGeneration);
         $('#ricoLiveStatus').text('NEXT: '+(list[index].name||list[index].file||'SID'));
       }
-      renderLivePlaylist();
+      renderPlaybackStatus();
       return;
     }
     if(index===player.sidListIndex&&player.isPlaying){
-      renderLivePlaylist();return;
+      renderPlaybackStatus();return;
     }
     player.initWebAudio();
     // If playback was paused or stopped, switch immediately and fade in.
@@ -673,7 +673,7 @@
     player.autoLoading=true;
     $('#ricoLiveStatus').text('NEXT: '+(list[index].name||list[index].file||'SID')+
       (playing?' · fading out':' · starting'));
-    renderLivePlaylist();
+    renderPlaybackStatus();
     // TEST203: asynchronously prepare *bytes and approved reSIDfp engine*
     // while the original SID fades. No playback or seeking of the new SID.
     prepareSidDuringFade(index,entry,generation);
@@ -692,7 +692,7 @@
         player.autoLoading=false;
         restoreFullVolume();
         $('#ricoLiveStatus').text('SID loading took too long; volume restored.');
-        renderLivePlaylist();
+        renderPlaybackStatus();
       },6000);
       // TEST205: no post-fade hold. The new SID still begins at PCM 00:00,
       // and the opening gate makes its first complete buffer audible.
@@ -2452,11 +2452,15 @@
   // TEST122: cheap playback/selection paint for a thousand-plus SID list.
   // Rebuilding 1,376 interactive DOM rows right at the click interrupts the
   // browser's ScriptProcessor callback and can sound like a stuck SID note.
-  function paintLargePlaylistMarkers(){
+  function paintLargePlaylistMarkers(allowXP){
     var painted=largePlaylistPainted;
     var scroller=document.getElementById('ricoLivePlaylistItems');
     var list=player.sidList||[];
-    if(!painted||!scroller||!activeReferenceStream||list.length<1000||
+    // TEST344: allow the already-verified lightweight row-marker updater
+    // for ordinary-size lists ONLY when explicitly called from playback
+    // paths in XP mode. Structural operations still perform a full render.
+    var xpFast=allowXP&&window.SpotySidLegacy&&window.SpotySidLegacy.enabled;
+    if(!painted||!scroller||(!xpFast&&(!activeReferenceStream||list.length<1000))||
        painted.stream!==activeReferenceStream||painted.list!==list||
        painted.revision!==largePlaylistStructureRevision||
        painted.count!==list.length||
@@ -2506,6 +2510,24 @@
       }
     }
     return true;
+  }
+
+  function renderPlaybackStatus(){
+    // TEST344: neither click nor AUTO may rebuild 50/100/500 DOM rows in
+    // the middle of the ScriptProcessor audio stream on slow Windows XP PCs.
+    // Reuse TEST122's existing row-marker update without changing list order.
+    if(window.SpotySidLegacy&&window.SpotySidLegacy.enabled&&
+       !landingPlaylists&&!activeCsdbRankDisplay&&paintLargePlaylistMarkers(true)){
+      // A selective reSIDfp route can change between two songs of one list.
+      var routeInfo=customActive&&window.RicoLftMode;
+      var ray=routeInfo&&window.RicoLftMode.playingRay();
+      var lft=routeInfo&&!ray&&window.RicoLftMode.playingApproved();
+      var title=customActive?(loadedPlaylistTitle||'CUSTOM PLAYLIST'):'GAMES';
+      $('#ricoLivePlaylistTitle').text(title+
+        (ray?' · RAY MANTA MODE ON':lft?' · LFT MODE ON':''));
+      return;
+    }
+    renderLivePlaylist();
   }
 
   function noHvscArtistLabel(value){
@@ -2798,7 +2820,8 @@
         else if(activeRect.bottom>boxRect.bottom)scroller.scrollTop+=activeRect.bottom-boxRect.bottom+4;
       }
     }
-    if(activeReferenceStream&&list.length>=1000){
+    if((activeReferenceStream&&list.length>=1000)||
+       (window.SpotySidLegacy&&window.SpotySidLegacy.enabled&&!activeCsdbRankDisplay)){
       largePlaylistPainted={stream:activeReferenceStream,list:list,
         revision:largePlaylistStructureRevision,count:list.length,
         rowsByIndex:groupedRowsByIndex,
@@ -3298,7 +3321,7 @@
       $('#ricoLiveStatus').text('');
       // Engine determines actual initial subtune from the SID header.
       player.initFileSelection();
-      renderLivePlaylist();
+      renderPlaybackStatus();
     } catch (error) {
       player.autoLoading = false;
       player.isPlaying = false;
