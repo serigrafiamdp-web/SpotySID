@@ -152,4 +152,118 @@
     event.preventDefault();
     target.click();
   },true);
+
+  // TEST333 — UP / DOWN choose only a playable playlist or SID song.
+  // ENTER dispatches the same existing PLAY/click action; browsing never
+  // starts playback by merely moving the keyboard selection.
+  // Other tabs, search inputs, select boxes, song timers and text fields
+  // keep their own keyboard behavior.
+  var keyboardRow=null;
+  function clearKeyboardRow(){
+    if(keyboardRow)keyboardRow.classList.remove('rico-keyboard-current');
+    keyboardRow=null;
+  }
+  function keyboardEditable(element){
+    if(!element||element.nodeType!==1)return false;
+    if(element.isContentEditable)return true;
+    if(element.closest&&element.closest(
+      '[contenteditable="true"],[contenteditable=""],[role="textbox"],[role="combobox"]'))
+      return true;
+    return /^(INPUT|TEXTAREA|SELECT)$/.test(element.tagName||'');
+  }
+  function keyboardList(){
+    if(isVisible(chooser)){
+      // Only the active list pane, never the upper category tabs/toolbar.
+      var panes=[
+        ['ricoCommunityPanel','ricoCommunityItems','.rico-community-row'],
+        ['sidListHolder','sidList','.rico-game-row,.rico-local-row'],
+        ['ricoHvscPanel','ricoHvscItems','button.rico-hvsc-row,button.rico-csdb-rank-head,.rico-csdb-detail:not([hidden]) .rico-csdb-track button'],
+        ['ricoOurCollectionPanel','ricoOurItems','.rico-our-collection-row']
+      ];
+      for(var i=0;i<panes.length;i++){
+        var box=document.getElementById(panes[i][0]);
+        var container=document.getElementById(panes[i][1]);
+        if(isVisible(box)&&container)
+          return {container:container,selector:panes[i][2]};
+      }
+      return null;
+    }
+    if(isVisible(playlist)){
+      var songs=document.getElementById('ricoLivePlaylistItems');
+      if(songs)return {container:songs,selector:'button.rico-live-row'};
+    }
+    return null;
+  }
+  function keyboardRows(list){
+    var nodes=list.container.querySelectorAll(list.selector);
+    return Array.prototype.filter.call(nodes,function(node){
+      // Rankings contain hidden expandable details: exclude their songs
+      // until that ranking has been expanded. No forced reflow of 1000+ rows.
+      return !node.closest('[hidden]')&&
+        !node.classList.contains('rico-csdb-pending-row');
+    });
+  }
+  function showKeyboardRow(row){
+    if(keyboardRow!==row)clearKeyboardRow();
+    keyboardRow=row;
+    row.classList.add('rico-keyboard-current');
+    row.scrollIntoView({block:'nearest',inline:'nearest'});
+  }
+  function playKeyboardRow(row){
+    if(!row||!row.isConnected)return;
+    if(row.classList.contains('rico-community-row')||
+       row.classList.contains('rico-our-collection-row')){
+      // The PLAY button is not always the first button: reorder controls
+      // and EDIT/DELETE must never fire when ENTER is pressed.
+      var buttons=row.querySelectorAll('button');
+      for(var i=0;i<buttons.length;i++){
+        if(buttons[i].textContent.trim().toUpperCase()==='PLAY'){
+          if(!buttons[i].disabled)buttons[i].click();
+          return;
+        }
+      }
+      return;
+    }
+    // GAMES, HVSC, CSDb and floating song rows use their normal click handler.
+    if(typeof row.click==='function')row.click();
+  }
+  document.addEventListener('keydown',function(event){
+    if(event.key==='Tab'){clearKeyboardRow();return;}
+    if(event.defaultPrevented||event.isComposing||event.ctrlKey||
+       event.altKey||event.metaKey)return;
+    var key=event.key;
+    if(key!=='ArrowUp'&&key!=='ArrowDown'&&key!=='Enter')return;
+    if(keyboardEditable(event.target)||keyboardEditable(document.activeElement)||
+       hasOtherForegroundWindow()||
+       isVisible(document.getElementById('ricoTileArtworkOverlay')))return;
+    var list=keyboardList();
+    if(!list){clearKeyboardRow();return;}
+    var rows=keyboardRows(list);
+    if(!rows.length){clearKeyboardRow();return;}
+    var current=rows.indexOf(keyboardRow);
+    if(key==='Enter'){
+      if(current<0||event.repeat)return;
+      event.preventDefault();event.stopImmediatePropagation();
+      playKeyboardRow(rows[current]);
+      return;
+    }
+    var step=key==='ArrowDown'?1:-1;
+    if(current<0){
+      // The active song or playlist is the starting position when possible.
+      current=rows.findIndex(function(row){
+        return row.classList.contains('rico-live-active')||
+          row.classList.contains('rico-community-selected')||
+          row.classList.contains('rico-active-row');
+      });
+      if(current<0)current=step>0?-1:rows.length;
+    }
+    var next=Math.max(0,Math.min(rows.length-1,current+step));
+    event.preventDefault();event.stopImmediatePropagation();
+    showKeyboardRow(rows[next]);
+  },true);
+  // A mouse selection or navigating elsewhere releases the keyboard cursor.
+  document.addEventListener('pointerdown',function(event){
+    if(keyboardRow&&keyboardRow!==event.target&&
+       !keyboardRow.contains(event.target))clearKeyboardRow();
+  },true);
 })();
