@@ -10,7 +10,9 @@ var SidPlayer = function() {
   this.sidHasSamples = false;
   // TEST24: filled waves are the standard mode on each page load.
   this.oscilloscopeMode = 'filled';
-  // TEST289: PETSCII is an independent display switch, not a color palette.
+  // TEST322: the same button cycles HI-RES / PETSCII / PIXEL independently
+  // of COLOR, FILL/LINE and ★. Preserve the PETSCII compatibility flag.
+  this.scopeDisplayMode = 'hires';
   this.petsciiEnabled = false;
   // TEST316: on every opening choose normal/inverted with equal probability.
   // Both states cover all 12 existing palettes; ★ can override either state.
@@ -1436,11 +1438,20 @@ SidPlayer.prototype = {
       sidPlayer.render();
     });
 
-    // TEST289: PETSCII toggles the text-character oscilloscope ON/OFF
-    // while COLOR keeps its current selected palette (all 11 available).
+    // TEST322: single display selector HI-RES -> PETSCII -> PIXEL -> HI-RES.
+    // Active special modes invert the button, but never modify color palette.
     $('#ricoPetsciiButton').on('click', function() {
-      sidPlayer.petsciiEnabled = !sidPlayer.petsciiEnabled;
-      $(this).attr('aria-pressed', sidPlayer.petsciiEnabled ? 'true' : 'false');
+      var modes=['hires','petscii','pixel'];
+      var current=modes.indexOf(sidPlayer.scopeDisplayMode);
+      sidPlayer.scopeDisplayMode=modes[(current+1)%modes.length];
+      sidPlayer.petsciiEnabled=sidPlayer.scopeDisplayMode==='petscii';
+      var mode=sidPlayer.scopeDisplayMode;
+      $(this).text(mode==='hires'?'HI-RES':mode.toUpperCase())
+        .attr('aria-pressed',mode==='hires'?'false':'true')
+        .attr('aria-label','Oscilloscope display mode: '+(mode==='hires'?'HI-RES':mode.toUpperCase())+
+          '. Click for '+(mode==='hires'?'PETSCII':mode==='petscii'?'PIXEL':'HI-RES')+'.');
+      if(window.RicoPetsciiMode&&typeof window.RicoPetsciiMode.refresh==='function')
+        window.RicoPetsciiMode.refresh();
       sidPlayer.render();
     });
 
@@ -2279,7 +2290,7 @@ SidPlayer.prototype = {
 
 
     this.context.strokeStyle = this.getActivePalette().line;
-    this.context.lineWidth = 2;
+    this.context.lineWidth = this.scopeDisplayMode==='pixel' ? 3 : 2;
 
     this.context.stroke();
 
@@ -2349,7 +2360,7 @@ SidPlayer.prototype = {
       ctx.moveTo(points[0][0], points[0][1]);
       for(var k = 1; k < points.length; k++) ctx.lineTo(points[k][0], points[k][1]);
       ctx.strokeStyle = this.getActivePalette().line;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = this.scopeDisplayMode==='pixel' ? 3 : 2;
       ctx.stroke();
     }
   },
