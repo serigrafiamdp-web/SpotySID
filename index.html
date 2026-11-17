@@ -835,7 +835,9 @@
     <script type="text/javascript" src="js/stats.min.js"></script>
     <script type="text/javascript" src="js/backend_tinysid.js"></script>
     <script type="text/javascript" src="js/dialogManager.js"></script>
-    <script type="text/javascript" src="js/sidPlayer.js?v=test326-random-scope-start"></script>
+    <!-- TEST343: XP compatibility detection must precede SidPlayer AudioContext initialization. -->
+    <script type="text/javascript" src="js/legacyCompat.test343.js?v=test343-xp-audio"></script>
+    <script type="text/javascript" src="js/sidPlayer.js?v=test343-xp-audio-buffer"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script type="text/javascript" src="js/sidImport.test221.js?v=test221import"></script>
     <script type="text/javascript" src="js/customPlaylist.test101.js?v=test341-idle-first-community-play"></script>
