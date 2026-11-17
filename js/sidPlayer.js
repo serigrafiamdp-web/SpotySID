@@ -2101,22 +2101,14 @@ SidPlayer.prototype = {
 */
   },
 
-  // TEST312: swap original palette's line/background without modifying it.
-  // FILL keeps its previous opacity when translucent; pure two-tone palettes
-  // (ZX Spectrum, Game & Watch, PETSCII) remain exactly two solid colors.
+  // TEST317: All 12 oscilloscope palettes use ONLY two opaque colors:
+  // active ink for both waveform outline and FILL, active paper for the
+  // background. The ★ inversion swaps the two without modifying originals.
   getActivePalette: function() {
     var base=this.colorModes[this.colorModeIndex];
-    if(!this.colorsInverted)return base;
-    var fill=base.background;
-    var opacity=/^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(0(?:\.\d+)?|1(?:\.0+)?)\s*\)$/i.exec(base.fill);
-    if(opacity&&/^#[0-9a-f]{6}$/i.test(base.background)){
-      var hex=base.background.substring(1);
-      fill='rgba('+parseInt(hex.substring(0,2),16)+','+
-        parseInt(hex.substring(2,4),16)+','+
-        parseInt(hex.substring(4,6),16)+','+opacity[1]+')';
-    }
-    return {name:base.name,line:base.background,
-      fill:fill,background:base.line};
+    var ink=this.colorsInverted?base.background:base.line;
+    var paper=this.colorsInverted?base.line:base.background;
+    return {name:base.name,line:ink,fill:ink,background:paper};
   },
 
   applyOscilloscopeColors: function() {
