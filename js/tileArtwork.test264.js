@@ -208,15 +208,23 @@
     if(event.deltaY===0)return;
     var next=Math.max(baseScale,Math.min(baseScale*5,scale+(event.deltaY<0?1:-1)));
     if(next===scale)return;
-    // Keep the artwork pixel under the pointer in roughly the same place.
+    // TEST330: anchor the zoom to the exact artwork coordinate under the
+    // mouse. Compute in scroll-content coordinates rather than nudging the
+    // previous scroll position: this also handles centered canvases and zoom
+    // changes that move the scrollbars or reflow the surface.
     var before=picture.getBoundingClientRect();
-    var sourceX=(event.clientX-before.left)/scale;
-    var sourceY=(event.clientY-before.top)/scale;
+    var viewport=stage.getBoundingClientRect();
+    var sourceX=Math.max(0,Math.min(WIDTH,(event.clientX-before.left)/before.width*WIDTH));
+    var sourceY=Math.max(0,Math.min(HEIGHT,(event.clientY-before.top)/before.height*HEIGHT));
+    var pointerX=event.clientX-viewport.left-stage.clientLeft;
+    var pointerY=event.clientY-viewport.top-stage.clientTop;
     manualScale=next;
     resizeCanvas();
     var after=picture.getBoundingClientRect();
-    stage.scrollLeft+=after.left+sourceX*next-event.clientX;
-    stage.scrollTop+=after.top+sourceY*next-event.clientY;
+    var contentX=after.left-viewport.left-stage.clientLeft+stage.scrollLeft;
+    var contentY=after.top-viewport.top-stage.clientTop+stage.scrollTop;
+    stage.scrollLeft=contentX+sourceX*next-pointerX;
+    stage.scrollTop=contentY+sourceY*next-pointerY;
   }
   function point(event){
     var rect=picture.getBoundingClientRect();
