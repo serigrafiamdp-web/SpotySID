@@ -3828,13 +3828,18 @@
         })
       };
     }
-    function validatedEntries(data) {
+    async function validatedEntries(data,serial) {
       if (!data || data.format !== 'ricos-sid-playlist' || data.version !== 1 ||
           typeof data.name !== 'string' || !data.name.trim() ||
           !Array.isArray(data.tracks) || !data.tracks.length || data.tracks.length > 2000)
         throw Error('Unsupported playlist JSON.');
-      var entries=[], total=0;
-      data.tracks.forEach(function(track, index){
+      var entries=[],total=0,slowXP=xpLongList(data.tracks.length);
+      // TEST348: V1 playlists embed SID bytes as base64. Even though ALL
+      // entries must be validated before starting, decode/parse in small
+      // batches on XP so the outgoing SID can continue its audio callbacks.
+      for(var index=0;index<data.tracks.length;index++){
+        if(serial!==playlistChangeSerial)return null;
+        var track=data.tracks[index];
         if (!track || typeof track.file !== 'string' || !track.file ||
             track.file.length > 255) throw Error('Invalid track filename.');
         var bytes=decode(track.sidBase64);
@@ -3844,13 +3849,18 @@
         if (!entry) throw Error('Invalid SID in track ' + (index+1));
         entry.id='local-'+index;
         entries.push(entry);
-      });
+        if(slowXP&&index%12===11)
+          await new Promise(function(resolve){setTimeout(resolve,25);});
+      }
       return entries;
     }
     async function loadPlaylist(data,startIndex,localImport,ranked) {
       // Validate first, then fade the outgoing playlist without a loading gap.
       var serial=requestPlaylistChange();
-      var entries=validatedEntries(data);
+      if(xpLongList(data&&data.tracks&&data.tracks.length))
+        $('#ricoLiveStatus').text('XP · PREPARING SID FILES...');
+      var entries=await validatedEntries(data,serial);
+      if(!entries||serial!==playlistChangeSerial)return false;
       return switchToPreparedPlaylist(serial,function(){
       if(window.RicoLftMode)window.RicoLftMode.deactivate();
       resetCsdbRankDisplay();
