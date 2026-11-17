@@ -626,6 +626,20 @@
         console.warn('TEST203: native SID prefetch unavailable; using original loader:',error);
     });
   }
+  function prepareSidWithAudioHeadroom(index,entry,generation,playing){
+    // TEST344 XP only: arm the original 5s fade immediately, then allow
+    // one 8192-sample audio callback before expensive ZIP/SID preparation.
+    // Stale NEXT requests are discarded by generation and selected index.
+    if(!(playing&&window.SpotySidLegacy&&window.SpotySidLegacy.enabled)){
+      prepareSidDuringFade(index,entry,generation);
+      return;
+    }
+    setTimeout(function(){
+      if(generation!==transitionGeneration||!transitionBusy||
+         queuedLiveIndex!==index)return;
+      prepareSidDuringFade(index,entry,generation);
+    },250);
+  }
   function requestSidSwitch(index,source){
     var list=player.sidList||[];
     if(index<0||index>=list.length)return;
@@ -648,7 +662,7 @@
       }else{
         queuedLiveIndex=index;
         transitionSource=source;
-        prepareSidDuringFade(index,entry,transitionGeneration);
+        prepareSidWithAudioHeadroom(index,entry,transitionGeneration,true);
         $('#ricoLiveStatus').text('NEXT: '+(list[index].name||list[index].file||'SID'));
       }
       renderPlaybackStatus();
@@ -676,7 +690,7 @@
     renderPlaybackStatus();
     // TEST203: asynchronously prepare *bytes and approved reSIDfp engine*
     // while the original SID fades. No playback or seeking of the new SID.
-    prepareSidDuringFade(index,entry,generation);
+    prepareSidWithAudioHeadroom(index,entry,generation,playing);
     transitionTimer=setTimeout(function(){
       transitionTimer=null;
       if(generation!==transitionGeneration)return;
