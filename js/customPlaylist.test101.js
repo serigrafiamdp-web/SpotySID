@@ -51,6 +51,14 @@
   // while ScriptProcessor audio needs the main thread for steady playback.
   var largePlaylistStructureRevision=0;
   var largePlaylistPainted=null;
+  // TEST348: a long XP list must not block ScriptProcessor audio with
+  // synchronous creation of hundreds of row buttons.
+  var xpLivePaintSerial=0,xpLivePaintTimer=null,xpLivePaintPending=false;
+  var xpLivePaintList=null,xpLivePaintRevision=-1;
+  var xpLocalPaintSerial=0,xpLocalPaintTimer=null;
+  function xpLongList(count){
+    return count>=80&&!!(window.SpotySidLegacy&&window.SpotySidLegacy.enabled);
+  }
   var fadeGainNode=null;
   // TEST197: separate song-output gain for Loco un Poco. This lives before
   // the unchanged transition-fade node; no SID samples are modified.
@@ -2527,6 +2535,11 @@
   }
 
   function renderPlaybackStatus(){
+    // TEST348: the initial XP long-list painter is already drawing rows
+    // incrementally. Let it finish rather than throw away its work and
+    // synchronously rebuilding the whole playlist after playSong().
+    if(xpLivePaintPending&&xpLivePaintList===player.sidList&&
+       xpLivePaintRevision===largePlaylistStructureRevision)return;
     // TEST344: neither click nor AUTO may rebuild 50/100/500 DOM rows in
     // the middle of the ScriptProcessor audio stream on slow Windows XP PCs.
     // Reuse TEST122's existing row-marker update without changing list order.
@@ -2569,6 +2582,8 @@
     });
   }
   function renderLivePlaylist() {
+    // TEST348: one painter at a time; structural list changes supersede
+    // any unfinished chunks rather than appending stale rows.
     // TEST244: update SHARE even when a large playlist uses virtual painting
     // and returns early before the ordinary row renderer.
     $('#ricoLiveShare').css('display',
@@ -2578,6 +2593,9 @@
     if(!activeCsdbRankDisplay&&paintLargePlaylistMarkers()){
       updateCheckedSidCount();return;
     }
+    var xpPaintToken=++xpLivePaintSerial;
+    if(xpLivePaintTimer!==null){clearTimeout(xpLivePaintTimer);xpLivePaintTimer=null;}
+    xpLivePaintPending=false;xpLivePaintList=null;
     var scrollNode=document.getElementById('ricoLivePlaylistItems');
     var previousScroll=scrollNode?scrollNode.scrollTop:0;
     var holder = $('#ricoLivePlaylistItems').empty();
@@ -2684,7 +2702,13 @@
     // TEST247: compute once for long lists; scanning 1,376 SID checkboxes
     // for every ↑/↓ button would block Web Audio on the main thread.
     var hasCheckedBatch=checkedSidIndices().length>0;
-    visualRows.forEach(function (entry) {
+    var xpChunked=xpLongList(list.length);
+    if(xpChunked){
+      xpLivePaintPending=true;
+      xpLivePaintList=list;
+      xpLivePaintRevision=largePlaylistStructureRevision;
+    }
+    function appendVisualRow(entry) {
       if(entry.heading){
         var heading=$('<div>').addClass('rico-csdb-live-heading');
         $('<strong>').text('#'+(entry.groupPosition+1)+' '+entry.heading.label).appendTo(heading);
@@ -2813,8 +2837,10 @@
         if(artistGroups)groupedRowsByIndex[index]=row[0];
         row.appendTo(holder);
       }
-    });
-    if(activeCsdbRankDisplay){
+    }
+    function finishPaint(){
+      if(xpPaintToken!==xpLivePaintSerial)return;
+      if(activeCsdbRankDisplay){
       while(nextCsdbRank<activeCsdbRankDisplay.items.length){
         if(isDemoRankDisplay())appendCsdbHeading(nextCsdbRank);
         else if(!activeCsdbRankDisplay.trackCounts[nextCsdbRank])appendPendingCsdbRow(nextCsdbRank);
@@ -2842,7 +2868,33 @@
         active:typeof player.sidListIndex==='number'?player.sidListIndex:-1,
         selected:typeof selectedLiveIndex==='number'?selectedLiveIndex:-1,
         queued:typeof queuedLiveIndex==='number'?queuedLiveIndex:-1};
+      if(xpChunked){
+        xpLivePaintPending=false;
+        xpLivePaintList=null;
+        // Rows drawn before playSong() are corrected from the current
+        // player state without re-creating the list.
+        if(largePlaylistPainted){
+          largePlaylistPainted.active=-1;
+          largePlaylistPainted.selected=-1;
+          largePlaylistPainted.queued=-1;
+          paintLargePlaylistMarkers(true);
+        }
+      }
     }
+    var xpVisualCursor=0;
+    function paintNextXPChunk(){
+      if(xpPaintToken!==xpLivePaintSerial)return;
+      var limit=xpChunked?Math.min(xpVisualCursor+16,visualRows.length):visualRows.length;
+      for(;xpVisualCursor<limit;xpVisualCursor++)
+        appendVisualRow(visualRows[xpVisualCursor]);
+      if(xpVisualCursor<visualRows.length){
+        xpLivePaintTimer=setTimeout(paintNextXPChunk,40);
+        return;
+      }
+      xpLivePaintTimer=null;
+      finishPaint();
+    }
+    paintNextXPChunk();
   }
 
   $('#ricoLiveSave').on('click',async function(event){
