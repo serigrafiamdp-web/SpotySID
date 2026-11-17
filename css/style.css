@@ -3442,14 +3442,41 @@ html body * {
   font-weight:700 !important;
 }
 
-/* TEST305 — Make the compact bottom toolbar visibly BOLD.
-   Tahoma at 10-11px looks thin even at weight 700. A small crisp
-   text stroke strengthens the glyphs WITHOUT changing font-size,
-   family, line-height, button size, spacing, or canvas rendering. */
+/* TEST306 — compact, single-row bold bottom toolbar.
+   Keep its original font sizes (11px actions, 10px right actions), button
+   heights and colors. Use less horizontal padding to accommodate bold ink. */
+#sidControls {
+  flex-wrap:nowrap !important;
+  gap:2px 3px !important;
+  padding:3px 4px !important;
+  height:33px !important;
+  min-height:33px !important;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+}
+#sidControls::-webkit-scrollbar {display:none;}
 #sidControls button,
 #sidControls label,
-#sidControls #subsongInfo,
-#sidControls > span:not(.rico-master-volume) {
-  font-weight:900 !important;
-  -webkit-text-stroke:0.4px currentColor;
+#sidControls #subsongInfo {
+  font-weight:700 !important;
+  -webkit-text-stroke:0.3px currentColor;
+  letter-spacing:-0.15px;
+}
+#sidControls button,
+#sidControls #oscilloscopeVisualButtons button {
+  padding-left:4px !important;
+  padding-right:4px !important;
+  font-size:11px !important;
+}
+#sidControls #oscilloscopeVisualButtons {gap:3px !important;}
+#sidControls .rico-bottom-about {gap:3px !important;}
+#sidControls .rico-bottom-about button {
+  padding:0 3px !important;
+  font-size:10px !important;
+}
+#sidControls #ricoMasterVolumeControl {
+  margin-left:4px !important;
+  margin-right:1px !important;
+  gap:4px !important;
 }
