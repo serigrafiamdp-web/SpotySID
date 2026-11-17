@@ -83,6 +83,8 @@
       var wave=channel<3&&typeof SID.getWave==='function'?SID.getWave(channel):0;
       var noiseWave=Number.isFinite(wave)&&
         (wave<=15?wave===8:(wave&0xf0)===0x80);
+      var noiseFlag=Number.isFinite(wave)&&
+        (wave<=15?(wave&8)!==0:(wave&0x80)!==0);
       var top=Math.floor(channel*rows/channels);
       var bottom=Math.floor((channel+1)*rows/channels)-1;
       if(bottom<top)continue;
@@ -113,6 +115,31 @@
       var range=max-min,mid=(min+max)/2;
       // Do not amplify tiny residual samples into a large visual mess.
       if(range<0.00015)continue;
+      // TEST303: measure the actual signal. A two-level pulse/square
+      // overrides noise-register changes, except for a sharply decaying
+      // drum impact. The sampled audio may lag the SID register state.
+      var plateau=0,flat=0,edges=0,head=0,tail=0;
+      var band=range*0.14,flatLimit=range*0.075;
+      var section=Math.max(1,Math.floor(count*0.20));
+      for(var n=0;n<count;n++){
+        var v=samples[n];
+        if(Math.abs(v-min)<band||Math.abs(v-max)<band)plateau++;
+        if(n>0){
+          var step=Math.abs(v-samples[n-1]);
+          if(step<flatLimit)flat++;
+          if(step>range*0.40)edges++;
+        }
+        if(n<section)head+=Math.abs(v-mid);
+        if(n>=count-section)tail+=Math.abs(v-mid);
+      }
+      var squareLike=plateau/count>=0.76 &&
+        flat/Math.max(1,count-1)>=0.60 &&
+        edges>=1&&edges<count*0.34;
+      var percussionBurst=head/section>0.003&&head>tail*1.30;
+      // Sustained melodic squares stay normal, including if a noise
+      // bit is also set. Drum-like decays may use '*' with any noise bit.
+      var showNoiseStar=noiseFlag&&
+        ((noiseWave&&!squareLike)||percussionBurst);
       var center=(top+bottom)/2;
       var heightInRows=Math.max(0,bottom-top-1);
       // TEST292: stable gain based on actual SID output, not each frame's
@@ -142,8 +169,9 @@
         var from=col*(count-1)/cols;
         var to=(col+1)*(count-1)/cols;
         var y0=yAt(from),y1=yAt(to),delta=y1-y0;
-        if(noiseWave){
-          // Actual SID noise amplitude determines the '*' tile position.
+        if(showNoiseStar){
+          // Actual SID amplitude locates the star for pure white noise
+          // or a fast percussive burst; square melodies draw normally.
           tile(SCOPE_GLYPH.noise,col,Math.round(yAt((from+to)/2)));
           continue;
         }
