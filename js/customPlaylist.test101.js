@@ -3443,6 +3443,14 @@
       return;
     }
     var holder = $('#sidList').empty();
+    // TEST348: USER LOCAL browser is retired (TEST72). On XP, don't
+    // construct its duplicate 1,376-row DOM while the visible player is
+    // already building the playlist. The visible live list remains intact.
+    if(xpLongList(custom.length)&&browserTab!=='local'){
+      renderLivePlaylist();
+      refreshTabs();
+      return;
+    }
     if (!custom.length) {
       $('<div>').addClass('rico-empty').text('No local SID files loaded. Use ADD SID FILES, ADD FOLDER or drop them here.').appendTo(holder);
     }
