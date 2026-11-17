@@ -3542,3 +3542,16 @@ html body * {
   font-size:13px !important;
   line-height:24px !important;
 }
+
+/* TEST316 — ON means actual ink/paper inversion, not a blended panel.
+   Covers PLAYLIST, AUTO, WAVE, ★, PETSCII and any existing bottom control
+   with aria-pressed=true. The same rule survives hover and all 12 COLORs.
+   Dimensions, font sizes and OFF button colors remain unchanged. */
+html #sidControls .rico-toolbar-main button[aria-pressed="true"],
+html #sidControls #oscilloscopeVisualButtons button[aria-pressed="true"],
+html #sidControls #ricoPlaylistToggle.rico-playlist-on {
+  background:var(--rico-theme-fg,#fff) !important;
+  background-color:var(--rico-theme-fg,#fff) !important;
+  color:var(--rico-theme-bg,#000) !important;
+  border-color:var(--rico-theme-fg,#fff) !important;
+}
