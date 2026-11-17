@@ -9,7 +9,8 @@
   var override=null;
   try { override=new URLSearchParams(window.location.search).get('xp'); }
   catch (ignore) {}
-  var reportedXP=/Windows NT 5\.[12]\b|Windows XP/i.test(ua);
+  var oscpu=String(navigator.oscpu||'');
+  var reportedXP=/Windows NT 5\.[12]\b|Windows XP/i.test(ua+' '+oscpu);
   var forced=override==='1'||override==='on';
   var disabled=override==='0'||override==='off';
   var enabled=!disabled&&(reportedXP||forced);
@@ -25,21 +26,59 @@
     scopeMaxFps:enabled?20:0
   };
   window.SpotySidLegacy=profile;
-  if(window.console&&console.info)console.info('SpotySid TEST344 compatibility',profile);
-  // The visible XP mark confirms the ACTIVE profile, not the true OS identity:
-  // Supermium can report a spoofed user-agent. The ?xp override is explicit.
-  function showActiveProfile(){
-    var badge=document.getElementById('ricoXpIndicator');
-    if(!badge)return;
-    badge.hidden=!profile.enabled;
-    badge.style.display=profile.enabled?'inline-block':'none';
-    badge.title=profile.forced?
-      'XP compatibility mode ON (manual override).':
-      'XP compatibility mode ON (reported by browser).';
+  if(window.console&&console.info)console.info('SpotySid TEST345 compatibility',profile);
+  // TEST345: report the OS/version offered by browser APIs rather than
+  // silently pretending that every Chromium/NT 10.0 User-Agent is Windows 11.
+  // Supermium can deliberately spoof both UA and Client Hints even on XP.
+  function syncVersion(text,reason) {
+    profile.reportedWindows=text;
+    profile.versionSource=reason;
+    var node=document.getElementById('ricoWindowsVersion');
+    if(!node)return;
+    node.textContent=text;
+    node.title=reason+(profile.enabled?
+      ' | XP-compatible audio mode ON.':' | XP-compatible audio mode OFF.');
+  }
+  function readVersion(){
+    var label='WIN ?',reason='Windows version not verifiable from browser metadata';
+    var nt=/Windows NT (\d+)\.(\d+)/i.exec(oscpu+' '+ua);
+    if(forced){
+      label='XP';
+      reason='XP mode explicitly selected (?xp=1); physical OS not independently verified';
+    }else if(reportedXP){
+      label='XP';
+      reason='Windows XP/NT 5.x reported in browser metadata';
+    }else if(nt){
+      var v=nt[1]+'.'+nt[2];
+      if(v==='6.1'){label='7';reason='Windows 7 reported by browser';}
+      else if(v==='6.2'){label='8';reason='Windows 8 reported by browser';}
+      else if(v==='6.3'){label='8.1';reason='Windows 8.1 reported by browser';}
+      else if(v==='10.0'){label='10/11?';reason='Browser reports Windows NT 10.0 (ambiguous between 10 and 11; Supermium may spoof XP)';}
+    }
+    syncVersion(label,reason);
+    // Client Hints is optional. Version >= 13 normally means Windows 11;
+    // Supermium can provide FALSE OS hints, so this is a browser report only.
+    var hints=navigator.userAgentData;
+    if(!forced&&!reportedXP&&hints&&typeof hints.getHighEntropyValues==='function'){
+      try{
+        var p=hints.getHighEntropyValues(['platform','platformVersion']);
+        if(p&&typeof p.then==='function'){
+          p.then(function(data){
+            if(!data||data.platform!=='Windows')return;
+            var major=parseInt(String(data.platformVersion||'').split('.')[0],10);
+            if(!isFinite(major))return;
+            if(major>=13)syncVersion('11',
+              'Browser Client Hints report Windows 11 (not independently verified; Supermium may spoof XP)');
+            else if(major>=1&&major<=10)syncVersion('10',
+              'Browser Client Hints report Windows 10 (not independently verified; Supermium may spoof XP)');
+          }).catch(function(){ /* keep the honest 10/11? or WIN ? */ });
+        }
+      }catch(ignore){ /* Client Hints not available */ }
+    }
   }
   if(document.readyState==='loading')
-    document.addEventListener('DOMContentLoaded',showActiveProfile,false);
-  else showActiveProfile();
+    document.addEventListener('DOMContentLoaded',readVersion,false);
+  else readVersion();
   if(!enabled)return;
 
   // ScriptProcessor runs on the UI thread on these browsers. Fewer canvas
