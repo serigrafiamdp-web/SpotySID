@@ -3653,3 +3653,19 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
 #ricoLivePlaylistItems .rico-live-row.rico-keyboard-current.rico-live-active {
   outline:none !important;
 }
+
+/* TEST344 — Tiny XP-active marker at the extreme right of the bottom toolbar.
+   Text only: no badge background, border, new toolbar height, or theme reset. */
+#sidControls .rico-bottom-about #ricoXpIndicator {
+  display:none;
+  flex:none;
+  align-self:center;
+  margin-left:2px;
+  min-width:15px;
+  text-align:right;
+  font:bold 9px Tahoma,Arial,sans-serif;
+  line-height:17px;
+  letter-spacing:0.2px;
+  color:var(--rico-theme-fg,#fff) !important;
+  white-space:nowrap;
+}
