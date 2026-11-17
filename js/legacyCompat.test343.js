@@ -38,7 +38,7 @@
     scopeTransitionFps:enabled?20:0
   };
   window.SpotySidLegacy=profile;
-  if(window.console&&console.info)console.info('SpotySid TEST347 compatibility',profile);
+  if(window.console&&console.info)console.info('SpotySid TEST348 compatibility',profile);
   // TEST345: report the OS/version offered by browser APIs rather than
   // silently pretending that every Chromium/NT 10.0 User-Agent is Windows 11.
   // Supermium can deliberately spoof both UA and Client Hints even on XP.
@@ -145,7 +145,12 @@
       var now=window.performance&&typeof window.performance.now==='function'
         ?window.performance.now():Date.now();
       var mode=this.scopeDisplayMode||'hires';
-      var targetFps=this.autoLoading?profile.scopeTransitionFps:profile.scopeMaxFps;
+      // TEST348: painting hundreds of playlist rows also competes with
+      // main-thread SID synthesis. Use the proven 20 FPS profile until
+      // the incremental XP list builder completes.
+      var listBusy=typeof window.ricoXpListBusy==='function'&&window.ricoXpListBusy();
+      var targetFps=(this.autoLoading||listBusy)?
+        profile.scopeTransitionFps:profile.scopeMaxFps;
       var frameMs=1000/targetFps;
       if(mode!==lastMode||now-lastPaint>=frameMs){
         lastPaint=now;
