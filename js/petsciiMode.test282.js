@@ -11,11 +11,13 @@
      window.C64CharROM.length!==4096)return;
   var ROM=window.C64CharROM;
   var atlas=null,atlasColor='',lastPaint=0;
-  var lastIsPetscii=null;
+  var lastDisplayMode=null;
+  // TEST322: one low-resolution offscreen image for PIXEL, reused every frame.
+  var pixelCanvas=null,pixelContext=null;
 
   function enabled(){
-    // TEST289: independent PETSCII button works with every COLOR palette.
-    return player.petsciiEnabled === true;
+    // TEST322: PETSCII remains its authentic independent renderer.
+    return player.scopeDisplayMode === 'petscii';
   }
   function drawAtlas(color){
     if(atlas&&atlasColor===color)return;
@@ -213,32 +215,84 @@
     }
   }
 
-  // TEST289: interface text remains native (same font and same layout).
-  // No label canvas, DOM observer, or theme-specific font overrides here.
+  // TEST322: PIXEL renders the SAME native waveform at 1/3 resolution,
+  // then scales nearest-neighbor to the regular canvas. Binary thresholding
+  // removes ALL antialias RGB/alpha values: exactly background + ink from the
+  // active normal/inverted palette. FILL / LINE still use their original math.
   var originalRender=player.render;
+  function paintPixel(){
+    var canvas=player.canvas,context=player.context;
+    if(!canvas||!context||typeof player.getActivePalette!=='function')return;
+    var width=canvas.width,height=canvas.height;
+    if(width<1||height<1)return;
+    var pixelSize=3;
+    var pw=Math.max(1,Math.ceil(width/pixelSize));
+    var ph=Math.max(1,Math.ceil(height/pixelSize));
+    if(!pixelCanvas){
+      pixelCanvas=document.createElement('canvas');
+      pixelContext=pixelCanvas.getContext('2d',{willReadFrequently:true});
+      if(!pixelContext)return;
+    }
+    if(pixelCanvas.width!==pw)pixelCanvas.width=pw;
+    if(pixelCanvas.height!==ph)pixelCanvas.height=ph;
+    pixelContext.setTransform(pw/width,0,0,ph/height,0,0);
+    pixelContext.clearRect(0,0,width,height);
+    // Call the existing LINE or FILL engine with a temporary drawing target.
+    // Never resize the actual oscilloscope or replace its canvas in the DOM.
+    player.context=pixelContext;
+    try{
+      originalRender.call(player);
+    }finally{
+      player.context=context;
+      pixelContext.setTransform(1,0,0,1,0,0);
+    }
+    var palette=player.getActivePalette();
+    function rgb(hex){
+      return [parseInt(hex.slice(1,3),16),
+        parseInt(hex.slice(3,5),16),parseInt(hex.slice(5,7),16)];
+    }
+    var ink=rgb(palette.line),paper=rgb(palette.background);
+    var frame=pixelContext.getImageData(0,0,pw,ph),data=frame.data;
+    // LINE gets a slightly lower coverage threshold to preserve fine peaks.
+    // The result is an opaque two-color image, including antialiased edges.
+    var threshold=player.oscilloscopeMode==='line'?64:112;
+    for(var i=0;i<data.length;i+=4){
+      var shade=data[i+3]>=threshold?ink:paper;
+      data[i]=shade[0];
+      data[i+1]=shade[1];
+      data[i+2]=shade[2];
+      data[i+3]=255;
+    }
+    pixelContext.putImageData(frame,0,0);
+    context.imageSmoothingEnabled=false;
+    context.clearRect(0,0,width,height);
+    context.drawImage(pixelCanvas,0,0,pw,ph,0,0,width,height);
+  }
+
+  // TEST322: Cycle HI-RES > PETSCII > PIXEL without changing interface fonts.
   player.render=function(){
-    var active=enabled();
-    if(lastIsPetscii!==active){
-      lastIsPetscii=active;
-      // Paint immediately on toggle, including if the first frame is <40ms.
+    var mode=player.scopeDisplayMode||'hires';
+    if(lastDisplayMode!==mode){
+      lastDisplayMode=mode;
+      // First frame of each mode must draw immediately after clicking.
       lastPaint=-Infinity;
     }
-    if(active){
+    if(mode==='petscii'||mode==='pixel'){
       var now=performance.now();
       if(now-lastPaint>=40){
         lastPaint=now;
-        paintPetscii();
+        if(mode==='petscii')paintPetscii();
+        else paintPixel();
       }
-      if(typeof this.updateVoiceInfo==='function')this.updateVoiceInfo();
+      if(mode==='petscii'&&typeof this.updateVoiceInfo==='function')
+        this.updateVoiceInfo();
       return;
     }
-    // Switching PETSCII OFF restores the existing native waveform renderer.
     return originalRender.apply(this,arguments);
   };
   window.RicoPetsciiMode={
     enabled:enabled,
     glyphCount:ROM.length/8,
-    // Retain a harmless refresh method for compatibility; UI font unchanged.
     refresh:function(){lastPaint=-Infinity;},
     scopeGlyphs:SCOPE_GLYPH
   };
