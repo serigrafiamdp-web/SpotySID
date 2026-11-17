@@ -2143,7 +2143,9 @@
       var payload={format:'ricos-sid-playlist',version:2,
         name:draft.name.trim()||'MY REMIX',createdBy:draft.creator.trim()||'REMIX PREVIEW',
         tracks:draft.tracks.map(remixCanonicalRef)};
-      await window.ricoPlayRemixDraft(payload);
+      var applied=await window.ricoPlayRemixDraft(payload);
+      if(applied===false)return;
+      closeChooseAfterPlaylistPlay(true);
       activeRemixDraftId=draft.id;
       activeLocalOrderDirty=false;
       renderLivePlaylist();
@@ -2849,6 +2851,15 @@
     event.preventDefault();
     if(activeSharePlaylistId)void copyPlaylistShareLink(activeSharePlaylistId);
   });
+  // TEST315: close the browser only after a real PLAY successfully loads.
+  // Never close it on a failed/stale load or for background song advances.
+  function closeChooseAfterPlaylistPlay(applied){
+    if(applied===false)return false;
+    var manager=player.dialogManager;
+    if(manager&&manager.dialogShown==='chooseSidDialog')
+      manager.hideDialog('chooseSidDialog');
+    return true;
+  }
   function showLivePlaylist(visible) {
     liveVisible = !!visible;
     // TEST314: hiding PLAYLIST always returns directly to the oscilloscope.
@@ -3999,7 +4010,7 @@
       },output[0]);
     }
     window.ricoPlayRemixDraft=async function(data){
-      await loadStoredPlaylist(data);
+      return loadStoredPlaylist(data);
     };
     async function refreshSaved() {
       var rows=await dbCall('readonly',function(store){return store.getAll();});
@@ -4737,8 +4748,10 @@
         name:title||cfg.title,createdBy:'CSDb / HVSC',tracks:tracks};
       hvscStatus.textContent='Loading SID audio...';
       try{
-        if(version===1)await loadPlaylist(selection,0,false,true);
-        else await loadStoredPlaylist(selection,false);
+        var applied=version===1?await loadPlaylist(selection,0,false,true):
+          await loadStoredPlaylist(selection,false);
+        if(applied===false)return false;
+        closeChooseAfterPlaylistPlay(true);
         hvscStatus.textContent='SID playback ready.';
         return true;
       }catch(err){
@@ -5421,7 +5434,8 @@
               // Ignore a late auto-load if the visitor picked a different source.
               if(isStartup && !startupPlaylistPending) return;
               if(isStartup) cancelStartupPlaylist();
-              await loadStoredPlaylist(chosen,false,item.remoteId||null); // Only published LFT may use TEST173.
+              var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null); // Only published LFT may use TEST173.
+              if(applied===false)return; // Superseded while loading: keep browser and newer selection.
               activeCuratedCatalogId=!item.remoteId&&item.id==='old-sid-collection-rico'
                 ? item.id:null;
               activeRemixDraftId=pending?pending.id:null;
@@ -5467,7 +5481,10 @@
                   say('First SID loaded. If there is no sound, click PLAY once to enable audio.');
                 }
               } else {
-                showCommunity(false,'local');
+                // TEST315: explicit COMMUNITY PLAY now closes CHOOSE A SID.
+                // The former showCommunity(false,'local') re-fetched the catalog
+                // and left the browser open over the playing playlist.
+                closeChooseAfterPlaylistPlay(true);
                 if(isShared){
                   // Deep links load the first SID; a real gesture may still be
                   // required by the browser before Web Audio can be audible.
