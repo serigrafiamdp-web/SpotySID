@@ -47,7 +47,7 @@
     vertical:93,        // centered two-column vertical bar
     rising:78,          // / rising on screen (toward the upper rows)
     falling:77,         // \ falling on screen (toward the lower rows)
-    noise:42            // genuine C64 '*' character for SID noise waveform
+    noise:42,           // genuine C64 '*' character for SID noise waveform
     // TEST286: no cross/corner tiles; their extra arms created ghost lines
   });
   function paintPetscii(){
@@ -74,32 +74,17 @@
     // TEST286: fewer audio samples per screen lets whole PETSCII glyphs
     // describe clean ramps and plateaus rather than tiny aliasing artifacts.
     var count=Math.min(Math.floor(bufferSize/2.8),Math.max(180,cols*4));
-    // TEST299: LFT / reSIDfp supplies independent live voice traces and
-    // control registers. TinySID getWave() is stale while LFT is active.
-    var lft=window.RicoLftMode;
-    var lftActive=!!(lft&&typeof lft.active==='function'&&lft.active());
-    var lftRegs=lftActive&&typeof lft.scopeRegisters==='function'
-      ?lft.scopeRegisters():null;
-    // TEST300: no synthetic idle/baseline glyphs. The cleared background
-    // remains empty when a voice has no waveform output.
     for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
-      // TEST299: take wave/noise flags from the same engine feeding the
-      // scope samples; do not mistake TinySID's old silent state for LFT.
-      var wave=channel>=3?0:
-        (lftActive
-          ? (lftRegs&&lftRegs.length>channel*7+4
-            ? lftRegs[channel*7+4]:null)
-          : (typeof SID.getWave==='function'?SID.getWave(channel):null));
-      var noiseWave=channel<3&&Number.isFinite(wave)&&
+      if(!buffer)continue;
+      // TEST293: use the SID's noise flag, not sample jaggedness.
+      // TinySID may return a 4-bit waveform nibble or raw SID control bits.
+      var wave=channel<3&&typeof SID.getWave==='function'?SID.getWave(channel):0;
+      var noiseWave=Number.isFinite(wave)&&
         (wave<=15?(wave&8)!==0:(wave&0x80)!==0);
       var top=Math.floor(channel*rows/channels);
       var bottom=Math.floor((channel+1)*rows/channels)-1;
       if(bottom<top)continue;
-      // TEST298: paused/stopped playback must not visualize stale audio
-      // buffers. On Pause the old isPaused flag remains true, but audio
-      // playback has stopped and the channel must be a clean idle line.
-      if(!player.isPlaying||!buffer)continue;
 
       // Keep a stable real SID waveform window; use zero crossing to
       // reduce horizontal jumping, not replace the source with a fake wave.
@@ -118,34 +103,22 @@
       var samples=new Float32Array(count),min=Infinity,max=-Infinity;
       for(var i=0;i<count;i++){
         var sample=SID.readFloatSample(buffer,offset+i);
-        if(!player.isPlaying)sample=0;
+        if(!player.isPlaying&&!player.isPaused)sample=0;
         if(!Number.isFinite(sample))sample=0;
         samples[i]=sample;
         if(sample<min)min=sample;
         if(sample>max)max=sample;
       }
-      // TEST297: isolated residual impulses were producing 14px vertical
-      // ticks and specks on otherwise silent channels. Detect the sustained
-      // signal using central percentiles instead of the two extreme samples.
-      var ordered=Array.prototype.slice.call(samples).sort(function(a,b){return a-b;});
-      var low=ordered[Math.floor((count-1)*0.05)];
-      var high=ordered[Math.ceil((count-1)*0.95)];
-      var range=high-low,mid=(low+high)/2;
+      var range=max-min,mid=(min+max)/2;
+      // Do not amplify tiny residual samples into a large visual mess.
+      if(range<0.00015)continue;
       var center=(top+bottom)/2;
       var heightInRows=Math.max(0,bottom-top-1);
-      // TEST292: stable gain retains real SID amplitude instead of
-      // renormalizing each frame, capped at 48% of the voice band.
+      // TEST292: stable gain based on actual SID output, not each frame's
+      // min/max. An envelope getting quieter now draws a smaller waveform.
+      // Keep the TEST289 maximum height of 48% of the voice band.
       var gain=heightInRows*10;
       var maxDeviation=heightInRows*0.24;
-      // Do not gate LFT on TinySID state. Its audio trace already tells
-      // whether the channel has audible waveform activity.
-      var inactive=!player.isPlaying||
-        (channel<3&&!lftActive&&wave===0);
-      if(inactive||range<0.00015||range*gain<2.75)continue;
-      // Ignore outlier impulses during drawing, too, so they cannot be
-      // mistaken for abrupt square-wave transitions.
-      for(var s=0;s<count;s++)
-        samples[s]=Math.max(low,Math.min(high,samples[s]));
       function valueAt(position){
         var p=Math.max(0,Math.min(count-1,position));
         var aIndex=Math.floor(p),fraction=p-aIndex;
