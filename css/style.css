@@ -3654,18 +3654,21 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   outline:none !important;
 }
 
-/* TEST344 — Tiny XP-active marker at the extreme right of the bottom toolbar.
-   Text only: no badge background, border, new toolbar height, or theme reset. */
-#sidControls .rico-bottom-about #ricoXpIndicator {
-  display:none;
-  flex:none;
-  align-self:center;
-  margin-left:2px;
-  min-width:15px;
-  text-align:right;
-  font:bold 9px Tahoma,Arial,sans-serif;
-  line-height:17px;
-  letter-spacing:0.2px;
+/* TEST345 — always-visible Windows version on the upper-right OSC backdrop.
+   Same 12px scale as the upper information text; not part of the zoomed
+   canvas or lower toolbar. Reflects currently active palette and inversion. */
+#ricoWindowsVersion {
+  position:fixed;
+  top:5px;
+  right:10px;
+  z-index:220;
+  display:block;
+  pointer-events:none;
   color:var(--rico-theme-fg,#fff) !important;
+  background:transparent !important;
+  font:normal 12px/20px Tahoma,Arial,sans-serif;
+  letter-spacing:0;
+  text-align:right;
   white-space:nowrap;
+  text-shadow:none;
 }
