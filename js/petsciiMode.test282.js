@@ -120,9 +120,10 @@
         if(sample>max)max=sample;
       }
       var range=max-min,mid=(min+max)/2;
-      // TEST323: a muted master volume draws no waveform/noise glyphs.
+      // TEST323: 0% master keeps the minimum visible waveform height
+      // (provided by scopeVisualGain); only genuinely silent SID data is blank.
       // Do not amplify tiny residual samples into a large visual mess.
-      if(volumeGain===0||range<0.00015)continue;
+      if(range<0.00015)continue;
       // TEST303: measure the actual signal. A two-level pulse/square
       // overrides noise-register changes, except for a sharply decaying
       // drum impact. The sampled audio may lag the SID register state.
