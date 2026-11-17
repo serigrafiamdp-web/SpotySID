@@ -142,14 +142,14 @@
     mos.click();
   },true);
 
-  // TEST338 — D opens TILEWORK using the existing pencil button.
-  // Preserve I/F, M/P/C. Trigger the existing
-  // buttons rather than duplicating behavior; never hijack text editing.
+  // TEST349 — N advances to NEXT SID through the existing toolbar button.
+  // Preserve D/I/F/M/P/C. Never intercept typing or foreground editors.
+  // Reuse the already validated XP-safe manual/AUTO SID handoff pipeline.
   document.addEventListener('keydown',function(event){
     if(event.defaultPrevented||event.repeat||event.isComposing||
        event.ctrlKey||event.metaKey||event.altKey)return;
     var key=String(event.key||'').toLowerCase();
-    if(key!=='p'&&key!=='c'&&key!=='m'&&key!=='i'&&key!=='f'&&key!=='d')return;
+    if(key!=='p'&&key!=='c'&&key!=='m'&&key!=='i'&&key!=='f'&&key!=='d'&&key!=='n')return;
     var focused=document.activeElement;
     var source=event.target;
     function editable(node){
@@ -166,10 +166,10 @@
     var shortcutButtons={
       p:'ricoPlaylistToggle',c:'oscilloscopeColorButton',m:'chooseSid',
       i:'ricoInvertColorsButton',f:'oscilloscopeModeButton',
-      d:'ricoToolbarTileArtworkButton'
+      d:'ricoToolbarTileArtworkButton',n:'nextSid'
     };
     var target=document.getElementById(shortcutButtons[key]);
-    if(!target)return;
+    if(!target||target.disabled)return;
     event.preventDefault();
     target.click();
   },true);
