@@ -2851,6 +2851,11 @@
   });
   function showLivePlaylist(visible) {
     liveVisible = !!visible;
+    // TEST314: hiding PLAYLIST always returns directly to the oscilloscope.
+    // Never leave CHOOSE A SID visible underneath the floating playlist.
+    if(!liveVisible&&player.dialogManager&&
+       player.dialogManager.dialogShown==='chooseSidDialog')
+      player.dialogManager.hideDialog('chooseSidDialog');
     // A flex column keeps the playlist scrolling inside a shorter panel.
     $('#ricoLivePlaylist').css('display', liveVisible ? 'flex' : 'none');
     $('#ricoPlaylistToggle').attr('aria-pressed', liveVisible ? 'true' : 'false')
@@ -2949,19 +2954,12 @@
   $('#ricoPlaylistToggle').on('click', function () {
     showLivePlaylist(!liveVisible);
   });
-  // TEST52: the large library browser stays hidden behind the primary playlist.
-  // Closing the floating playlist reveals Choose A SID only on a real user click.
+  // TEST314: X closes PLAYLIST onto the oscilloscope, without reopening
+  // the library, altering the current selection, or interrupting playback.
+  // CHOOSE A SID can still be opened explicitly with its own button.
   $('#ricoLiveClose').on('click', function () {
     showLivePlaylist(false);
     cancelPendingCommunityStartup();
-    // TEST74: closing a playing list must never reveal the retired USER LOCAL view.
-    // Reuse the single community-opening path without modifying playback.
-    if(typeof window.ricoOpenCommunityFromRemix==='function'){
-      window.ricoOpenCommunityFromRemix();
-    }else{
-      var manager=player.dialogManager;
-      if(manager&&!manager.dialogShown)manager.showDialog('chooseSidDialog');
-    }
   });
 
 
