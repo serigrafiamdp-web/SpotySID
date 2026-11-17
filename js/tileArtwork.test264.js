@@ -521,4 +521,14 @@
       return true;
     }
   };
+  // TEST308: toolbar pencil opens the existing Tile Artwork editor for
+  // the artist playing at the instant of the click. The editor freezes
+  // this context and its existing SAVE stores it in STIL+ ARTWORK TILEWORKS.
+  var toolbarPencil=document.getElementById('ricoToolbarTileArtworkButton');
+  if(toolbarPencil)toolbarPencil.addEventListener('click',function(){
+    var artistStore=window.RicoStilPlusTileworks;
+    if(!artistStore||typeof artistStore.capture!=='function')return;
+    var context=artistStore.capture();
+    if(context)window.RicoTileArtwork.open(context);
+  });
 })();
