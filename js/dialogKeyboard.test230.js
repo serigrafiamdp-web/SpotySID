@@ -125,15 +125,14 @@
     }
   },true);
 
-  // TEST335 — M opens MOS using the existing button. Preserve TEST313 P/C.
-  // Single-letter player shortcuts. Reuse the existing
-  // buttons so playlist state, wave rendering and ★ inversion remain
-  // exactly the same as a mouse click. Do not hijack text editing.
+  // TEST336 — I = invert background/foreground (★), F = FILL/LINE.
+  // Preserve M = MOS, P = PLAYLIST, C = COLOR. Trigger the existing
+  // buttons rather than duplicating behavior; never hijack text editing.
   document.addEventListener('keydown',function(event){
     if(event.defaultPrevented||event.repeat||event.isComposing||
        event.ctrlKey||event.metaKey||event.altKey)return;
     var key=String(event.key||'').toLowerCase();
-    if(key!=='p'&&key!=='c'&&key!=='m')return;
+    if(key!=='p'&&key!=='c'&&key!=='m'&&key!=='i'&&key!=='f')return;
     var focused=document.activeElement;
     var source=event.target;
     function editable(node){
@@ -147,8 +146,11 @@
     if(hasOtherForegroundWindow()||
        isVisible(document.getElementById('ricoTileArtworkOverlay')))
       return;
-    var target=document.getElementById(key==='p'?
-      'ricoPlaylistToggle':key==='c'?'oscilloscopeColorButton':'chooseSid');
+    var shortcutButtons={
+      p:'ricoPlaylistToggle',c:'oscilloscopeColorButton',m:'chooseSid',
+      i:'ricoInvertColorsButton',f:'oscilloscopeModeButton'
+    };
+    var target=document.getElementById(shortcutButtons[key]);
     if(!target)return;
     event.preventDefault();
     target.click();
