@@ -1,6 +1,6 @@
 # SpotySid — Features
 
-**Current frontend feature reference · 17 November 2026 (Argentina) · TEST341**
+**Current frontend feature reference · 17 November 2026 (Argentina) · TEST350**
 
 [Open SpotySid](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [README](../README.md) · [User guide](HELP_USER_GUIDE.md) · [Latest checkpoint](CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [Architecture](ARCHITECTURE.md)
 
@@ -9,10 +9,10 @@ This is the **current list of implemented main-branch capabilities**. Where a fe
 ## Playback and oscilloscope
 
 - C64 SID playback through the normal TinySID route, with separate, selectively approved reSIDfp tracks.
-- **Three oscilloscope visual modes:** **HI-RES / PETSCII / PIXEL**; authentic C64 PETSCII font; selectable **FILL / LINE** waveforms.
+- **Three oscilloscope visual modes:** **HI-RES / PETSCII / PIXEL**; authentic C64 PETSCII font; selectable **FILL / LINE** waveforms. In TEST350 the FILL/LINE button names the *next* action rather than the current waveform.
 - Random startup scope mode and random theme; palette-aware UI controls. **COLOR** cycles palettes and **★** inverts foreground/background.
 - The **master volume** affects sound and the displayed oscilloscope height (TEST323). At its lowest setting, the visual wave can be flat.
-- **PLAY / STOP / NEXT SID**, subtune controls, voice enable controls, FILTER, **AUTO**, silence detection, soft transitions and a configurable **MM:SS TIMER**.
+- **PLAY / STOP / NEXT SID**, subtune controls, voice enable controls, FILTER, **AUTO**, silence detection, soft transitions and a configurable **MM:SS TIMER**. TEST349 **N = NEXT SID** is user PASS; TEST350 highlights NEXT SID in palette colors until the next track's first audio buffer arrives (real-browser PASS pending).
 - **HVSC Songlengths** (TEST199) suggest per-track/subtune durations when a known reference is available; otherwise use default 03:00. Manual timer adjustments are session-local and **not** permanently saved by REPUBLISH.
 - A limited set of approved **LINUS / LFT** SID references activates the reSIDfp engine regardless of the playlist containing that exact reference. The LFT playlist is not forced to open on startup. Its three oscilloscope channels are visual SID-register estimates, not isolated analog voice recordings.
 - **Uctumi — Loco un Poco** has a targeted PAL / 8580 route. Its sustained intro-to-rhythm/filter/voice balance is **not verified PASS**; the earlier unsuccessful experiments were rolled back and the TEST188 bridge restored in TEST193. Do not activate the engine for every Uctumi track.
