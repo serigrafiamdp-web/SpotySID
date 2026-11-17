@@ -2,7 +2,7 @@
 
 **Commodore 64 SID music · PLAY · CREATE · REMIX · DISCOVER · SHARE**
 
-[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Previous checkpoint — TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [Windows diagnostic — TEST345](docs/TEST345_WINDOWS_VERSION.md) · [Architecture](docs/ARCHITECTURE.md)
+[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Previous checkpoint — TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [Supermium XP confirmation — TEST346](docs/TEST346_SUPERMIUM_XP_CONFIRMATION.md) · [Architecture](docs/ARCHITECTURE.md)
 
 SpotySid continues the original James / Jojati web SID Player, with extensions by RICO / RicoSerigrafia. The music, original artists and SID files keep their own credits; playlist editing does **not** change the original compositions.
 
@@ -15,7 +15,7 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 - **FILL / LINE** waveform view; **COLOR** palette cycle; **★** swaps foreground/background colors across the current theme. **Master volume** controls audio and the corresponding waveform height.
 - **PLAY / STOP / NEXT SID**, subtune controls, **AUTO**, adjustable **MM:SS TIMER**, HVSC song-length estimates where known, silence detection and soft transitions.
 - **Selective reSIDfp** support for exact approved LFT/LINUS references and one targeted Uctumi source, without changing the normal default engine. Some targeted audio cases still need separate verification.
-- **Windows XP / Supermium compatibility (TEST343–345):** always-visible Windows version label in the OSC background's upper-right edge (12px themed text); browser-reported XP, Windows 11/10 Client Hints or an honest unknown indicator when detection is ambiguous. Supermium can spoof OS reporting. The XP safety profile uses an 8192-sample audio buffer, 20 FPS scope and lighter manual/AUTO transitions. `?xp=1` forces XP mode; `?xp=0` disables it. Real XP audio validation is pending.
+- **Windows XP / Supermium compatibility (TEST343–346):** tiny 12px theme-colored OS label at the upper right of the OSC background. Supermium can falsely identify XP as Windows 11; click the label **once** on a real XP machine to save XP mode **for that browser** and reload. The selection persists on later visits; click XP again to return to browser detection. The XP safety profile uses an 8192-sample audio buffer, 20 FPS scope and lighter manual/AUTO transitions. `?xp=1` forces and `?xp=0` disables it for the current URL. Real XP audio validation is pending.
 
 ### Discover music
 
@@ -64,9 +64,9 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 
 Shortcuts do not override text editing or other foreground editors/dialogs. Navigation is **not** the same as the on-row **↑/↓ reorder buttons**.
 
-## Latest progress — 17 November 2026 · TEST345 (XP validation pending)
+## Latest progress — 17 November 2026 · TEST346 (XP validation pending)
 
-**Current development: `main` through TEST345.** The user confirmed **TEST341 PASS** and **TEST342 PASS** (zoom). TEST343 improved XP playback but still repeated a short SID segment during manual and automatic transitions; TEST344 addresses that common handoff path, **pending real Windows XP/Supermium PASS**. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
+**Current development: `main` through TEST346.** The user confirmed **TEST341 PASS** and **TEST342 PASS** (zoom). TEST343 improved XP playback but still repeated a short SID segment during manual and automatic transitions; TEST344 addresses that common handoff path, **pending real Windows XP/Supermium PASS**. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
 
 | Area | Recent tests and change |
 | --- | --- |
@@ -77,7 +77,7 @@ Shortcuts do not override text editing or other foreground editors/dialogs. Navi
 | Escape priority | **TEST340** supersedes TEST339: ESC closes PLAYLIST or MOS first; only idle OSC opens MOS |
 | First playback | **TEST341 (user PASS):** bottom PLAY/Enter without an earlier song selection starts first COMMUNITY playlist's first SID |
 | Oscilloscope zoom | **TEST342 (user PASS):** wheel zoom anchored under cursor; graphics only, HI-RES/PIXEL/PETSCII |
-| Windows XP/Supermium | **TEST343 (partial improvement):** 8192 audio buffer / 20 FPS canvas; **TEST344 (PASS pending):** manual/AUTO fade handoff; **TEST345 (PASS pending):** always-visible upper-right Windows version diagnostic outside the zoomed canvas, 12px themed text, honest 10/11? fallback and `?xp=1` override; [test guide](docs/TEST345_WINDOWS_VERSION.md) |
+| Windows XP/Supermium | **TEST343 (partial improvement):** 8192 buffer / 20 FPS canvas; **TEST344 (PASS pending):** manual/AUTO fade handoff; **TEST345:** 12px upper-right OS text; **TEST346 (PASS pending):** one-click persistent XP confirmation when Supermium falsely claims Win11, without impacting other browsers; [test guide](docs/TEST346_SUPERMIUM_XP_CONFIRMATION.md) |
 
 **Do not equate an implemented TEST or successful GitHub Pages build with a user PASS for every audio/UI pathway.** Confirm a changed behavior on the live site, especially when it involves Web Audio or Cloudflare.
 
@@ -115,7 +115,8 @@ The previous verified baseline **MASTER-2026-11-16-TEST301** is retained as a se
 | `docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md` | Earlier confirmed TEST341 checkpoint |
 | `docs/TEST343_XP_COMPATIBILITY.md` | Initial XP compatibility profile, TEST343 |
 | `docs/TEST344_XP_AUDIO_HANDOFF.md` | XP audio transition experiment, TEST344 |
-| `docs/TEST345_WINDOWS_VERSION.md` | Top-right OS diagnostic, detection limits and test procedure, TEST345 |
+| `docs/TEST345_WINDOWS_VERSION.md` | Top-right OS diagnostic and detection limits, TEST345 |
+| `docs/TEST346_SUPERMIUM_XP_CONFIRMATION.md` | Persist user-confirmed XP with misleading Supermium metadata, TEST346 |
 | `docs/ARCHITECTURE.md` | Maintenance and backend boundaries |
 
 ## Hosting, credits and preservation
