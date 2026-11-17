@@ -8,6 +8,9 @@ var SidPlayer = function() {
   this.canvas = null;
   this.context = null;
   this.sidHasSamples = false;
+  // TEST323: oscilloscope-only amplitude factor, synced to master volume.
+  // 50% volume = original wave height; 0% = flat; 100% = 2x height.
+  this.scopeVisualGain = 1;
   // TEST24: filled waves are the standard mode on each page load.
   this.oscilloscopeMode = 'filled';
   // TEST322: the same button cycles HI-RES / PETSCII / PIXEL independently
@@ -2159,6 +2162,7 @@ SidPlayer.prototype = {
   },
 
   drawLines: function() {
+    var scopeGain=this.scopeVisualGain;
     var SCREEN_WIDTH = window.innerWidth;
     var SCREEN_HEIGHT = window.innerHeight;
     var channelCount = 3;
@@ -2241,15 +2245,15 @@ SidPlayer.prototype = {
 
           if(channel < 3) {
             if(i == 0) {
-              this.context.moveTo(xOffset + i * channelWidth / displaySize, 20 + channelHeight / 2 + channel * channelHeight + sample * channelHeight * 10 );
+              this.context.moveTo(xOffset + i * channelWidth / displaySize, 20 + channelHeight / 2 + channel * channelHeight + sample * scopeGain * channelHeight * 10 );
             } else {
-              this.context.lineTo(xOffset + i * channelWidth / displaySize, 20 +  channelHeight / 2 + channel * channelHeight + sample * channelHeight * 10 );
+              this.context.lineTo(xOffset + i * channelWidth / displaySize, 20 +  channelHeight / 2 + channel * channelHeight + sample * scopeGain * channelHeight * 10 );
             }
           } else {
             if(i == 0) {
-              this.context.moveTo(xOffset + i * channelWidth / displaySize, 20 + channelHeight / 2 + channel * channelHeight + sample * channelHeight * 0.5 );
+              this.context.moveTo(xOffset + i * channelWidth / displaySize, 20 + channelHeight / 2 + channel * channelHeight + sample * scopeGain * channelHeight * 0.5 );
             } else {
-              this.context.lineTo(xOffset + i * channelWidth / displaySize, 20 + channelHeight / 2 + channel * channelHeight + sample * channelHeight * 0.5 );              
+              this.context.lineTo(xOffset + i * channelWidth / displaySize, 20 + channelHeight / 2 + channel * channelHeight + sample * scopeGain * channelHeight * 0.5 );              
             }
 
           }
@@ -2279,9 +2283,9 @@ SidPlayer.prototype = {
         }
 
         if(i == 0) {
-          this.context.moveTo(xOffset + i * channelWidth / bufferSize, 20 + channelHeight / 2 + channel * channelHeight + sample * channelHeight * 0.8 );
+          this.context.moveTo(xOffset + i * channelWidth / bufferSize, 20 + channelHeight / 2 + channel * channelHeight + sample * scopeGain * channelHeight * 0.8 );
         } else {
-          this.context.lineTo(xOffset + i * channelWidth / bufferSize, 20 + channelHeight / 2 + channel * channelHeight + sample * channelHeight * 0.8 );              
+          this.context.lineTo(xOffset + i * channelWidth / bufferSize, 20 + channelHeight / 2 + channel * channelHeight + sample * scopeGain * channelHeight * 0.8 );              
         }
 
 
@@ -2298,6 +2302,7 @@ SidPlayer.prototype = {
 
   // TEST01: independent filled visualization. Original drawLines() is retained unchanged.
   drawFilledWaves: function() {
+    var scopeGain=this.scopeVisualGain;
     var width = window.innerWidth;
     var height = window.innerHeight;
     var channelCount = this.sidHasSamples ? 4 : 3;
@@ -2345,7 +2350,7 @@ SidPlayer.prototype = {
       for(var i = 0; i < count; i++) {
         var sample = SID.readFloatSample(buffer, i + triggerOffset);
         if(!this.isPlaying && !this.isPaused) sample = 0;
-        points.push([xOffset + i * channelWidth / count, centerY + sample * amplitude]);
+        points.push([xOffset + i * channelWidth / count, centerY + sample * amplitude * scopeGain]);
       }
       if(!points.length) continue;
       ctx.beginPath();
