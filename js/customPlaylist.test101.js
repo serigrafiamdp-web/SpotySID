@@ -2868,7 +2868,8 @@
         active:typeof player.sidListIndex==='number'?player.sidListIndex:-1,
         selected:typeof selectedLiveIndex==='number'?selectedLiveIndex:-1,
         queued:typeof queuedLiveIndex==='number'?queuedLiveIndex:-1};
-      if(xpChunked){
+    }
+    if(xpChunked){
         xpLivePaintPending=false;
         xpLivePaintList=null;
         // Rows drawn before playSong() are corrected from the current
@@ -2879,7 +2880,7 @@
           largePlaylistPainted.queued=-1;
           paintLargePlaylistMarkers(true);
         }
-      }
+    }
     }
     var xpVisualCursor=0;
     function paintNextXPChunk(){
