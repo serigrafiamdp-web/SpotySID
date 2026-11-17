@@ -59,6 +59,9 @@
     // TEST312: PETSCII honors the same inverted ink/paper as the other waves.
     var palette=typeof player.getActivePalette==='function'?
       player.getActivePalette():player.colorModes[player.colorModeIndex];
+    // TEST323: master slider scales the PETSCII waveform, not its glyphs.
+    var volumeGain=Math.max(0,Math.min(2,Number(player.scopeVisualGain)));
+    if(!Number.isFinite(volumeGain))volumeGain=1;
     drawAtlas(palette.line);
     var width=cv.width,height=cv.height;
     if(width<=0||height<=0)return;
@@ -117,8 +120,9 @@
         if(sample>max)max=sample;
       }
       var range=max-min,mid=(min+max)/2;
+      // TEST323: a muted master volume draws no waveform/noise glyphs.
       // Do not amplify tiny residual samples into a large visual mess.
-      if(range<0.00015)continue;
+      if(volumeGain===0||range<0.00015)continue;
       // TEST303: measure the actual signal. A two-level pulse/square
       // overrides noise-register changes, except for a sharply decaying
       // drum impact. The sampled audio may lag the SID register state.
@@ -149,8 +153,8 @@
       // TEST292: stable gain based on actual SID output, not each frame's
       // min/max. An envelope getting quieter now draws a smaller waveform.
       // Keep the TEST289 maximum height of 48% of the voice band.
-      var gain=heightInRows*10;
-      var maxDeviation=heightInRows*0.24;
+      var gain=heightInRows*10*volumeGain;
+      var maxDeviation=heightInRows*0.24*volumeGain;
       function valueAt(position){
         var p=Math.max(0,Math.min(count-1,position));
         var aIndex=Math.floor(p),fraction=p-aIndex;
