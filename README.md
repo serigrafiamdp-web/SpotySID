@@ -2,7 +2,7 @@
 
 **Commodore 64 SID music · PLAY · CREATE · REMIX · DISCOVER · SHARE**
 
-[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Previous checkpoint — TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [XP long lists — TEST348](docs/TEST348_XP_LONG_PLAYLIST_FIRST_SID.md) · [Architecture](docs/ARCHITECTURE.md)
+[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Previous checkpoint — TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [TEST350 controls](docs/TEST350_NEXT_HIGHLIGHT_WAVE_LABEL.md) · [Architecture](docs/ARCHITECTURE.md)
 
 SpotySid continues the original James / Jojati web SID Player, with extensions by RICO / RicoSerigrafia. The music, original artists and SID files keep their own credits; playlist editing does **not** change the original compositions.
 
@@ -12,8 +12,8 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 
 - **SID player + three-voice oscilloscope**, with original TinySID playback by default.
 - **Three visualization modes:** **HI-RES**, **PETSCII** (authentic C64 character rendering) and **PIXEL**. The initial display mode is randomized on page load; the selected palette is randomized separately.
-- **FILL / LINE** waveform view; **COLOR** palette cycle; **★** swaps foreground/background colors across the current theme. **Master volume** controls audio and the corresponding waveform height.
-- **PLAY / STOP / NEXT SID**, subtune controls, **AUTO**, adjustable **MM:SS TIMER**, HVSC song-length estimates where known, silence detection and soft transitions.
+- **FILL / LINE** waveform view (TEST350: the button names the NEXT action: filled wave → **LINE**, line wave → **FILL**); **COLOR** palette cycle; **★** swaps foreground/background colors across the current theme. **Master volume** controls audio and the corresponding waveform height.
+- **PLAY / STOP / NEXT SID**, subtune controls, **AUTO**, adjustable **MM:SS TIMER**, HVSC song-length estimates where known, silence detection and soft transitions. **N = NEXT SID** (user PASS); **TEST350** highlights NEXT using the current palette until the incoming song's first audio is delivered.
 - **Selective reSIDfp** support for exact approved LFT/LINUS references and one targeted Uctumi source, without changing the normal default engine. Some targeted audio cases still need separate verification.
 - **Windows XP / Supermium compatibility (TEST343–348):** upper-right XP indicator with one-time saved confirmation when Supermium spoofs Windows 11; 8192-sample audio buffer, verified smooth handoffs and 25 FPS normal / 20 FPS busy oscilloscope ceilings. **NEW TEST348:** when a list has 80+ tracks in XP mode, load its first SID fully before starting, do not bulk-prefetch unselected tracks, and progressively draw long playlist rows in small chunks so audio gets priority. Real XP confirmation is pending.
 
@@ -65,16 +65,16 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 
 Shortcuts do not override text editing or other foreground editors/dialogs. Navigation is **not** the same as the on-row **↑/↓ reorder buttons**.
 
-## Latest progress — 17 November 2026 · TEST349 (N = NEXT SID)
+## Latest progress — 17 November 2026 · TEST350 (visual controls)
 
-**Current development: `main` through TEST349.** The user confirmed **TEST341 PASS**, **TEST342 PASS** (zoom) and reported clean XP/Supermium audio transitions with TEST344–346. TEST347 increased the XP OSC ceiling to 25 FPS in normal playback. **TEST348 improves long lists on XP only:** verify the first SID before starting playback, disable bulk SID prefetch, and draw the playlist incrementally; OSC remains at 20 FPS while the list is painting. Real XP PASS for TEST348 is pending. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
+**Current development: `main` through TEST350.** The user confirmed **TEST341 PASS**, **TEST342 PASS** (zoom) and reported clean XP/Supermium audio transitions with TEST344–346. TEST347 increased the XP OSC ceiling to 25 FPS in normal playback. **TEST348 improves long lists on XP only:** verify the first SID before starting playback, disable bulk SID prefetch, and draw the playlist incrementally; OSC remains at 20 FPS while the list is painting. Real XP PASS for TEST348 is pending. **TEST349 N shortcut is user PASS**; **TEST350** adds waveform action labeling and pending-NEXT visual feedback (hardware PASS pending). The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
 
 | Area | Recent tests and change |
 | --- | --- |
 | Retro display | **TEST323–326:** volume-aware oscilloscope; MOS chip; NEW PLAYLIST wording; randomized HI-RES/PETSCII/PIXEL startup |
 | TILEWORK | **TEST327, 329–331:** ink inversion, compact save-before-exit panel, precise wheel zoom/scroll, ESC confirmation |
-| Bottom toolbar | **TEST332:** removed the fine line above the controls without changing button sizes/borders |
-| Mouse + keyboard | **TEST333–338:** ↑/↓ + Enter; identical selection highlight; M, I, F, D shortcuts; first MOS row selected. **TEST349 (pending user PASS):** N = NEXT SID via existing toolbar action |
+| Bottom toolbar | **TEST332:** removed the fine line above the controls. **TEST350 (pending user PASS):** FILL/LINE text always names the next action; NEXT SID uses palette highlight from N/click until the new song's audio starts |
+| Mouse + keyboard | **TEST333–338:** ↑/↓ + Enter; identical selection highlight; M, I, F, D shortcuts; first MOS row selected. **TEST349 (user PASS):** N = NEXT SID via existing toolbar action |
 | Escape priority | **TEST340** supersedes TEST339: ESC closes PLAYLIST or MOS first; only idle OSC opens MOS |
 | First playback | **TEST341 (user PASS):** bottom PLAY/Enter without an earlier song selection starts first COMMUNITY playlist's first SID |
 | Oscilloscope zoom | **TEST342 (user PASS):** wheel zoom anchored under cursor; graphics only, HI-RES/PIXEL/PETSCII |
@@ -120,6 +120,7 @@ The previous verified baseline **MASTER-2026-11-16-TEST301** is retained as a se
 | `docs/TEST346_SUPERMIUM_XP_CONFIRMATION.md` | Persist user-confirmed XP with misleading Supermium metadata, TEST346 |
 | `docs/TEST347_XP_SCOPE_25FPS.md` | Optional 25 FPS oscilloscope on XP without sacrificing 20 FPS transition headroom, TEST347 |
 | `docs/TEST348_XP_LONG_PLAYLIST_FIRST_SID.md` | First SID priority, on-demand bytes, incremental row painting on XP, TEST348 |
+| `docs/TEST350_NEXT_HIGHLIGHT_WAVE_LABEL.md` | Waveform action labels and palette-colored NEXT pending until first new audio, TEST350 |
 | `docs/ARCHITECTURE.md` | Maintenance and backend boundaries |
 
 ## Hosting, credits and preservation
