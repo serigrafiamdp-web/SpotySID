@@ -3432,3 +3432,12 @@ html[data-rico-petscii="on"] .dialog .title > div:first-child.rico-petscii-label
 html[data-rico-petscii="on"] .dialog .title > div:first-child.rico-petscii-labeled {
   position:absolute !important;
 }
+
+/* TEST304 — Bold interface text in every COLOR and PETSCII mode.
+   Font families, sizes, line-heights, spacing, oscilloscope canvas and
+   the original C64 ROM pixels remain unchanged. This override also
+   covers controls and dynamically created playlist/dialog content. */
+html body,
+html body * {
+  font-weight:700 !important;
+}
