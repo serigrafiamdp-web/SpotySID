@@ -2,7 +2,7 @@
 <html  xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://ogp.me/ns/fb">
   <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="css/style.css?v=test344-xp-status">
+    <link rel="stylesheet" href="css/style.css?v=test345-top-windows-version">
     <title>SpotySid — Rico + James SID Player | Oscilloscope View</title>
 
     <link rel="shortcut icon" type="image/png" href="images/icon16.png"/>
@@ -20,6 +20,8 @@
     </form>
 
     <canvas id="sidDisplay" style="background-color: #000000;"></canvas>
+    <!-- TEST345: fixed to the oscilloscope background, outside the zoomed canvas and controls. -->
+    <span id="ricoWindowsVersion" aria-live="polite" title="Reading the Windows version reported by your browser">WIN ?</span>
 
     <div style="position: absolute; top: 0; left: 0; right: 0; height: 20px; background-color: #666666; display: none" id="voiceInfo">
     </div>
@@ -828,7 +830,6 @@
         <button type="button" id="aboutSIDButton" title="Learn about the SID chip">ABOUT SID CHIP</button>
         <button type="button" id="aboutButton" title="Project information and credits">ABOUT</button>
         <button type="button" id="ricoHelpButton" title="Player instructions and playlist guide" aria-label="Help" aria-haspopup="dialog" aria-controls="ricoHelpDialog">?</button>
-        <span id="ricoXpIndicator" hidden aria-label="XP compatibility mode active" title="Windows XP compatibility mode active">XP</span>
       </div>
     </div>
 <!-- TEST136: retry native Pages publication after previous deploy timeout/cancellation; UI unchanged. -->
@@ -837,7 +838,7 @@
     <script type="text/javascript" src="js/backend_tinysid.js"></script>
     <script type="text/javascript" src="js/dialogManager.js"></script>
     <!-- TEST343: XP compatibility detection must precede SidPlayer AudioContext initialization. -->
-    <script type="text/javascript" src="js/legacyCompat.test343.js?v=test344-visible-xp"></script>
+    <script type="text/javascript" src="js/legacyCompat.test343.js?v=test345-top-windows-version"></script>
     <script type="text/javascript" src="js/sidPlayer.js?v=test343-xp-audio-buffer"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script type="text/javascript" src="js/sidImport.test221.js?v=test221import"></script>
