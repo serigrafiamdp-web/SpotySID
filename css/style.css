@@ -3441,3 +3441,15 @@ html body,
 html body * {
   font-weight:700 !important;
 }
+
+/* TEST305 — Make the compact bottom toolbar visibly BOLD.
+   Tahoma at 10-11px looks thin even at weight 700. A small crisp
+   text stroke strengthens the glyphs WITHOUT changing font-size,
+   family, line-height, button size, spacing, or canvas rendering. */
+#sidControls button,
+#sidControls label,
+#sidControls #subsongInfo,
+#sidControls > span:not(.rico-master-volume) {
+  font-weight:900 !important;
+  -webkit-text-stroke:0.4px currentColor;
+}
