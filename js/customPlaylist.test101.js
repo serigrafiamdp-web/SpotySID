@@ -3992,9 +3992,16 @@
     }
     async function loadProgressiveReferencePlaylist(data,localImport,serial){
       var stream=createProgressiveReferenceStream(data.tracks,data.name==='UNKNOWN CSDB');
+      // TEST348 XP: load/verify FIRST SID before any new playback. A long
+      // playlist must not trigger dozens of background ZIP decodes while
+      // the first song is starting on a slow ScriptProcessor machine.
+      var xpFirstOnly=xpLongList(data.tracks.length);
+      if(xpFirstOnly)
+        $('#ricoLiveStatus').text('XP · LOADING FIRST SID...');
       // TOP 100 DEMOS: song metadata is already in the source manifest.
       // Load song bytes on demand without decoding the entire list at launch.
-      stream.onDemandOnly=data.name==='TOP 100 DEMOS'||/^TOP 100 CSDb (?:ONEFILE )?DEMOS/.test(data.name);
+      stream.onDemandOnly=xpFirstOnly||data.name==='TOP 100 DEMOS'||
+        /^TOP 100 CSDb (?:ONEFILE )?DEMOS/.test(data.name);
       try{
         await stream.loadSlot(stream.slots[0]);
       }catch(error){
@@ -4002,6 +4009,8 @@
         throw error;
       }
       if(serial!==playlistChangeSerial){stream.cancel();return false;}
+      if(xpFirstOnly)
+        $('#ricoLiveStatus').text('XP · FIRST SID READY · PREPARING PLAYLIST...');
       var applied=await switchToPreparedPlaylist(serial,function(){
       resetCsdbRankDisplay();
       resetSoftTransition(true);
@@ -4026,8 +4035,11 @@
       loadedPlaylistCreator=(data.createdBy||'You').slice(0,100);
       if(!customActive)activate('custom');else player.initFileSelection();
       loadCustomIndex(0);showLivePlaylist(true);
-      $('#ricoLiveStatus').text('First SID ready; the rest of HVSC loads progressively.');
-      setTimeout(function(){if(activeReferenceStream===stream)stream.prefetch();},0);
+      $('#ricoLiveStatus').text(xpFirstOnly?
+        'XP · FIRST SID READY · OTHERS LOAD WHEN SELECTED':
+        'First SID ready; the rest of HVSC loads progressively.');
+      if(!xpFirstOnly)
+        setTimeout(function(){if(activeReferenceStream===stream)stream.prefetch();},0);
       },stream.slots[0]);
       if(!applied)stream.cancel();
       return applied;
