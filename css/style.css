@@ -3530,3 +3530,15 @@ html body * {
   z-index:2;
   background:var(--rico-theme-bg,#000);
 }
+
+/* TEST312 — compact star beside COLOR: same height and typography as
+   existing controls, palette-aware, without increasing toolbar height. */
+#sidControls #ricoInvertColorsButton {
+  width:23px !important;
+  min-width:23px !important;
+  flex:0 0 23px;
+  padding:0 !important;
+  text-align:center;
+  font-size:13px !important;
+  line-height:24px !important;
+}
