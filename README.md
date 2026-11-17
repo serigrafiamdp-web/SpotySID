@@ -55,6 +55,7 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 | **I** | Invert foreground/background (★) |
 | **F** | Toggle FILL ↔ LINE |
 | **D** | Open TILEWORK artist editor |
+| **N** | NEXT SID — advance to the next song using the existing button |
 | **↑ / ↓** | Select previous/next visible playlist or SID row |
 | **Enter** | PLAY selected row; from idle OSC start the first SID of the first COMMUNITY playlist |
 | **ESC**, in **PLAYLIST** | Close the playlist and return to OSC |
@@ -64,16 +65,16 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 
 Shortcuts do not override text editing or other foreground editors/dialogs. Navigation is **not** the same as the on-row **↑/↓ reorder buttons**.
 
-## Latest progress — 17 November 2026 · TEST348 (XP long-list trial)
+## Latest progress — 17 November 2026 · TEST349 (N = NEXT SID)
 
-**Current development: `main` through TEST348.** The user confirmed **TEST341 PASS**, **TEST342 PASS** (zoom) and reported clean XP/Supermium audio transitions with TEST344–346. TEST347 increased the XP OSC ceiling to 25 FPS in normal playback. **TEST348 improves long lists on XP only:** verify the first SID before starting playback, disable bulk SID prefetch, and draw the playlist incrementally; OSC remains at 20 FPS while the list is painting. Real XP PASS for TEST348 is pending. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
+**Current development: `main` through TEST349.** The user confirmed **TEST341 PASS**, **TEST342 PASS** (zoom) and reported clean XP/Supermium audio transitions with TEST344–346. TEST347 increased the XP OSC ceiling to 25 FPS in normal playback. **TEST348 improves long lists on XP only:** verify the first SID before starting playback, disable bulk SID prefetch, and draw the playlist incrementally; OSC remains at 20 FPS while the list is painting. Real XP PASS for TEST348 is pending. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
 
 | Area | Recent tests and change |
 | --- | --- |
 | Retro display | **TEST323–326:** volume-aware oscilloscope; MOS chip; NEW PLAYLIST wording; randomized HI-RES/PETSCII/PIXEL startup |
 | TILEWORK | **TEST327, 329–331:** ink inversion, compact save-before-exit panel, precise wheel zoom/scroll, ESC confirmation |
 | Bottom toolbar | **TEST332:** removed the fine line above the controls without changing button sizes/borders |
-| Mouse + keyboard | **TEST333–338:** ↑/↓ + Enter; identical selection highlight; M, I, F, D shortcuts; first MOS row selected |
+| Mouse + keyboard | **TEST333–338:** ↑/↓ + Enter; identical selection highlight; M, I, F, D shortcuts; first MOS row selected. **TEST349 (pending user PASS):** N = NEXT SID via existing toolbar action |
 | Escape priority | **TEST340** supersedes TEST339: ESC closes PLAYLIST or MOS first; only idle OSC opens MOS |
 | First playback | **TEST341 (user PASS):** bottom PLAY/Enter without an earlier song selection starts first COMMUNITY playlist's first SID |
 | Oscilloscope zoom | **TEST342 (user PASS):** wheel zoom anchored under cursor; graphics only, HI-RES/PIXEL/PETSCII |
