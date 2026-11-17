@@ -3501,3 +3501,32 @@ html body * {
   stroke-linejoin:round;
   pointer-events:none;
 }
+
+/* TEST309 — Keep the editor pencil + DONATE / ABOUT / ? visible.
+   The left-side controls may scroll horizontally on narrow screens,
+   but the right-hand actions must NEVER be clipped by the toolbar.
+   Toolbar remains 33px tall with identical text and button sizes. */
+#sidControls {
+  overflow:hidden !important;
+}
+#sidControls .rico-toolbar-main {
+  display:flex;
+  flex:1 1 auto;
+  min-width:0;
+  align-items:center;
+  flex-wrap:nowrap;
+  gap:3px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+}
+#sidControls .rico-toolbar-main::-webkit-scrollbar {display:none;}
+#sidControls .rico-toolbar-main > * {flex-shrink:0;}
+#sidControls .rico-bottom-about {
+  flex:0 0 auto;
+  margin-left:0 !important;
+  white-space:nowrap;
+  position:relative;
+  z-index:2;
+  background:var(--rico-theme-bg,#000);
+}
