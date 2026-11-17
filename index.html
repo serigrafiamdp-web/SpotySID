@@ -184,8 +184,11 @@
             <strong>F</strong> FILL/LINE · <strong>D</strong> TILEWORK ·
             <strong>N</strong> NEXT SID.
             <strong>↑ / ↓</strong> select a visible playlist or song (without reordering);
-            <strong>Enter</strong> plays the selected row. Mouse and keyboard use the same
-            highlight. Text inputs, search and TIMER keep their normal keys.</p>
+            <strong>Enter</strong> plays the selected row. <strong>FILL / LINE</strong>
+            always names the mode you can switch to. <strong>N / NEXT SID</strong>
+            uses the current palette's highlight until the next SID begins.
+            Mouse and keyboard use the same highlight. Text inputs, search and
+            TIMER keep their normal keys.</p>
             <p><strong>ESC:</strong> PLAYLIST open → close to OSC; MOS open → close MOS;
             OSC without a menu → open MOS; TILEWORK → ask before exiting.</p>
 
@@ -254,8 +257,11 @@
             <strong>F</strong> FILL/LINE · <strong>D</strong> TILEWORK ·
             <strong>N</strong> NEXT SID.
             <strong>↑ / ↓</strong> seleccionan listas o canciones visibles sin reordenar;
-            <strong>Enter</strong> reproduce la fila elegida. Mouse y teclado usan
-            el mismo resaltado. Buscadores, campos de texto y TIMER conservan sus teclas.</p>
+            <strong>Enter</strong> reproduce la fila elegida. <strong>FILL / LINE</strong>
+            muestra la acción disponible, no el modo actual. <strong>N / NEXT SID</strong>
+            queda resaltado con el color de la paleta hasta que comienza el próximo SID.
+            Mouse y teclado usan el mismo resaltado. Buscadores, campos de texto
+            y TIMER conservan sus teclas.</p>
             <p><strong>ESC:</strong> en PLAYLIST la cierra y vuelve a OSC; en MOS cierra MOS;
             en OSC sin menú abre MOS; en TILEWORK pregunta antes de salir.</p>
 
@@ -787,14 +793,14 @@
       </button>
       <button type="button" id="ricoRemixToolbar" aria-label="Open New Playlist Creator">NEW PLAYLIST</button>
       <button type="button" id="ricoImportSidButton" title="Import and save SID files in this browser only">IMPORT SID</button>
-      <button type="button" id="nextSid">Next SID &gt;</button>
+      <button type="button" id="nextSid" aria-pressed="false" aria-label="NEXT SID">Next SID &gt;</button>
       <button type="button" id="ricoPlaylistToggle" aria-pressed="true" title="Show or hide active playlist">PLAYLIST</button>
       <button type="button" id="autoAdvanceButton" aria-pressed="true" title="Advance to the next SID file when its playback duration ends">AUTO: ON</button>
 
       <button type="button" id="stopButton">Stop</button>
       <button type="button" id="playButton">Play</button>
       <span id="oscilloscopeVisualButtons">
-        <button type="button" id="oscilloscopeModeButton" aria-pressed="false" aria-label="Fill waveform mode; click for Line">FILL</button>
+        <button type="button" id="oscilloscopeModeButton" aria-pressed="false" aria-label="Filled waveform displayed. Click to switch to LINE.">LINE</button>
         <button type="button" id="oscilloscopeColorButton" aria-label="Change color palette">COLOR 1</button>
         <button type="button" id="ricoInvertColorsButton" aria-label="Invert foreground and background colors" aria-pressed="false">★</button>
         <button type="button" id="ricoPetsciiButton" aria-pressed="false" aria-label="Oscilloscope display mode: HI-RES. Click for PETSCII.">HI-RES</button>
@@ -841,10 +847,10 @@
     <script type="text/javascript" src="js/dialogManager.js"></script>
     <!-- TEST343: XP compatibility detection must precede SidPlayer AudioContext initialization. -->
     <script type="text/javascript" src="js/legacyCompat.test343.js?v=test348-long-list-20fps-final"></script>
-    <script type="text/javascript" src="js/sidPlayer.js?v=test343-xp-audio-buffer"></script>
+    <script type="text/javascript" src="js/sidPlayer.js?v=test350-waveform-action"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script type="text/javascript" src="js/sidImport.test221.js?v=test221import"></script>
-    <script type="text/javascript" src="js/customPlaylist.test101.js?v=test348-first-sid-ready-final"></script>
+    <script type="text/javascript" src="js/customPlaylist.test101.js?v=test350-next-highlight"></script>
     <script type="text/javascript" src="js/stil.test223.js?v=test275-publish-artwork-verified"></script>
     <script type="text/javascript" src="js/tileArtwork.test264.js?v=test331-esc-save-before-exit"></script>
     <script type="text/javascript" src="lft-test/lft-mode.experimental.js?v=test239fingerprint"></script>
