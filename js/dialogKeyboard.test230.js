@@ -100,15 +100,24 @@
     return false;
   }
 
-  // TEST339 — ESC toggles the MOS menu from the OSC view:
-  // MOS open -> close MOS; OSC view -> open MOS through its existing chip
-  // button (even when the floating playlist is visible). TILEWORK keeps its
-  // own priority ESC confirmation; other editors and text inputs are untouched.
+  // TEST340 — ESC closes the foreground list BEFORE it can open MOS.
+  // PLAYLIST -> its existing X (return to OSC); MOS -> close MOS;
+  // OSC with no menu -> open MOS. TILEWORK keeps its exit confirmation.
   document.addEventListener('keydown',function(event){
     if((event.key!=='Escape'&&event.key!=='Esc')||
        event.defaultPrevented||event.repeat)return;
     if(hasOtherForegroundWindow()||
        isVisible(document.getElementById('ricoTileArtworkOverlay')))return;
+    if(isVisible(playlist)){
+      // Reuse the PLAYLIST X action, including its current playback-safe
+      // close behavior. ESC must NOT open MOS in the same keypress.
+      var closePlaylist=document.getElementById('ricoLiveClose');
+      if(!closePlaylist)return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      closePlaylist.click();
+      return;
+    }
     if(isVisible(chooser)){
       var manager=window.sidPlayer&&window.sidPlayer.dialogManager;
       if(!manager||manager.dialogShown!=='chooseSidDialog')return;
@@ -119,7 +128,9 @@
       return;
     }
     var focused=document.activeElement;
-    if(focused&&(focused.isContentEditable||
+    // Only visible text fields block ESC from opening MOS. A focused TIMER
+    // inside a now-hidden playlist must not block the OSC shortcut.
+    if(isVisible(focused)&&(focused.isContentEditable||
        /^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName||'')||
        (focused.closest&&focused.closest(
          '[contenteditable="true"],[contenteditable=""],[role="textbox"],[role="combobox"]'))))
