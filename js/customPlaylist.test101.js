@@ -418,10 +418,10 @@
       // 50% is standard original output; 100% gives up to +6dB boost.
       // Independent of track-specific gain, SID registers and fade-out.
       masterVolume=2*percent/100;
-      // TEST323: visual height follows the same master gain, independently of
-      // SID samples, fades and per-track processing. The existing output
-      // volume path remains unchanged.
-      player.scopeVisualGain=masterVolume;
+      // TEST323: visual height follows master gain, but never collapses to
+      // zero. At 0% the wave stays minimally visible; 50% keeps its original
+      // height and 100% tests twice the original height. Audio can still mute.
+      player.scopeVisualGain=Math.max(0.06,masterVolume);
       wrap.style.setProperty('--rico-volume-level',percent+'%');
       range.setAttribute('aria-valuetext',percent+'%');
       // Do not create an AudioContext on page load. A real PLAY or user
