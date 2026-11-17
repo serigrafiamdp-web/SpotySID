@@ -4526,6 +4526,76 @@
         $('#ricoLiveStatus').text('Audio blocked: '+error.message+' · Click PLAY again.');
       });
     },true);
+    // TEST341 — In OSC with no SID chosen, bottom PLAY (or ENTER via the
+    // keyboard module) plays track #1 of the FIRST visible COMMUNITY playlist.
+    // Reuse that row's existing PLAY callback; never play the legacy GAMES list.
+    // TEST161 remains intact: absolutely no auto-start on page load.
+    var firstCommunityPlayPending=false;
+    var firstCommunityPlayObserver=null;
+    function canStartFirstCommunity(){
+      var tile=document.getElementById('ricoTileArtworkOverlay');
+      return landingPlaylists&&player.sidListIndex===false&&
+        !player.isPlaying&&!player.autoLoading&&!transitionBusy&&
+        !sharedRequestId&&!liveVisible&&
+        !(player.dialogManager&&player.dialogManager.dialogShown)&&
+        !(tile&&!tile.hidden);
+    }
+    function clearPendingFirstCommunity(){
+      firstCommunityPlayPending=false;
+      if(firstCommunityPlayObserver){
+        firstCommunityPlayObserver.disconnect();
+        firstCommunityPlayObserver=null;
+      }
+    }
+    function tryFirstCommunityPlay(){
+      if(!firstCommunityPlayPending)return false;
+      if(!canStartFirstCommunity()){clearPendingFirstCommunity();return false;}
+      var rows=communityItems.querySelectorAll('.rico-community-row');
+      for(var i=0;i<rows.length;i++){
+        var buttons=rows[i].querySelectorAll('button');
+        for(var j=0;j<buttons.length;j++){
+          if(buttons[j].textContent.trim().toUpperCase()!=='PLAY')continue;
+          if(buttons[j].disabled)break; // Skip empty, non-playable drafts.
+          var play=buttons[j];
+          clearPendingFirstCommunity(); // One explicit gesture, one load.
+          play.click();
+          return true;
+        }
+      }
+      return false;
+    }
+    window.ricoStartFirstCommunityIfIdle=function(){
+      if(!canStartFirstCommunity())return false;
+      if(firstCommunityPlayPending)return true;
+      firstCommunityPlayPending=true;
+      if(!tryFirstCommunityPlay()){
+        $('#ricoLiveStatus').text('Loading the first COMMUNITY playlist...');
+        firstCommunityPlayObserver=new MutationObserver(function(){
+          if(communityItems.textContent.indexOf('Could not load COMMUNITY PLAYLISTS:')===0||
+             communityItems.textContent==='No additional published playlists available.'){
+            clearPendingFirstCommunity();
+            $('#ricoLiveStatus').text('No COMMUNITY playlist available. Open MOS to retry.');
+            return;
+          }
+          tryFirstCommunityPlay();
+        });
+        firstCommunityPlayObserver.observe(communityItems,{childList:true});
+        // Startup loads the catalog; do not spawn a duplicate request.
+        // If startup previously failed, retry in response to this PLAY.
+        if(!communityRequestNumber||
+           communityItems.textContent.indexOf('Could not load COMMUNITY PLAYLISTS:')===0)
+          void loadCommunityCatalog();
+      }
+      return true;
+    };
+    // Capture before sidPlayer's generic play/pause listener. With no track
+    // loaded it would otherwise toggle a silent player, not select a SID.
+    if(sharedPlayButton)sharedPlayButton.addEventListener('click',function(event){
+      if(!canStartFirstCommunity())return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      window.ricoStartFirstCommunityIfIdle();
+    },true);
     // TEST161: preserve manually selected playlist order; no startup autoplay.
     var COMMUNITY_STARTUP_LAST_KEY='rico-community-startup-last-v1';
     function cancelStartupPlaylist() {
