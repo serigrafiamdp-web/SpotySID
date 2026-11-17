@@ -2,7 +2,7 @@
 
 **Commodore 64 SID music · PLAY · CREATE · REMIX · DISCOVER · SHARE**
 
-[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Previous checkpoint — TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [XP oscilloscope FPS — TEST347](docs/TEST347_XP_SCOPE_25FPS.md) · [Architecture](docs/ARCHITECTURE.md)
+[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Previous checkpoint — TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [XP long lists — TEST348](docs/TEST348_XP_LONG_PLAYLIST_FIRST_SID.md) · [Architecture](docs/ARCHITECTURE.md)
 
 SpotySid continues the original James / Jojati web SID Player, with extensions by RICO / RicoSerigrafia. The music, original artists and SID files keep their own credits; playlist editing does **not** change the original compositions.
 
@@ -15,7 +15,7 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 - **FILL / LINE** waveform view; **COLOR** palette cycle; **★** swaps foreground/background colors across the current theme. **Master volume** controls audio and the corresponding waveform height.
 - **PLAY / STOP / NEXT SID**, subtune controls, **AUTO**, adjustable **MM:SS TIMER**, HVSC song-length estimates where known, silence detection and soft transitions.
 - **Selective reSIDfp** support for exact approved LFT/LINUS references and one targeted Uctumi source, without changing the normal default engine. Some targeted audio cases still need separate verification.
-- **Windows XP / Supermium compatibility (TEST343–347):** tiny 12px theme-colored OS label at upper right; on genuine XP in Supermium, click misleading `11?` once to save the XP profile for that browser. The confirmed XP profile uses an 8192-sample audio buffer and lighter manual/AUTO handoffs. **TEST347:** raise the steady oscilloscope limit from 20 to 25 FPS in HI-RES, PETSCII and PIXEL, keeping 20 FPS during transitions. The 25 FPS trial still needs real XP validation.
+- **Windows XP / Supermium compatibility (TEST343–348):** upper-right XP indicator with one-time saved confirmation when Supermium spoofs Windows 11; 8192-sample audio buffer, verified smooth handoffs and 25 FPS normal / 20 FPS busy oscilloscope ceilings. **NEW TEST348:** when a list has 80+ tracks in XP mode, load its first SID fully before starting, do not bulk-prefetch unselected tracks, and progressively draw long playlist rows in small chunks so audio gets priority. Real XP confirmation is pending.
 
 ### Discover music
 
@@ -64,9 +64,9 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 
 Shortcuts do not override text editing or other foreground editors/dialogs. Navigation is **not** the same as the on-row **↑/↓ reorder buttons**.
 
-## Latest progress — 17 November 2026 · TEST347 (XP FPS trial)
+## Latest progress — 17 November 2026 · TEST348 (XP long-list trial)
 
-**Current development: `main` through TEST347.** The user confirmed **TEST341 PASS**, **TEST342 PASS** (zoom), and reports that XP/Supermium audio transitions are now OK with the TEST344–346 handoff and remembered XP preference. **TEST347 raises scope rendering during regular playback from 20 to 25 FPS but retains 20 FPS while switching/loading SIDs**, pending real XP audio and display validation. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
+**Current development: `main` through TEST348.** The user confirmed **TEST341 PASS**, **TEST342 PASS** (zoom) and reported clean XP/Supermium audio transitions with TEST344–346. TEST347 increased the XP OSC ceiling to 25 FPS in normal playback. **TEST348 improves long lists on XP only:** verify the first SID before starting playback, disable bulk SID prefetch, and draw the playlist incrementally; OSC remains at 20 FPS while the list is painting. Real XP PASS for TEST348 is pending. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
 
 | Area | Recent tests and change |
 | --- | --- |
@@ -77,7 +77,7 @@ Shortcuts do not override text editing or other foreground editors/dialogs. Navi
 | Escape priority | **TEST340** supersedes TEST339: ESC closes PLAYLIST or MOS first; only idle OSC opens MOS |
 | First playback | **TEST341 (user PASS):** bottom PLAY/Enter without an earlier song selection starts first COMMUNITY playlist's first SID |
 | Oscilloscope zoom | **TEST342 (user PASS):** wheel zoom anchored under cursor; graphics only, HI-RES/PIXEL/PETSCII |
-| Windows XP/Supermium | **TEST343–346 (user-confirmed audio transition now OK):** 8192 buffer, optimized fade handoff, 12px top-right OS text and remembered XP mode. **TEST347 (user test pending):** 25 FPS scope ceiling while playing, 20 FPS while loading/changing songs; [test guide](docs/TEST347_XP_SCOPE_25FPS.md) |
+| Windows XP/Supermium | **TEST343–346:** 8192-sample buffer, cleaned-up manual/AUTO transitions and remembered XP mode. **TEST347:** 25 FPS steady OSC / 20 FPS on handoff. **TEST348 (user PASS pending):** first SID ready before playback, no long-list background SID prefetch, incremental row painting and 20 FPS while list builds; [test guide](docs/TEST348_XP_LONG_PLAYLIST_FIRST_SID.md) |
 
 **Do not equate an implemented TEST or successful GitHub Pages build with a user PASS for every audio/UI pathway.** Confirm a changed behavior on the live site, especially when it involves Web Audio or Cloudflare.
 
@@ -99,7 +99,7 @@ The previous verified baseline **MASTER-2026-11-16-TEST301** is retained as a se
 | `index.html` | Player layout, bilingual HELP text, ABOUT and script references |
 | `css/style.css` | Interface, toolbar, playlist/keyboard selection, TILEWORK appearance |
 | `js/sidPlayer.js`, `js/backend_tinysid.js` | SID player and default playback engine |
-| `js/legacyCompat.test343.js` | Early XP profile detection, theme-colored XP badge and canvas throttle (TEST343–344) |
+| `js/legacyCompat.test343.js` | Saved XP confirmation, OS indicator, and dynamic 20/25 FPS audio-safe OSC throttle (TEST343–348) |
 | `js/scopeZoom.test342.js` | Mouse-wheel zoom restricted to scope canvas (TEST342) |
 | `js/customPlaylist.test101.js` | **Active** community, HVSC, playlists, batch actions, initial COMMUNITY playback |
 | `js/dialogKeyboard.test230.js` | **Active** keyboard shortcuts, ESC and list navigation |
@@ -118,6 +118,7 @@ The previous verified baseline **MASTER-2026-11-16-TEST301** is retained as a se
 | `docs/TEST345_WINDOWS_VERSION.md` | Top-right OS diagnostic and detection limits, TEST345 |
 | `docs/TEST346_SUPERMIUM_XP_CONFIRMATION.md` | Persist user-confirmed XP with misleading Supermium metadata, TEST346 |
 | `docs/TEST347_XP_SCOPE_25FPS.md` | Optional 25 FPS oscilloscope on XP without sacrificing 20 FPS transition headroom, TEST347 |
+| `docs/TEST348_XP_LONG_PLAYLIST_FIRST_SID.md` | First SID priority, on-demand bytes, incremental row painting on XP, TEST348 |
 | `docs/ARCHITECTURE.md` | Maintenance and backend boundaries |
 
 ## Hosting, credits and preservation
