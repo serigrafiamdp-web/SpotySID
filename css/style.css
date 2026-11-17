@@ -3556,13 +3556,13 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   border-color:var(--rico-theme-fg,#fff) !important;
 }
 
-/* TEST319 — fixed compact WAVE toggle. FILLED and LINE share one width;
-   the existing TEST316 pressed-state rule inverts only LINE. */
+/* TEST320 — FILL / LINE: compact fixed width, same across both states.
+   TEST316 pressed-state colors invert only LINE. */
 #sidControls #oscilloscopeVisualButtons #oscilloscopeModeButton {
-  width:52px !important;
-  min-width:52px !important;
-  max-width:52px !important;
-  flex:0 0 52px;
+  width:42px !important;
+  min-width:42px !important;
+  max-width:42px !important;
+  flex:0 0 42px;
   padding-left:0 !important;
   padding-right:0 !important;
   text-align:center;
