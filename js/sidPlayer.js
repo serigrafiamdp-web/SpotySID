@@ -1464,13 +1464,21 @@ SidPlayer.prototype = {
       sidPlayer.render();
     });
 
-    // TEST320 — FILL is default (normal button); LINE is inverted.
+    // TEST350: FILL/LINE button always names the NEXT action.
+    // Current line drawing -> button says FILL; current filled drawing -> LINE.
+    // Preserve TEST320's inverse-ink styling for the active line mode.
+    function syncWaveformActionButton(){
+      var lineMode=sidPlayer.oscilloscopeMode === 'line';
+      $('#oscilloscopeModeButton').text(lineMode?'FILL':'LINE')
+        .attr('aria-pressed',lineMode?'true':'false')
+        .attr('aria-label',lineMode?
+          'Line waveform displayed. Click to switch to FILL.':
+          'Filled waveform displayed. Click to switch to LINE.');
+    }
+    syncWaveformActionButton();
     $('#oscilloscopeModeButton').on('click', function() {
       sidPlayer.oscilloscopeMode = sidPlayer.oscilloscopeMode === 'line' ? 'filled' : 'line';
-      var lineMode=sidPlayer.oscilloscopeMode === 'line';
-      $(this).text(lineMode ? 'LINE' : 'FILL')
-        .attr('aria-pressed',lineMode ? 'true' : 'false')
-        .attr('aria-label',lineMode ? 'Line waveform mode; click for Fill' : 'Fill waveform mode; click for Line');
+      syncWaveformActionButton();
       sidPlayer.render();
     });
 
