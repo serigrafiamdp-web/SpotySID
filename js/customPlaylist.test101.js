@@ -3898,6 +3898,9 @@
       landingPlaylists = false;
       player.isPlaying=false;
       player.isPaused=false;
+      // TEST348: cached row markers refer to the previous mutable custom[]
+      // container. The new list may have the same track count and stream.
+      largePlaylistPainted=null;largePlaylistStructureRevision++;
       custom.length=0;
       Array.prototype.push.apply(custom,entries);
       nameEl.value=data.name.slice(0,100);
@@ -4052,6 +4055,7 @@
       cancelPendingCommunityStartup();
       landingPlaylists=false;
       player.isPlaying=false;player.isPaused=false;
+      largePlaylistPainted=null;largePlaylistStructureRevision++;
       custom.length=0;Array.prototype.push.apply(custom,stream.slots);
       nameEl.value=data.name.slice(0,100);
       loadedPlaylistTitle=data.name.trim().slice(0,100);
@@ -4148,6 +4152,7 @@
       cancelPendingCommunityStartup();
       landingPlaylists=false;
       player.isPlaying=false;player.isPaused=false;
+      largePlaylistPainted=null;largePlaylistStructureRevision++;
       custom.length=0;Array.prototype.push.apply(custom,output);
       nameEl.value=data.name.slice(0,100);
       loadedPlaylistTitle=data.name.trim().slice(0,100);
