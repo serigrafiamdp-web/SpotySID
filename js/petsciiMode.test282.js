@@ -47,8 +47,7 @@
     vertical:93,        // centered two-column vertical bar
     rising:78,          // / rising on screen (toward the upper rows)
     falling:77,         // \ falling on screen (toward the lower rows)
-    noise:42,           // genuine C64 '*' character for SID noise waveform
-    idle:100            // authentic C64 ROM: one-pixel full-width horizontal line
+    noise:42            // genuine C64 '*' character for SID noise waveform
     // TEST286: no cross/corner tiles; their extra arms created ghost lines
   });
   function paintPetscii(){
@@ -81,12 +80,8 @@
     var lftActive=!!(lft&&typeof lft.active==='function'&&lft.active());
     var lftRegs=lftActive&&typeof lft.scopeRegisters==='function'
       ?lft.scopeRegisters():null;
-    // TEST294: keep a one-ROM-pixel baseline in channels with no output.
-    function drawIdleLine(top,bottom){
-      var row=Math.round((top+bottom)/2);
-      for(var col=0;col<cols;col++)
-        blit(ctx,SCOPE_GLYPH.idle,col*cellW,row*cellH,cellW,cellH);
-    }
+    // TEST300: no synthetic idle/baseline glyphs. The cleared background
+    // remains empty when a voice has no waveform output.
     for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
       // TEST299: take wave/noise flags from the same engine feeding the
@@ -104,7 +99,7 @@
       // TEST298: paused/stopped playback must not visualize stale audio
       // buffers. On Pause the old isPaused flag remains true, but audio
       // playback has stopped and the channel must be a clean idle line.
-      if(!player.isPlaying||!buffer){drawIdleLine(top,bottom);continue;}
+      if(!player.isPlaying||!buffer)continue;
 
       // Keep a stable real SID waveform window; use zero crossing to
       // reduce horizontal jumping, not replace the source with a fake wave.
@@ -142,16 +137,11 @@
       // renormalizing each frame, capped at 48% of the voice band.
       var gain=heightInRows*10;
       var maxDeviation=heightInRows*0.24;
-      // A silent voice (or an isolated spike without sustained amplitude)
-      // uses only the one-pixel C64 horizontal glyph.
       // Do not gate LFT on TinySID state. Its audio trace already tells
       // whether the channel has audible waveform activity.
       var inactive=!player.isPlaying||
         (channel<3&&!lftActive&&wave===0);
-      if(inactive||range<0.00015||range*gain<2.75){
-        drawIdleLine(top,bottom);
-        continue;
-      }
+      if(inactive||range<0.00015||range*gain<2.75)continue;
       // Ignore outlier impulses during drawing, too, so they cannot be
       // mistaken for abrupt square-wave transitions.
       for(var s=0;s<count;s++)
@@ -178,12 +168,6 @@
         var from=col*(count-1)/cols;
         var to=(col+1)*(count-1)/cols;
         var y0=yAt(from),y1=yAt(to),delta=y1-y0;
-        // A sub-character variation is a continuous thin baseline,
-        // never a vertical bar/cross or stray dot.
-        if(Math.max(Math.abs(y0-center),Math.abs(y1-center))<1.25){
-          tile(SCOPE_GLYPH.idle,col,Math.round(center));
-          continue;
-        }
         if(noiseWave){
           // Actual SID noise amplitude determines the '*' tile position.
           tile(SCOPE_GLYPH.noise,col,Math.round(yAt((from+to)/2)));
