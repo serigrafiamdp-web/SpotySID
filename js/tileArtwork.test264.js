@@ -473,6 +473,17 @@
     themeObserver.observe(document.documentElement,{
       attributes:true,attributeFilter:['style']
     });
+    // TEST331: ESC uses the same SAVE BEFORE EXIT? confirmation as the X.
+    // Listen in the window capture phase so other player/dialog ESC handlers
+    // cannot close an underlying playlist before TILEWORK handles it.
+    // An already visible confirmation stays open until an exit is chosen.
+    window.addEventListener('keydown',function(event){
+      if(!overlay||overlay.hidden||
+         (event.key!=='Escape'&&event.key!=='Esc'))return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if(!event.repeat&&confirmBox&&confirmBox.hidden)confirmClose();
+    },true);
     document.addEventListener('keydown',function(event){
       if(!overlay||overlay.hidden||!panel.contains(document.activeElement))return;
       if((event.ctrlKey||event.metaKey)&&event.key.toLowerCase()==='z'){
