@@ -77,11 +77,12 @@
     for(var channel=0;channel<channels;channel++){
       var buffer=SID.getChannelBuffer(channel+1);
       if(!buffer)continue;
-      // TEST293: use the SID's noise flag, not sample jaggedness.
-      // TinySID may return a 4-bit waveform nibble or raw SID control bits.
+      // TEST302: '*' only for pure SID white noise, not instruments
+      // that combine the noise bit with triangle/saw/pulse effects.
+      // TinySID reports either a 4-bit waveform nibble or control bits.
       var wave=channel<3&&typeof SID.getWave==='function'?SID.getWave(channel):0;
       var noiseWave=Number.isFinite(wave)&&
-        (wave<=15?(wave&8)!==0:(wave&0x80)!==0);
+        (wave<=15?wave===8:(wave&0xf0)===0x80);
       var top=Math.floor(channel*rows/channels);
       var bottom=Math.floor((channel+1)*rows/channels)-1;
       if(bottom<top)continue;
