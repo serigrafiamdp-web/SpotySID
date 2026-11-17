@@ -3663,7 +3663,9 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   right:10px;
   z-index:220;
   display:block;
-  pointer-events:none;
+  pointer-events:auto;
+  cursor:pointer;
+  user-select:none;
   color:var(--rico-theme-fg,#fff) !important;
   background:transparent !important;
   font:normal 12px/20px Tahoma,Arial,sans-serif;
@@ -3671,4 +3673,10 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   text-align:right;
   white-space:nowrap;
   text-shadow:none;
+}
+
+/* TEST346 — visually text-only; keyboard users can confirm XP using Enter. */
+#ricoWindowsVersion:focus-visible {
+  outline:1px dotted var(--rico-theme-fg,#fff);
+  outline-offset:2px;
 }
