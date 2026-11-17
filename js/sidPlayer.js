@@ -12,8 +12,9 @@ var SidPlayer = function() {
   this.oscilloscopeMode = 'filled';
   // TEST289: PETSCII is an independent display switch, not a color palette.
   this.petsciiEnabled = false;
-  // TEST312: one independent inversion switch applies to every COLOR theme.
-  this.colorsInverted = false;
+  // TEST316: on every opening choose normal/inverted with equal probability.
+  // Both states cover all 12 existing palettes; ★ can override either state.
+  this.colorsInverted = Math.random() < 0.5;
   this.colorModeIndex = 0;
   this.colorModes = [
     { name: 'Original', line: '#ffffff', fill: 'rgba(255,255,255,0.56)', background: '#000000' },
@@ -2141,6 +2142,8 @@ SidPlayer.prototype = {
       root.style.setProperty('--rico-theme-panel', 'color-mix(in srgb, ' + palette.background + ' 80%, ' + palette.line + ' 20%)');
       root.style.setProperty('--rico-theme-hover', 'color-mix(in srgb, ' + palette.background + ' 65%, ' + palette.line + ' 35%)');
     }
+    // TEST316: synchronize ★ even on startup (before the first user click).
+    $('#ricoInvertColorsButton').attr('aria-pressed',this.colorsInverted?'true':'false');
     // TEST119: keep palette selection numeric, with 1-based index in the
     // current set. Avoid the browser's native white tooltip too.
     $('#oscilloscopeColorButton').text('COLOR ' + (this.colorModeIndex + 1))
