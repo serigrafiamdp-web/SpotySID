@@ -125,14 +125,14 @@
     }
   },true);
 
-  // TEST336 — I = invert background/foreground (★), F = FILL/LINE.
-  // Preserve M = MOS, P = PLAYLIST, C = COLOR. Trigger the existing
+  // TEST338 — D opens TILEWORK using the existing pencil button.
+  // Preserve I/F, M/P/C. Trigger the existing
   // buttons rather than duplicating behavior; never hijack text editing.
   document.addEventListener('keydown',function(event){
     if(event.defaultPrevented||event.repeat||event.isComposing||
        event.ctrlKey||event.metaKey||event.altKey)return;
     var key=String(event.key||'').toLowerCase();
-    if(key!=='p'&&key!=='c'&&key!=='m'&&key!=='i'&&key!=='f')return;
+    if(key!=='p'&&key!=='c'&&key!=='m'&&key!=='i'&&key!=='f'&&key!=='d')return;
     var focused=document.activeElement;
     var source=event.target;
     function editable(node){
@@ -148,7 +148,8 @@
       return;
     var shortcutButtons={
       p:'ricoPlaylistToggle',c:'oscilloscopeColorButton',m:'chooseSid',
-      i:'ricoInvertColorsButton',f:'oscilloscopeModeButton'
+      i:'ricoInvertColorsButton',f:'oscilloscopeModeButton',
+      d:'ricoToolbarTileArtworkButton'
     };
     var target=document.getElementById(shortcutButtons[key]);
     if(!target)return;
