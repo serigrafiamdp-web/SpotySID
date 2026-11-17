@@ -100,11 +100,15 @@
     return false;
   }
 
-  // Handle only Esc. Preserve existing modal-editor and beta-key Esc handling.
+  // TEST339 — ESC toggles the MOS menu from the OSC view:
+  // MOS open -> close MOS; OSC view -> open MOS through its existing chip
+  // button (even when the floating playlist is visible). TILEWORK keeps its
+  // own priority ESC confirmation; other editors and text inputs are untouched.
   document.addEventListener('keydown',function(event){
     if((event.key!=='Escape'&&event.key!=='Esc')||
        event.defaultPrevented||event.repeat)return;
-    if(hasOtherForegroundWindow())return;
+    if(hasOtherForegroundWindow()||
+       isVisible(document.getElementById('ricoTileArtworkOverlay')))return;
     if(isVisible(chooser)){
       var manager=window.sidPlayer&&window.sidPlayer.dialogManager;
       if(!manager||manager.dialogShown!=='chooseSidDialog')return;
@@ -114,15 +118,17 @@
       event.stopImmediatePropagation();
       return;
     }
-    if(isVisible(playlist)){
-      // The X button opens the library again. The existing PLAYLIST toggle,
-      // instead, simply hides the playlist, keeping the oscilloscope/audio.
-      var toggle=document.getElementById('ricoPlaylistToggle');
-      if(!toggle)return;
-      toggle.click();
-      event.preventDefault();
-      event.stopImmediatePropagation();
-    }
+    var focused=document.activeElement;
+    if(focused&&(focused.isContentEditable||
+       /^(INPUT|TEXTAREA|SELECT)$/.test(focused.tagName||'')||
+       (focused.closest&&focused.closest(
+         '[contenteditable="true"],[contenteditable=""],[role="textbox"],[role="combobox"]'))))
+      return;
+    var mos=document.getElementById('chooseSid');
+    if(!mos)return;
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    mos.click();
   },true);
 
   // TEST338 — D opens TILEWORK using the existing pencil button.
