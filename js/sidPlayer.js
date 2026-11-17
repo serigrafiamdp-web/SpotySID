@@ -13,10 +13,11 @@ var SidPlayer = function() {
   this.scopeVisualGain = 1;
   // TEST24: filled waves are the standard mode on each page load.
   this.oscilloscopeMode = 'filled';
-  // TEST322: the same button cycles HI-RES / PETSCII / PIXEL independently
-  // of COLOR, FILL/LINE and ★. Preserve the PETSCII compatibility flag.
-  this.scopeDisplayMode = 'hires';
-  this.petsciiEnabled = false;
+  // TEST326: randomize HI-RES / PETSCII / PIXEL uniformly on each opening.
+  // Independent of COLOR and ★; preserve PETSCII compatibility flag.
+  var initialScopeModes=['hires','petscii','pixel'];
+  this.scopeDisplayMode = initialScopeModes[Math.floor(Math.random()*initialScopeModes.length)];
+  this.petsciiEnabled = this.scopeDisplayMode==='petscii';
   // TEST316: on every opening choose normal/inverted with equal probability.
   // Both states cover all 12 existing palettes; ★ can override either state.
   this.colorsInverted = Math.random() < 0.5;
@@ -1441,18 +1442,23 @@ SidPlayer.prototype = {
       sidPlayer.render();
     });
 
-    // TEST322: single display selector HI-RES -> PETSCII -> PIXEL -> HI-RES.
-    // Active special modes invert the button, but never modify color palette.
+    // TEST326: the button must display the randomly selected startup mode,
+    // then preserve the existing HI-RES -> PETSCII -> PIXEL cycle.
+    // Active special modes invert the button in the current palette.
+    function syncScopeDisplayButton() {
+      var mode=sidPlayer.scopeDisplayMode;
+      $('#ricoPetsciiButton').text(mode==='hires'?'HI-RES':mode.toUpperCase())
+        .attr('aria-pressed',mode==='hires'?'false':'true')
+        .attr('aria-label','Oscilloscope display mode: '+(mode==='hires'?'HI-RES':mode.toUpperCase())+
+          '. Click for '+(mode==='hires'?'PETSCII':mode==='petscii'?'PIXEL':'HI-RES')+'.');
+    }
+    syncScopeDisplayButton();
     $('#ricoPetsciiButton').on('click', function() {
       var modes=['hires','petscii','pixel'];
       var current=modes.indexOf(sidPlayer.scopeDisplayMode);
       sidPlayer.scopeDisplayMode=modes[(current+1)%modes.length];
       sidPlayer.petsciiEnabled=sidPlayer.scopeDisplayMode==='petscii';
-      var mode=sidPlayer.scopeDisplayMode;
-      $(this).text(mode==='hires'?'HI-RES':mode.toUpperCase())
-        .attr('aria-pressed',mode==='hires'?'false':'true')
-        .attr('aria-label','Oscilloscope display mode: '+(mode==='hires'?'HI-RES':mode.toUpperCase())+
-          '. Click for '+(mode==='hires'?'PETSCII':mode==='petscii'?'PIXEL':'HI-RES')+'.');
+      syncScopeDisplayButton();
       if(window.RicoPetsciiMode&&typeof window.RicoPetsciiMode.refresh==='function')
         window.RicoPetsciiMode.refresh();
       sidPlayer.render();
