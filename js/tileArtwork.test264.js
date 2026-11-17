@@ -123,9 +123,11 @@
     if(picture)picture.style.cursor=tool==='fill'?'cell':
       tool==='select'?'crosshair':'crosshair';
   }
-  // TEST280: the LCD palette must use only glass/ink, including STAR inverse.
+  // TEST327: reverse must swap both palette colors, not force black pixels.
+  // In all 12 COLOR themes (also ★-inverted), bit 1 uses current PAPER when
+  // TILEWORK reverse is ON. Keep the one-bit artwork and tools untouched.
   function lcdTwoTone(){return document.documentElement.getAttribute('data-rico-lcd')==='2tone';}
-  function reverseInkColor(){return lcdTwoTone()?themeBackground():'#000000';}
+  function reverseInkColor(){return themeBackground();}
   function paint(){
     if(!pictureCtx)return;
     // Logical bit 0 = background, bit 1 = ink. Star reverses their colors,
