@@ -1,6 +1,6 @@
 # SpotySid — Architecture and operational map
 
-Updated: 2026-11-11 (Argentina). This is the **current** map; the former TEST62 architecture report remains a historical snapshot.
+Updated: **2026-11-17 (Argentina)** for the frontend through **TEST341**. The 11 Nov audio/backend findings remain separately documented; the former TEST62 architecture report is a historical snapshot.
 
 ## Components
 
@@ -18,9 +18,10 @@ flowchart TD
 
 ### Frontend / audio
 
-- `index.html` loads `css/style.css`, `js/customPlaylist.test101.js`, `js/sidPlayer.js`, `js/backend_tinysid.js`, JSZip, HELP and DONATE.
-- The `test101` filename is historical; it is currently loaded by `index.html`. Do not rename or replace without checking all references.
-- The SID engine is separate from the community and playlist code. Avoid changing playback when working on catalog or UI.
+- `index.html` loads `css/style.css`, `js/customPlaylist.test101.js`, `js/dialogKeyboard.test230.js`, `js/tileArtwork.test264.js`, `js/petsciiMode.test282.js`, `js/sidPlayer.js`, `js/backend_tinysid.js`, JSZip, HELP and DONATE.
+- The `test101`, `test230` and `test264` filenames are historical, but these are **active scripts** loaded by `index.html`. Do not rename them without updating the references and checking the behavior.
+- The SID engine is separate from the community, playlist, keyboard and TILEWORK code. Avoid changing playback when working on catalog, HELP/ABOUT or styling.
+- **TEST333–341 frontend:** `js/dialogKeyboard.test230.js` owns ↑/↓/Enter, M/P/C/I/F/D and context-sensitive ESC; `js/customPlaylist.test101.js` handles idle OSC PLAY/Enter → first available COMMUNITY playlist's first SID (TEST341 user PASS). This action is **not** auto-play on page load. `js/tileArtwork.test264.js` owns the 256×64 editor, its zoom, local SAVE and save-before-exit confirmation. In-app HELP and ABOUT copy is in `index.html`; `js/help.test109.js` only controls its language/dialog behavior.
 - **Selective reSIDfp:** `lft-test/lft-mode.experimental.js` bridges the existing TinySID interface to `lft-test/lft-wasm/` for an explicit allowlist of LFT HVSC sources plus the **single** `Loco_un_Poco.sid` Uctumi source. The bridge from TEST188 was restored **byte-for-byte** in TEST193 and is the active bridge. The original `js/backend_tinysid.js` remains the default engine.
 - **Audio status:** `Loco_un_Poco.sid` has a MOS8580-specific route, but the intro-to-rhythm/filter/volume behaviour remains unresolved. Do **not** label it PASS or extend this route to all Uctumi songs without isolated verification. Historical TEST189–192 changes are not active.
 - **Uctumi audit only:** `library/uctumi-chip-profiles.json` documents the original 99 Uctumi PSID headers (97 PAL/8580; 2 PAL/6581, including two 2SID tunes); it is not a runtime switch for 99 songs.
@@ -78,4 +79,4 @@ Public v2 playlists can also contain `{sidId, file}` references to immutable con
 
 ## Source and historical records
 
-[README](../README.md) · **[Features](FEATURES.md)** · **[Checkpoint 2026-11-11](CHECKPOINT_2026-11-11_SPOTYSID.md)** · [Checkpoint 2026-11-10](CHECKPOINT_2026-11-10_SPOTYSID.md) · [NO HVSC TEST165](NO_HVSC_ARCHIVE_TEST165.md) · [User guide](HELP_USER_GUIDE.md) · [Historical TEST62 architecture](ARCHITECTURE_COMMUNITY_HVSC_D1_TEST62.md) · [TEST118 Worker/content-edit design](TEST118_EDIT_PUBLISHED_PLAYLIST_CONTENT.md)
+[README](../README.md) · **[Features](FEATURES.md)** · **[Latest checkpoint TEST341 / 2026-11-17](CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md)** · [Historical checkpoint 2026-11-11](CHECKPOINT_2026-11-11_SPOTYSID.md) · [Checkpoint 2026-11-10](CHECKPOINT_2026-11-10_SPOTYSID.md) · [NO HVSC TEST165](NO_HVSC_ARCHIVE_TEST165.md) · [User guide](HELP_USER_GUIDE.md) · [Historical TEST62 architecture](ARCHITECTURE_COMMUNITY_HVSC_D1_TEST62.md) · [TEST118 Worker/content-edit design](TEST118_EDIT_PUBLISHED_PLAYLIST_CONTENT.md)
