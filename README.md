@@ -2,7 +2,7 @@
 
 **Commodore 64 SID music · PLAY · CREATE · REMIX · DISCOVER · SHARE**
 
-[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Latest checkpoint — 17 Nov 2026 / TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [Architecture](docs/ARCHITECTURE.md)
+[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Previous checkpoint — TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [XP compatibility — TEST343](docs/TEST343_XP_COMPATIBILITY.md) · [Architecture](docs/ARCHITECTURE.md)
 
 SpotySid continues the original James / Jojati web SID Player, with extensions by RICO / RicoSerigrafia. The music, original artists and SID files keep their own credits; playlist editing does **not** change the original compositions.
 
@@ -15,6 +15,7 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 - **FILL / LINE** waveform view; **COLOR** palette cycle; **★** swaps foreground/background colors across the current theme. **Master volume** controls audio and the corresponding waveform height.
 - **PLAY / STOP / NEXT SID**, subtune controls, **AUTO**, adjustable **MM:SS TIMER**, HVSC song-length estimates where known, silence detection and soft transitions.
 - **Selective reSIDfp** support for exact approved LFT/LINUS references and one targeted Uctumi source, without changing the normal default engine. Some targeted audio cases still need separate verification.
+- **Windows XP / Supermium compatibility (TEST343):** a low-CPU profile with a larger 8192-sample audio buffer and up to 20 FPS oscilloscope redraw. Detects reported XP automatically; use `?xp=1` to force or `?xp=0` to disable when Supermium masks its user agent. Pending real XP audio validation.
 
 ### Discover music
 
@@ -63,9 +64,9 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 
 Shortcuts do not override text editing or other foreground editors/dialogs. Navigation is **not** the same as the on-row **↑/↓ reorder buttons**.
 
-## Latest progress — 17 November 2026 · TEST341
+## Latest progress — 17 November 2026 · TEST343 (XP validation pending)
 
-**Current development: `main` through TEST341.** The user confirmed **TEST341 PASS**. The full chronological record and limitations are in [the 17 Nov checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
+**Current development: `main` through TEST343.** The user confirmed **TEST341 PASS** and **TEST342 PASS** (zoom). TEST343 is implemented but has **not yet passed a Windows XP/Supermium playback test**. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
 
 | Area | Recent tests and change |
 | --- | --- |
@@ -75,6 +76,8 @@ Shortcuts do not override text editing or other foreground editors/dialogs. Navi
 | Mouse + keyboard | **TEST333–338:** ↑/↓ + Enter; identical selection highlight; M, I, F, D shortcuts; first MOS row selected |
 | Escape priority | **TEST340** supersedes TEST339: ESC closes PLAYLIST or MOS first; only idle OSC opens MOS |
 | First playback | **TEST341 (user PASS):** bottom PLAY/Enter without an earlier song selection starts first COMMUNITY playlist's first SID |
+| Oscilloscope zoom | **TEST342 (user PASS):** wheel zoom anchored under cursor; graphics only, HI-RES/PIXEL/PETSCII |
+| Windows XP/Supermium | **TEST343 (user test pending):** automatic reported-XP detection + manual override, 8192 audio buffer, reduced canvas redraws; [test guide](docs/TEST343_XP_COMPATIBILITY.md) |
 
 **Do not equate an implemented TEST or successful GitHub Pages build with a user PASS for every audio/UI pathway.** Confirm a changed behavior on the live site, especially when it involves Web Audio or Cloudflare.
 
@@ -96,6 +99,8 @@ The previous verified baseline **MASTER-2026-11-16-TEST301** is retained as a se
 | `index.html` | Player layout, bilingual HELP text, ABOUT and script references |
 | `css/style.css` | Interface, toolbar, playlist/keyboard selection, TILEWORK appearance |
 | `js/sidPlayer.js`, `js/backend_tinysid.js` | SID player and default playback engine |
+| `js/legacyCompat.test343.js` | Early XP profile detection, browser diagnostics and canvas throttle (TEST343) |
+| `js/scopeZoom.test342.js` | Mouse-wheel zoom restricted to scope canvas (TEST342) |
 | `js/customPlaylist.test101.js` | **Active** community, HVSC, playlists, batch actions, initial COMMUNITY playback |
 | `js/dialogKeyboard.test230.js` | **Active** keyboard shortcuts, ESC and list navigation |
 | `js/tileArtwork.test264.js` | **Active** TILEWORK editor, zoom, saving and exit confirmation |
@@ -107,7 +112,8 @@ The previous verified baseline **MASTER-2026-11-16-TEST301** is retained as a se
 | `community/api/worker.js`, `community/api/schema.sql` | Reference Worker source and D1 schema (separate deployment) |
 | `docs/FEATURES.md` | Feature reference |
 | `docs/HELP_USER_GUIDE.md` | User-facing manual |
-| `docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md` | Latest checkpoint and change record |
+| `docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md` | Earlier confirmed TEST341 checkpoint |
+| `docs/TEST343_XP_COMPATIBILITY.md` | XP/Supermium test procedure, detection limits and rollback |
 | `docs/ARCHITECTURE.md` | Maintenance and backend boundaries |
 
 ## Hosting, credits and preservation
