@@ -212,6 +212,33 @@
     row.classList.add('rico-keyboard-current');
     row.scrollIntoView({block:'nearest',inline:'nearest'});
   }
+  // TEST337: MOS opens with its FIRST visible playlist ready for ENTER.
+  // The Community catalog is fetched asynchronously, so select immediately
+  // when rows exist and retry when the catalog replaces its loading message.
+  // Never synthesize PLAY or alter the currently playing SID.
+  function selectFirstMosRow(){
+    if(!isVisible(chooser)||!chooser.classList.contains('rico-view-community'))return;
+    var list=keyboardList();
+    if(!list||list.container.id!=='ricoCommunityItems')return;
+    var rows=keyboardRows(list);
+    if(!rows.length)return;
+    if(keyboardRow&&rows.indexOf(keyboardRow)>=0)return;
+    showKeyboardRow(rows[0]);
+  }
+  var mosButton=document.getElementById('chooseSid');
+  if(mosButton)mosButton.addEventListener('click',function(){
+    // Each MOS opening starts at position 1, not the previous keyboard row.
+    clearKeyboardRow();
+    selectFirstMosRow();
+  });
+  var mosItems=document.getElementById('ricoCommunityItems');
+  if(mosItems){
+    var mosListObserver=new MutationObserver(selectFirstMosRow);
+    mosListObserver.observe(mosItems,{childList:true});
+  }
+  // Also cover a Choose window that was already open on initial page load.
+  selectFirstMosRow();
+
   function playKeyboardRow(row){
     if(!row||!row.isConnected)return;
     if(row.classList.contains('rico-community-row')||
