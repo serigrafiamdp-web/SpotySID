@@ -32,10 +32,13 @@
     savedXP:savedXP,
     overrideSource:forcedByUrl?'url':disabledByUrl?'url-off':savedXP?'saved':'browser',
     bufferSamples:enabled?8192:4096,
-    scopeMaxFps:enabled?20:0
+    // TEST347: steady playback 25 FPS (PAL half-rate). Keep 20 FPS
+    // while loading/fading so the validated XP audio handoff has headroom.
+    scopeMaxFps:enabled?25:0,
+    scopeTransitionFps:enabled?20:0
   };
   window.SpotySidLegacy=profile;
-  if(window.console&&console.info)console.info('SpotySid TEST346 compatibility',profile);
+  if(window.console&&console.info)console.info('SpotySid TEST347 compatibility',profile);
   // TEST345: report the OS/version offered by browser APIs rather than
   // silently pretending that every Chromium/NT 10.0 User-Agent is Windows 11.
   // Supermium can deliberately spoof both UA and Client Hints even on XP.
@@ -129,8 +132,9 @@
   else readVersion();
   if(!enabled)return;
 
-  // ScriptProcessor runs on the UI thread on these browsers. Fewer canvas
-  // redraws leave more time for SID synthesis and ZIP/playlist transitions.
+  // ScriptProcessor runs on the UI thread on these browsers. TEST347 lets
+  // steady oscilloscope playback run at 25 FPS, but keeps the validated
+  // 20 FPS headroom during SID transitions and ZIP/file loading.
   // Audio, AUTO timing, input, keyboard and the MOS/PLAYLIST UI keep running.
   function installScopeThrottle(){
     var player=window.sidPlayer;
@@ -141,7 +145,9 @@
       var now=window.performance&&typeof window.performance.now==='function'
         ?window.performance.now():Date.now();
       var mode=this.scopeDisplayMode||'hires';
-      if(mode!==lastMode||now-lastPaint>=50){
+      var targetFps=this.autoLoading?profile.scopeTransitionFps:profile.scopeMaxFps;
+      var frameMs=1000/targetFps;
+      if(mode!==lastMode||now-lastPaint>=frameMs){
         lastPaint=now;
         lastMode=mode;
         return originalRender.apply(this,arguments);
