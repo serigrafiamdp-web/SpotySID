@@ -3408,6 +3408,10 @@
     if (!customActive) defaultPopPath.apply(player, arguments);
   };
   player.initFileSelection = function () {
+    // TEST348: never let an old XP list continue appending rows after a
+    // playlist replacement, browser tab change or another file selection.
+    var localPaintToken=++xpLocalPaintSerial;
+    if(xpLocalPaintTimer!==null){clearTimeout(xpLocalPaintTimer);xpLocalPaintTimer=null;}
     if (browserTab === 'games' || (browserTab === 'community' && !customActive)) {
       // TEST37: GAMES is a compact metadata-only list, no artwork.
       var gamesHolder = $('#sidList').empty();
@@ -3437,7 +3441,7 @@
     if (!custom.length) {
       $('<div>').addClass('rico-empty').text('No local SID files loaded. Use ADD SID FILES, ADD FOLDER or drop them here.').appendTo(holder);
     }
-    custom.forEach(function (item, index) {
+    function appendLocalRow(item,index){
       var row = $('<div>').addClass('rico-local-row').attr('title', item.file);
       if (customActive && index === player.sidListIndex) row.addClass('rico-active-row');
       $('<span>').addClass('rico-row-index').text(('0' + (index + 1)).slice(-2)).appendTo(row);
@@ -3446,7 +3450,21 @@
       $('<span>').addClass('rico-row-subs').text(item.numSubtunes + (item.numSubtunes === 1 ? ' sub' : ' subs')).appendTo(row);
       row.on('click', function () { loadCustomIndex(index); });
       row.appendTo(holder);
-    });
+    }
+    // XP/long list: paint just 16 rows now and leave the main thread
+    // available for the first SID and Web Audio callbacks. Other browsers
+    // retain their original all-at-once renderer.
+    var xpChunkedLocal=xpLongList(custom.length),localNext=0;
+    function paintLocalChunk(){
+      if(localPaintToken!==xpLocalPaintSerial)return;
+      var end=xpChunkedLocal?Math.min(localNext+16,custom.length):custom.length;
+      for(;localNext<end;localNext++)
+        appendLocalRow(custom[localNext],localNext);
+      if(localNext<custom.length)
+        xpLocalPaintTimer=setTimeout(paintLocalChunk,50);
+      else xpLocalPaintTimer=null;
+    }
+    paintLocalChunk();
     renderLivePlaylist();
     refreshTabs();
   };
