@@ -1444,10 +1444,14 @@ SidPlayer.prototype = {
       sidPlayer.render();
     });
 
+    // TEST319 — compact, fixed-width WAVE toggle:
+    // FILLED = normal button (default); LINE = inverted ON button.
     $('#oscilloscopeModeButton').on('click', function() {
       sidPlayer.oscilloscopeMode = sidPlayer.oscilloscopeMode === 'line' ? 'filled' : 'line';
-      $(this).text(sidPlayer.oscilloscopeMode === 'filled' ? 'Wave: Filled' : 'Wave: Line');
-      $(this).attr('aria-pressed', sidPlayer.oscilloscopeMode === 'filled' ? 'true' : 'false');
+      var lineMode=sidPlayer.oscilloscopeMode === 'line';
+      $(this).text(lineMode ? 'LINE' : 'FILLED')
+        .attr('aria-pressed',lineMode ? 'true' : 'false')
+        .attr('aria-label',lineMode ? 'Line waveform mode; click for Filled' : 'Filled waveform mode; click for Line');
       sidPlayer.render();
     });
 
