@@ -3590,3 +3590,25 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   padding-right:0 !important;
   text-align:center;
 }
+
+/* TEST324 — MOS chipmaker mark inside the existing Choose A SID button.
+   Keep its click target, height and border; recolor the vector via currentColor
+   for every COLOR palette, ★ inversion and hover/active button state. */
+#sidControls #chooseSid.rico-mos-trigger {
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+  width:104px !important;
+  min-width:104px !important;
+  padding-left:4px !important;
+  padding-right:4px !important;
+}
+#sidControls #chooseSid .rico-mos-logo {
+  display:block;
+  width:60px;
+  height:20px;
+  fill:currentColor;
+  stroke:none;
+  flex:none;
+  pointer-events:none;
+}
