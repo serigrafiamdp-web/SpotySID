@@ -1412,7 +1412,7 @@ left: 1px;
 
 /* TEST63: compact removal controls in the floating playlist. */
 #ricoLivePlaylistItems .rico-live-edit-row {
-  display:flex;align-items:stretch;min-width:0;border-bottom:1px solid #24343f;
+  display:flex;align-items:stretch;min-width:0;border-bottom:1px solid var(--rico-theme-border,#fff);
 }
 #ricoLivePlaylistItems .rico-live-edit-row .rico-live-row {
   flex:1 1 auto;min-width:0;width:auto;border-bottom:0;
@@ -3566,4 +3566,14 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   padding-left:0 !important;
   padding-right:0 !important;
   text-align:center;
+}
+
+/* TEST321 — floating playlist row separators share the selected COLOR ink.
+   Earlier TEST63 left #24343f on editable rows, which appeared grey in
+   red and inverted palettes. No sizes, layout or audio are changed. */
+#ricoLivePlaylist #ricoLivePlaylistItems .rico-live-edit-row {
+  border-bottom-color:var(--rico-theme-border,#fff) !important;
+}
+#ricoLivePlaylist #ricoLivePlaylistItems > .rico-live-row {
+  border-bottom-color:var(--rico-theme-border,#fff) !important;
 }
