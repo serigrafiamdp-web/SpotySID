@@ -1731,7 +1731,9 @@ left: 1px;
 #sidControls {
   background:var(--rico-theme-bg,#000) !important;
   color:var(--rico-theme-fg,#fff) !important;
-  border-top:1px solid var(--rico-theme-border,#fff) !important;
+  /* TEST332: remove only the thin top edge over the bottom toolbar.
+     Keep all individual button borders and the 33px toolbar height. */
+  border-top:0 !important;
 }
 #sidControls button,
 #sidControls #oscilloscopeVisualButtons button,
