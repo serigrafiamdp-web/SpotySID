@@ -12,6 +12,8 @@ var SidPlayer = function() {
   this.oscilloscopeMode = 'filled';
   // TEST289: PETSCII is an independent display switch, not a color palette.
   this.petsciiEnabled = false;
+  // TEST312: one independent inversion switch applies to every COLOR theme.
+  this.colorsInverted = false;
   this.colorModeIndex = 0;
   this.colorModes = [
     { name: 'Original', line: '#ffffff', fill: 'rgba(255,255,255,0.56)', background: '#000000' },
@@ -1422,6 +1424,16 @@ SidPlayer.prototype = {
       sidPlayer.applyOscilloscopeColors();
       sidPlayer.render();
     });
+    // TEST312: starred button swaps INK/PAPER across all palettes.
+    // Preserve inversion when cycling COLOR; second click restores original.
+    $('#ricoInvertColorsButton').on('click', function() {
+      sidPlayer.colorsInverted = !sidPlayer.colorsInverted;
+      $(this).attr('aria-pressed',sidPlayer.colorsInverted?'true':'false');
+      sidPlayer.applyOscilloscopeColors();
+      if(window.RicoPetsciiMode&&typeof window.RicoPetsciiMode.refresh==='function')
+        window.RicoPetsciiMode.refresh();
+      sidPlayer.render();
+    });
 
     // TEST289: PETSCII toggles the text-character oscilloscope ON/OFF
     // while COLOR keeps its current selected palette (all 11 available).
@@ -2088,8 +2100,26 @@ SidPlayer.prototype = {
 */
   },
 
+  // TEST312: swap original palette's line/background without modifying it.
+  // FILL keeps its previous opacity when translucent; pure two-tone palettes
+  // (ZX Spectrum, Game & Watch, PETSCII) remain exactly two solid colors.
+  getActivePalette: function() {
+    var base=this.colorModes[this.colorModeIndex];
+    if(!this.colorsInverted)return base;
+    var fill=base.background;
+    var opacity=/^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*(0(?:\.\d+)?|1(?:\.0+)?)\s*\)$/i.exec(base.fill);
+    if(opacity&&/^#[0-9a-f]{6}$/i.test(base.background)){
+      var hex=base.background.substring(1);
+      fill='rgba('+parseInt(hex.substring(0,2),16)+','+
+        parseInt(hex.substring(2,4),16)+','+
+        parseInt(hex.substring(4,6),16)+','+opacity[1]+')';
+    }
+    return {name:base.name,line:base.background,
+      fill:fill,background:base.line};
+  },
+
   applyOscilloscopeColors: function() {
-    var palette = this.colorModes[this.colorModeIndex];
+    var palette = this.getActivePalette();
     if(this.canvas) this.canvas.style.backgroundColor = palette.background;
     // TEST20: synchronize interface colors with the selected oscilloscope palette.
     var root = document.documentElement;
@@ -2250,7 +2280,7 @@ SidPlayer.prototype = {
     }
 
 
-    this.context.strokeStyle = this.colorModes[this.colorModeIndex].line;
+    this.context.strokeStyle = this.getActivePalette().line;
     this.context.lineWidth = 2;
 
     this.context.stroke();
@@ -2314,13 +2344,13 @@ SidPlayer.prototype = {
       for(var j = 0; j < points.length; j++) ctx.lineTo(points[j][0], points[j][1]);
       ctx.lineTo(points[points.length - 1][0], centerY);
       ctx.closePath();
-      ctx.fillStyle = this.colorModes[this.colorModeIndex].fill;
+      ctx.fillStyle = this.getActivePalette().fill;
       ctx.fill();
 
       ctx.beginPath();
       ctx.moveTo(points[0][0], points[0][1]);
       for(var k = 1; k < points.length; k++) ctx.lineTo(points[k][0], points[k][1]);
-      ctx.strokeStyle = this.colorModes[this.colorModeIndex].line;
+      ctx.strokeStyle = this.getActivePalette().line;
       ctx.lineWidth = 2;
       ctx.stroke();
     }
