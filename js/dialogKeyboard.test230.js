@@ -124,4 +124,32 @@
       event.stopImmediatePropagation();
     }
   },true);
+
+  // TEST313 — single-letter player shortcuts. Reuse the existing
+  // buttons so playlist state, wave rendering and ★ inversion remain
+  // exactly the same as a mouse click. Do not hijack text editing.
+  document.addEventListener('keydown',function(event){
+    if(event.defaultPrevented||event.repeat||event.isComposing||
+       event.ctrlKey||event.metaKey||event.altKey)return;
+    var key=String(event.key||'').toLowerCase();
+    if(key!=='p'&&key!=='c')return;
+    var focused=document.activeElement;
+    var source=event.target;
+    function editable(node){
+      if(!node||node.nodeType!==1)return false;
+      if(node.isContentEditable)return true;
+      if(node.closest&&node.closest('[contenteditable="true"],[contenteditable=""],[role="textbox"]'))
+        return true;
+      return /^(INPUT|TEXTAREA|SELECT)$/.test(node.tagName||'');
+    }
+    if(editable(source)||editable(focused))return;
+    if(hasOtherForegroundWindow()||
+       isVisible(document.getElementById('ricoTileArtworkOverlay')))
+      return;
+    var target=document.getElementById(key==='p'?
+      'ricoPlaylistToggle':'oscilloscopeColorButton');
+    if(!target)return;
+    event.preventDefault();
+    target.click();
+  },true);
 })();
