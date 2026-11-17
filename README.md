@@ -2,7 +2,7 @@
 
 **Commodore 64 SID music · PLAY · CREATE · REMIX · DISCOVER · SHARE**
 
-[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Previous checkpoint — TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [Supermium XP confirmation — TEST346](docs/TEST346_SUPERMIUM_XP_CONFIRMATION.md) · [Architecture](docs/ARCHITECTURE.md)
+[**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [User guide](docs/HELP_USER_GUIDE.md) · [Previous checkpoint — TEST341](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [XP oscilloscope FPS — TEST347](docs/TEST347_XP_SCOPE_25FPS.md) · [Architecture](docs/ARCHITECTURE.md)
 
 SpotySid continues the original James / Jojati web SID Player, with extensions by RICO / RicoSerigrafia. The music, original artists and SID files keep their own credits; playlist editing does **not** change the original compositions.
 
@@ -15,7 +15,7 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 - **FILL / LINE** waveform view; **COLOR** palette cycle; **★** swaps foreground/background colors across the current theme. **Master volume** controls audio and the corresponding waveform height.
 - **PLAY / STOP / NEXT SID**, subtune controls, **AUTO**, adjustable **MM:SS TIMER**, HVSC song-length estimates where known, silence detection and soft transitions.
 - **Selective reSIDfp** support for exact approved LFT/LINUS references and one targeted Uctumi source, without changing the normal default engine. Some targeted audio cases still need separate verification.
-- **Windows XP / Supermium compatibility (TEST343–346):** tiny 12px theme-colored OS label at the upper right of the OSC background. Supermium can falsely identify XP as Windows 11; click the label **once** on a real XP machine to save XP mode **for that browser** and reload. The selection persists on later visits; click XP again to return to browser detection. The XP safety profile uses an 8192-sample audio buffer, 20 FPS scope and lighter manual/AUTO transitions. `?xp=1` forces and `?xp=0` disables it for the current URL. Real XP audio validation is pending.
+- **Windows XP / Supermium compatibility (TEST343–347):** tiny 12px theme-colored OS label at upper right; on genuine XP in Supermium, click misleading `11?` once to save the XP profile for that browser. The confirmed XP profile uses an 8192-sample audio buffer and lighter manual/AUTO handoffs. **TEST347:** raise the steady oscilloscope limit from 20 to 25 FPS in HI-RES, PETSCII and PIXEL, keeping 20 FPS during transitions. The 25 FPS trial still needs real XP validation.
 
 ### Discover music
 
@@ -64,9 +64,9 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 
 Shortcuts do not override text editing or other foreground editors/dialogs. Navigation is **not** the same as the on-row **↑/↓ reorder buttons**.
 
-## Latest progress — 17 November 2026 · TEST346 (XP validation pending)
+## Latest progress — 17 November 2026 · TEST347 (XP FPS trial)
 
-**Current development: `main` through TEST346.** The user confirmed **TEST341 PASS** and **TEST342 PASS** (zoom). TEST343 improved XP playback but still repeated a short SID segment during manual and automatic transitions; TEST344 addresses that common handoff path, **pending real Windows XP/Supermium PASS**. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
+**Current development: `main` through TEST347.** The user confirmed **TEST341 PASS**, **TEST342 PASS** (zoom), and reports that XP/Supermium audio transitions are now OK with the TEST344–346 handoff and remembered XP preference. **TEST347 raises scope rendering during regular playback from 20 to 25 FPS but retains 20 FPS while switching/loading SIDs**, pending real XP audio and display validation. The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
 
 | Area | Recent tests and change |
 | --- | --- |
@@ -77,7 +77,7 @@ Shortcuts do not override text editing or other foreground editors/dialogs. Navi
 | Escape priority | **TEST340** supersedes TEST339: ESC closes PLAYLIST or MOS first; only idle OSC opens MOS |
 | First playback | **TEST341 (user PASS):** bottom PLAY/Enter without an earlier song selection starts first COMMUNITY playlist's first SID |
 | Oscilloscope zoom | **TEST342 (user PASS):** wheel zoom anchored under cursor; graphics only, HI-RES/PIXEL/PETSCII |
-| Windows XP/Supermium | **TEST343 (partial improvement):** 8192 buffer / 20 FPS canvas; **TEST344 (PASS pending):** manual/AUTO fade handoff; **TEST345:** 12px upper-right OS text; **TEST346 (PASS pending):** one-click persistent XP confirmation when Supermium falsely claims Win11, without impacting other browsers; [test guide](docs/TEST346_SUPERMIUM_XP_CONFIRMATION.md) |
+| Windows XP/Supermium | **TEST343–346 (user-confirmed audio transition now OK):** 8192 buffer, optimized fade handoff, 12px top-right OS text and remembered XP mode. **TEST347 (user test pending):** 25 FPS scope ceiling while playing, 20 FPS while loading/changing songs; [test guide](docs/TEST347_XP_SCOPE_25FPS.md) |
 
 **Do not equate an implemented TEST or successful GitHub Pages build with a user PASS for every audio/UI pathway.** Confirm a changed behavior on the live site, especially when it involves Web Audio or Cloudflare.
 
@@ -117,6 +117,7 @@ The previous verified baseline **MASTER-2026-11-16-TEST301** is retained as a se
 | `docs/TEST344_XP_AUDIO_HANDOFF.md` | XP audio transition experiment, TEST344 |
 | `docs/TEST345_WINDOWS_VERSION.md` | Top-right OS diagnostic and detection limits, TEST345 |
 | `docs/TEST346_SUPERMIUM_XP_CONFIRMATION.md` | Persist user-confirmed XP with misleading Supermium metadata, TEST346 |
+| `docs/TEST347_XP_SCOPE_25FPS.md` | Optional 25 FPS oscilloscope on XP without sacrificing 20 FPS transition headroom, TEST347 |
 | `docs/ARCHITECTURE.md` | Maintenance and backend boundaries |
 
 ## Hosting, credits and preservation
