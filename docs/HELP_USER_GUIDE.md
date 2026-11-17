@@ -1,6 +1,6 @@
 # SpotySid — User guide
 
-**Updated 17 November 2026 · main / TEST341**
+**Updated 17 November 2026 · main / TEST349**
 
 [Open player](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [README](../README.md) · [Complete features](FEATURES.md) · [Latest checkpoint](CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md)
 
@@ -12,7 +12,7 @@ Once a playlist is loaded, its floating **PLAYLIST** window shows the track list
 
 If you are on the bare **OSC** display and have **not yet selected any SID**, pressing **Enter** or bottom-bar **PLAY** starts the first song from the first available **COMMUNITY PLAYLIST** (TEST341). It will wait for that catalog if it is still loading. This is a response to your input, **not automatic playback**.
 
-**PLAY / STOP / NEXT SID** control playback. **AUTO**, the **MM:SS TIMER**, detected silence, and known HVSC song-length information govern automatic advancement. Tracks may include multiple subtunes accessible through the dedicated controls. Some browsers require a user click/keypress to enable audio.
+**PLAY / STOP / NEXT SID** control playback. Press **N** for NEXT SID. **AUTO**, the **MM:SS TIMER**, detected silence, and known HVSC song-length information govern automatic advancement. Tracks may include multiple subtunes accessible through the dedicated controls. Some browsers require a user click/keypress to enable audio.
 
 ## Keyboard shortcuts
 
@@ -24,6 +24,7 @@ If you are on the bare **OSC** display and have **not yet selected any SID**, pr
 | **I** | Swap foreground and background colors, same as **★** |
 | **F** | Switch **FILL** ↔ **LINE** waveform |
 | **D** | Open TILEWORK pixel-art editor |
+| **N** | NEXT SID (same as the bottom button) |
 | **↑ / ↓** | Move between available playlists or songs; does **not** reorder or play |
 | **Enter** | Play the highlighted list/song; from idle OSC starts the first COMMUNITY list's first SID |
 | **ESC** in PLAYLIST | Close the playlist, return to OSC |
