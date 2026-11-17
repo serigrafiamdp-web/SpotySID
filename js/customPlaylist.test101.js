@@ -4049,7 +4049,9 @@
               listEl.value=item.id;
               var stored=await dbCall('readonly',function(store){return store.get(item.id);});
               if (!stored) throw Error('Playlist not found.');
-              await loadStoredPlaylist(stored,true);
+              var applied=await loadStoredPlaylist(stored,true);
+              if(applied===false)return;
+              closeChooseAfterPlaylistPlay(applied);
               say('Loaded: '+stored.name+' ('+stored.tracks.length+' SID).');
             } catch(error){say(error.message || 'Failed to load playlist.');}
           });
@@ -4111,7 +4113,9 @@
               var stored=await dbCall('readonly',function(store){return store.get(item.id);});
               if(!stored)throw Error('Playlist not found.');
               currentId=item.id;
-              await loadStoredPlaylist(stored,true);
+              var applied=await loadStoredPlaylist(stored,true);
+              if(applied===false)return;
+              closeChooseAfterPlaylistPlay(applied);
               say('Loaded '+stored.name+' · Playlist by '+(stored.createdBy||'Unknown')+'.');
             }catch(error){say(error.message||'Could not load playlist.');}
             finally{load.disabled=false;}
@@ -4148,7 +4152,9 @@
       if (!listEl.value) throw Error('Select a saved playlist.');
       var data=await dbCall('readonly',function(store){return store.get(listEl.value);});
       if (!data) throw Error('Playlist not found.');
-      await loadStoredPlaylist(data,true);
+      var applied=await loadStoredPlaylist(data,true);
+      if(applied===false)return;
+      closeChooseAfterPlaylistPlay(applied);
       say('Loaded: '+data.name+'.');
     });
     run('ricoDownloadList',function(){
@@ -4171,7 +4177,9 @@
       try {
         if (file.size > MAX_BYTES*2) throw Error('JSON file is too large.');
         var data=JSON.parse(await file.text());
-        await loadPlaylist(data,undefined,true);
+        var applied=await loadPlaylist(data,undefined,true);
+        if(applied===false)return;
+        closeChooseAfterPlaylistPlay(applied);
         say('Imported '+data.name+' ('+data.tracks.length+' SID). Use SAVE LIST to keep it locally.');
       } catch(error) {
         say(error.message || 'Invalid JSON playlist.');
@@ -4822,7 +4830,12 @@
         var title=document.createElement('span');title.className='rico-hvsc-title';title.textContent=name;
         var who=document.createElement('span');who.className='rico-hvsc-artist';who.textContent=alias;
         row.appendChild(nr);row.appendChild(title);row.appendChild(who);
-        row.addEventListener('click',async function(){try{await loadPlaylist(data,index,false,true);}catch(error){hvscStatus.textContent='Cannot play SID: '+error.message;}});
+        row.addEventListener('click',async function(){
+          try{
+            var applied=await loadPlaylist(data,index,false,true);
+            closeChooseAfterPlaylistPlay(applied);
+          }catch(error){hvscStatus.textContent='Cannot play SID: '+error.message;}
+        });
         hvscItems.appendChild(row);
       });
     }
@@ -4837,8 +4850,10 @@
         return;
       }
       hvscLoad.disabled=true;
-      try{await loadPlaylist(await getRankData(kind),0,false,true);}
-      catch(e){hvscStatus.textContent='Could not load playlist: '+e.message;}
+      try{
+        var applied=await loadPlaylist(await getRankData(kind),0,false,true);
+        closeChooseAfterPlaylistPlay(applied);
+      }catch(e){hvscStatus.textContent='Could not load playlist: '+e.message;}
       finally{hvscLoad.disabled=false;}
     });
     [['ricoHvscTab','hvsc'],['ricoDemosTab','demos'],['ricoOnefileTab','onefile'],
@@ -4970,10 +4985,10 @@
             var stored=await dbCall('readonly',function(store){return store.get(item.id);});
             if(!stored)throw Error('Local playlist no longer available.');
             currentId=item.id;
-            await loadStoredPlaylist(stored,true);
+            var applied=await loadStoredPlaylist(stored,true);
+            if(applied===false)return;
+            closeChooseAfterPlaylistPlay(applied);
             say('Loaded locally: '+stored.name);
-            if(player.dialogManager&&player.dialogManager.dialogShown==='chooseSidDialog')
-              player.dialogManager.hideDialog('chooseSidDialog');
           }catch(error){say(error.message||'Could not load local playlist.');}
         },false);
         var editLocal=action('EDIT',async function(){
