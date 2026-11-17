@@ -35,7 +35,7 @@ var SidPlayer = function() {
     { name: 'PETSCII C64', line: '#a6a6ff', fill: '#a6a6ff', background: '#3836a6' },
     // TEST310 — ZX Spectrum classic ULA palette: normal blue PAPER
     // (#0000D7), bright yellow INK (#FFFF00). No other themes change.
-    { name: 'ZX Spectrum', line: '#FFFF00', fill: 'rgba(255,255,0,0.56)', background: '#0000D7' }
+    { name: 'ZX Spectrum', line: '#FFFF00', fill: '#FFFF00', background: '#0000D7' }
   ];
   // TEST24: choose a fresh theme on every opening (no persistent preference).
   this.colorModeIndex = Math.floor(Math.random() * this.colorModes.length);
