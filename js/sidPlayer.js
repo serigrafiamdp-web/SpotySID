@@ -2011,8 +2011,12 @@ SidPlayer.prototype = {
       return;
     }
 
-    if(this.audioContext && this.audioContext != 'running') {
-      this.audioContext.resume();
+    if(this.audioContext && this.audioContext.state === 'suspended') {
+      // TEST343: don't call resume() redundantly on every SID switch.
+      var resumed=this.audioContext.resume();
+      if(resumed && typeof resumed.catch==='function')resumed.catch(function(error){
+        console.warn('Browser did not resume Web Audio:',error);
+      });
     }
 
     if(this.scriptNode) {
@@ -2029,7 +2033,9 @@ SidPlayer.prototype = {
 
       this.sampleRate = this.audioContext.sampleRate; 
 
-      var bufferLength = 4096;//2048;
+      // TEST343: on XP/Supermium use a larger ScriptProcessor buffer to
+      // tolerate longer UI/ZIP stalls; keep 4096 in regular browsers.
+      var bufferLength = window.SpotySidLegacy && window.SpotySidLegacy.enabled ? 8192 : 4096;
 
 //    this.scriptNode = null;
       if (typeof this.audioContext.createJavaScriptNode === 'function') { 
