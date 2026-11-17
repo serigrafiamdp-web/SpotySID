@@ -281,6 +281,26 @@
        event.altKey||event.metaKey)return;
     var key=event.key;
     if(key!=='ArrowUp'&&key!=='ArrowDown'&&key!=='Enter')return;
+    // TEST341: ENTER from a clear OSC view starts the first song of the
+    // first Community playlist when none was selected. It is the same
+    // action as bottom PLAY, NOT the old GAMES/legacy play toggle.
+    // Keep native Enter on focused buttons/links and text editing intact.
+    if(key==='Enter'&&!event.repeat&&!isVisible(chooser)&&!isVisible(playlist)&&
+       !hasOtherForegroundWindow()&&
+       !isVisible(document.getElementById('ricoTileArtworkOverlay'))){
+      var focused=document.activeElement,source=event.target;
+      function visibleInput(node){return keyboardEditable(node)&&isVisible(node);}
+      function visibleAction(node){
+        return !!(node&&node.nodeType===1&&isVisible(node)&&node.closest&&
+          node.closest('button,a,[role="button"]'));
+      }
+      if(!visibleInput(source)&&!visibleInput(focused)&&
+         !visibleAction(source)&&!visibleAction(focused)&&
+         typeof window.ricoStartFirstCommunityIfIdle==='function'&&
+         window.ricoStartFirstCommunityIfIdle()){
+        event.preventDefault();event.stopImmediatePropagation();return;
+      }
+    }
     if(keyboardEditable(event.target)||keyboardEditable(document.activeElement)||
        hasOtherForegroundWindow()||
        isVisible(document.getElementById('ricoTileArtworkOverlay')))return;
