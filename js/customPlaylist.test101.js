@@ -59,6 +59,11 @@
   function xpLongList(count){
     return count>=80&&!!(window.SpotySidLegacy&&window.SpotySidLegacy.enabled);
   }
+  // TEST348: the 25 FPS scope from TEST347 drops to its audio-safe 20 FPS
+  // for the entire first-load row-build, not just while autoLoading=true.
+  window.ricoXpListBusy=function(){
+    return xpLivePaintPending||xpLocalPaintTimer!==null;
+  };
   var fadeGainNode=null;
   // TEST197: separate song-output gain for Loco un Poco. This lives before
   // the unchanged transition-fade node; no SID samples are modified.
