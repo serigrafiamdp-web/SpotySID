@@ -6,6 +6,15 @@
 
 SpotySid preserves and extends the original James / Jojati SID Player. RICO maintains the project and develops the community, playlist and browsing tools. The project does not modify the underlying SID compositions.
 
+## MASTER — 16 November 2026 · TEST301 (user PASS)
+
+**Saved working snapshot:** [MASTER-2026-11-16-TEST301](https://github.com/serigrafiamdp-web/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/tree/MASTER-2026-11-16-TEST301) · [exact verified commit](https://github.com/serigrafiamdp-web/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/commit/e9f80c42835a9c55dad9bfca8d7c5867d9d8c19e).
+
+- **PETSCII oscilloscope:** TEST301 restores the **TEST293** renderer, prior to the experimental empty-channel baseline (TEST294–300). All 3 voices, including the middle channel, were visually approved by the user.
+- 14px authentic C64 ROM characters, palette-aware PETSCII button, SID noise represented with `*`.
+- **No synthetic idle/baseline line**; channels with no visible signal remain blank.
+- The MASTER branch is the archived checkpoint. Continued development stays on `main`.
+
 ## New additions first — TEST248 (pending browser PASS)
 
 When adding one or multiple checked SIDs with **+**, insert the new SID(s)
