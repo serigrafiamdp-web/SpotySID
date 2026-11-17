@@ -7,6 +7,30 @@
   if (!window.sidPlayer || !window.SID) return;
 
   var player = window.sidPlayer;
+  // TEST350: the NEXT SID button uses the existing palette's inverse-ink
+  // state while a user-requested N / button NEXT waits for its first audio
+  // buffer. No fade or SID synthesis changes.
+  var nextSidButton=document.getElementById('nextSid');
+  var nextSidPending=false;
+  var nextSidWaitForAudio=false;
+  function setNextSidPending(pending){
+    nextSidPending=!!pending;
+    if(!nextSidPending)nextSidWaitForAudio=false;
+    if(nextSidButton){
+      nextSidButton.setAttribute('aria-pressed',nextSidPending?'true':'false');
+      nextSidButton.setAttribute('aria-label',nextSidPending?
+        'NEXT SID — waiting for the next song to start':'NEXT SID');
+    }
+  }
+  if(nextSidButton){
+    setNextSidPending(false);
+    // Capture runs before the original jQuery NEXT click handler. The
+    // keyboard N shortcut calls this same button's click() action.
+    nextSidButton.addEventListener('click',function(){
+      if(nextSidButton.disabled||!player.sidList||!player.sidList.length)return;
+      setNextSidPending(true);
+    },true);
+  }
   // TEST213: refresh only the Uctumi archive after its canonical Mujer Amante FIX.
   function hvscArchiveUrl(pack){
     return pack==='library/packs/musicians/U/Uctumi.zip'
@@ -368,6 +392,11 @@
           }else priorRenderer.call(this,event);
           inspectSidOutput(event,wasPlaying);
           if(!pendingNewSidUnmute){
+            // The first complete NEW SID buffer has left the opening gate.
+            // Clear the N highlight here, not early at the 5s fade boundary.
+            if(nextSidWaitForAudio&&wasPlaying&&!player.isPaused&&
+               deliveredSongSamples&&!openingBufferReplay)
+              setNextSidPending(false);
             if(wasPlaying&&!player.isPaused&&deliveredSongSamples){
               countdownElapsedSamples+=(event&&event.outputBuffer&&event.outputBuffer.length)||0;
               renderCountdownTimer(false);
@@ -522,6 +551,9 @@
     fadeGainNode.gain.setValueAtTime(1,now);
   }
   function resetSoftTransition(resetSelection){
+    // STOP, cancel, failed load and playlist replacements must never leave
+    // NEXT highlighted after the requested transition is abandoned.
+    setNextSidPending(false);
     var keepPlaylistHandoff=playlistCommitInProgress&&
       transitionSource==='playlist';
     resetSilenceDetector();
@@ -570,6 +602,14 @@
         pendingNewSidUnmute=true;
       else restoreFullVolume();
       if(transitionSource==='next'||transitionSource==='silence')followPlayingRowOnce=true;
+      // The switch is committed, but an XP ScriptProcessor may still have
+      // queued audio from before the switch. Keep NEXT highlighted until the
+      // new SID's first complete output buffer is delivered.
+      if(nextSidPending){
+        nextSidWaitForAudio=!!(audioOutputHookNode&&
+          audioOutputHookNode===player.scriptNode);
+        if(!nextSidWaitForAudio)setNextSidPending(false);
+      }
       transitionSource=null;
       renderPlaybackStatus();
       if(wasPlaylistHandoff&&playlistStartResolver){
@@ -717,6 +757,7 @@
         transitionAwaitingStart=false;transitionBusy=false;queuedLiveIndex=null;
         pendingNewSidUnmute=false;
         player.autoLoading=false;
+        setNextSidPending(false);
         restoreFullVolume();
         $('#ricoLiveStatus').text('SID loading took too long; volume restored.');
         renderPlaybackStatus();
