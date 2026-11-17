@@ -25,7 +25,21 @@
     scopeMaxFps:enabled?20:0
   };
   window.SpotySidLegacy=profile;
-  if(window.console&&console.info)console.info('SpotySid TEST343 compatibility',profile);
+  if(window.console&&console.info)console.info('SpotySid TEST344 compatibility',profile);
+  // The visible XP mark confirms the ACTIVE profile, not the true OS identity:
+  // Supermium can report a spoofed user-agent. The ?xp override is explicit.
+  function showActiveProfile(){
+    var badge=document.getElementById('ricoXpIndicator');
+    if(!badge)return;
+    badge.hidden=!profile.enabled;
+    badge.style.display=profile.enabled?'inline-block':'none';
+    badge.title=profile.forced?
+      'XP compatibility mode ON (manual override).':
+      'XP compatibility mode ON (reported by browser).';
+  }
+  if(document.readyState==='loading')
+    document.addEventListener('DOMContentLoaded',showActiveProfile,false);
+  else showActiveProfile();
   if(!enabled)return;
 
   // ScriptProcessor runs on the UI thread on these browsers. Fewer canvas
