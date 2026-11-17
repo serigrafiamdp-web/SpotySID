@@ -54,7 +54,9 @@
     var cv=player.canvas,ctx=player.context;
     if(!cv||!ctx||typeof SID==='undefined'||
        typeof SID.getChannelBuffer!=='function')return;
-    var palette=player.colorModes[player.colorModeIndex];
+    // TEST312: PETSCII honors the same inverted ink/paper as the other waves.
+    var palette=typeof player.getActivePalette==='function'?
+      player.getActivePalette():player.colorModes[player.colorModeIndex];
     drawAtlas(palette.line);
     var width=cv.width,height=cv.height;
     if(width<=0||height<=0)return;
