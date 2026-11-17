@@ -3625,3 +3625,17 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   flex:none;
   pointer-events:none;
 }
+
+/* TEST333 — Keyboard cursor: visible on the selected playlist or song.
+   Draw inside the existing row; no added spacing, buttons or third color. */
+#ricoCommunityItems .rico-community-row.rico-keyboard-current,
+#sidList .rico-game-row.rico-keyboard-current,
+#sidList .rico-local-row.rico-keyboard-current,
+#ricoHvscItems .rico-hvsc-row.rico-keyboard-current,
+#ricoHvscItems .rico-csdb-rank-head.rico-keyboard-current,
+#ricoHvscItems .rico-csdb-track button.rico-keyboard-current,
+#ricoOurItems .rico-our-collection-row.rico-keyboard-current,
+#ricoLivePlaylistItems .rico-live-row.rico-keyboard-current {
+  outline:2px solid var(--rico-theme-fg,#fff) !important;
+  outline-offset:-2px !important;
+}
