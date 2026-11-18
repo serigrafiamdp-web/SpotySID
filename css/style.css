@@ -3810,3 +3810,49 @@ html.rico-topaz-toolbar #sidControls #subsongInfo {
 #ricoImportSidWindow button {
   font-synthesis:none;
 }
+
+/* TEST355 — larger Topaz A1200 in list content, not headings.
+   Existing controls, rows and panels retain their geometry. */
+#ricoCommunityItems .rico-community-row > span,
+#ricoCommunityItems .rico-community-row > span *,
+#ricoHvscItems .rico-hvsc-row,
+#ricoLibrarySections .rico-library-section,
+#ricoLibrarySongs .rico-library-track,
+#ricoOurItems,
+#sidList,
+#ricoLivePlaylistItems .rico-live-row {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:13px !important;
+  font-synthesis:none;
+}
+#ricoCommunityItems .rico-community-row > button,
+#ricoCommunityItems .rico-community-row button,
+#ricoHvscItems .rico-csdb-entry button,
+#ricoLibraryPanel button,
+#ricoOurCollectionPanel button,
+#ricoLivePlaylistItems .rico-live-row button {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:12px !important;
+  font-synthesis:none;
+}
+#ricoCommunityOrderStatus,
+#ricoHvscIntro,
+#ricoHvscStatus,
+#ricoLibraryIntro,
+#ricoOurStatus,
+#ricoLiveStatus,
+#ricoImportSidFooter,
+#ricoImportSidWindow .rico-import-note,
+#ricoImportProgress,
+#ricoRemixStatus,
+#ricoSavedStatus,
+#ricoPlaylistStatus,
+#ricoCommunityPanel > div[style*="font-size:11px"] {
+  font-size:12px !important;
+}
+#ricoCommunityItems .rico-community-row > span {
+  min-width:0;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
