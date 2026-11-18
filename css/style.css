@@ -3690,7 +3690,7 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   src:url("https://cdn.jsdelivr.net/gh/rewtnull/amigafonts@master/ttf/Topaz_a1200_v1.0.ttf") format("truetype");
   font-weight:400;
   font-style:normal;
-  font-display:swap;
+  font-display:block;
 }
 html.rico-topaz-toolbar #sidControls button,
 html.rico-topaz-toolbar #sidControls label,
@@ -3885,4 +3885,19 @@ html #sidControls .rico-toolbar-main #nextSid.rico-next-pending:active {
   background-color:var(--rico-theme-fg,#fff) !important;
   color:var(--rico-theme-bg,#000) !important;
   border-color:var(--rico-theme-fg,#fff) !important;
+}
+
+/* TEST358 — do not paint fallback lettering before the A1200 font loads.
+   Keep physical layout and button sizing unchanged while font initializes. */
+html.rico-topaz-loading #sidControls,
+html.rico-topaz-loading #chooseSidDialog,
+html.rico-topaz-loading #ricoLivePlaylist,
+html.rico-topaz-loading #ricoRemixEditor,
+html.rico-topaz-loading #ricoImportSidWindow,
+html.rico-topaz-loading #ricoHelpDialog,
+html.rico-topaz-loading #aboutHolder,
+html.rico-topaz-loading #aboutSIDHolder,
+html.rico-topaz-loading #sidInfo,
+html.rico-topaz-loading #songInfo {
+  visibility:hidden !important;
 }
