@@ -3681,14 +3681,13 @@ html #sidControls #ricoPlaylistToggle.rico-playlist-on {
   outline-offset:2px;
 }
 
-/* TEST351 — Amiga Topaz bottom-toolbar typography experiment.
+/* TEST352 — original A1200 Workbench 2.x/3.x Topaz bottom-toolbar experiment.
    Only typography changes; the current control geometry stays unchanged.
    Actual button widths are captured before enabling the font (index.html).
    External WOFF2/WOFF font falls back to the original Tahoma on failure. */
 @font-face {
   font-family:"RicoAmigaTopaz";
-  src:url("https://cdn.jsdelivr.net/gh/haabe/retro-fonts@main/topaz/Topaz-Regular.woff2") format("woff2"),
-      url("https://cdn.jsdelivr.net/gh/haabe/retro-fonts@main/topaz/Topaz-Regular.woff") format("woff");
+  src:url("https://cdn.jsdelivr.net/gh/rewtnull/amigafonts@master/ttf/Topaz_a1200_v1.0.ttf") format("truetype");
   font-weight:400;
   font-style:normal;
   font-display:swap;
