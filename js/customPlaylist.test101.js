@@ -986,6 +986,20 @@
     return value.replace(/\s+/g, ' ').trim();
   }
   function u16(b, n) { return (b[n] << 8) | b[n + 1]; }
+  // SpotySID content policy: exclude SID releases credited to Hokuto Force.
+  function blockedHokutoText(value){
+    return typeof value==='string' && /hokuto[\s_.-]*force/i.test(value);
+  }
+  function blockedHokutoMeta(value){
+    if(!value||typeof value!=='object')return false;
+    var keys=['name','title','author','artist','released','release','group','sceneGroup','credit','credits','origin','file','filename','demoTitle','createdBy'];
+    return keys.some(function(key){return blockedHokutoText(value[key]);});
+  }
+  function assertNoHokutoPlaylist(data){
+    if(blockedHokutoMeta(data)||
+       (Array.isArray(data&&data.tracks)&&data.tracks.some(blockedHokutoMeta)))
+      throw Error('Hokuto Force releases are not supported on SpotySID.');
+  }
   function parseSID(bytes, file) {
     if (bytes.length < 0x76) return null;
     var magic = String.fromCharCode(bytes[0], bytes[1], bytes[2], bytes[3]);
@@ -995,6 +1009,7 @@
     var title = field(bytes, 0x16) || escapeFilename(file.name) || file.name;
     var author = field(bytes, 0x36) || 'Unknown artist';
     var released = field(bytes, 0x56) || '';
+    if([title,author,released,file&&file.name].some(blockedHokutoText))return null;
     return {
       id: 'local-' + custom.length,
       name: title, author: author, released: released,
@@ -1767,6 +1782,7 @@
     return ref.sidId?{sidId:ref.sidId,file:ref.file}:{pack:ref.pack,file:ref.file};
   }
   function validRemixRef(ref){
+    if(blockedHokutoMeta(ref))return false;
     if(!ref||typeof ref.file!=='string'||ref.file.includes('..')||
        ref.file.includes('\\')||!/^[^<>:*?|]+\.sid$/i.test(ref.file))return false;
     if(ref.sidId)return /^[a-f0-9]{64}$/.test(ref.sidId)&&!ref.file.includes('/')&&!ref.pack;
@@ -2070,6 +2086,7 @@
     }
     if(!target){remixNotice('Select a destination first using ADD + TO.');return;}
     var sidEntry=(player.sidList||[])[index];
+    if(blockedHokutoMeta(sidEntry)){remixNotice('Hokuto Force SID blocked.');return;}
     if(!sidEntry){remixNotice('SID selection no longer available.');return;}
     // TEST111: reference-only v2 playlists already validated and loaded every
     // SID from its real HVSC ZIP. Keep the source from activeReferenceTracks,
@@ -2261,6 +2278,8 @@
       return;
     }
     // All references remain within the original HVSC ZIP library, no SID data.
+    if(blockedHokutoMeta(draft)||draft.tracks.some(blockedHokutoMeta))
+      throw Error('Hokuto Force releases cannot be published.');
     var refs=draft.tracks.map(remixCanonicalRef);
     if(new Set(refs.map(function(t){return remixRefKey(t);})).size!==refs.length)
       throw Error('Duplicate SID references cannot be published.');
@@ -2339,6 +2358,9 @@
     draft.name=draft.name.trim();draft.creator=draft.creator.trim();
     if(!draft.name||!draft.creator){remixNotice('Enter remix name and creator first.');return;}
     if(!draft.tracks.length){remixNotice('Add some SID using + before publishing.');return;}
+    if(blockedHokutoMeta(draft)||draft.tracks.some(blockedHokutoMeta)){
+      remixNotice('Hokuto Force releases cannot be published.');return;
+    }
     try{
       // Crucial: publish the order visible in the floating playlist,
       // even if the visitor did not press its local SAVE first.
@@ -3882,6 +3904,7 @@
           typeof data.name !== 'string' || !data.name.trim() ||
           !Array.isArray(data.tracks) || !data.tracks.length || data.tracks.length > 2000)
         throw Error('Unsupported playlist JSON.');
+      assertNoHokutoPlaylist(data);
       var entries=[],total=0,slowXP=xpLongList(data.tracks.length);
       // TEST348: V1 playlists embed SID bytes as base64. Even though ALL
       // entries must be validated before starting, decode/parse in small
@@ -4119,6 +4142,7 @@
       // The selected track's verified HVSC reference decides its engine.
       var serial=requestPlaylistChange();
       if (!data || data.format!=='ricos-sid-playlist') throw Error('Unsupported playlist.');
+      assertNoHokutoPlaylist(data);
       if (data.version===1) {
         var legacyApplied=await loadPlaylist(data,undefined,!!localImport);
         if(legacyApplied)activeLocalSavedId=localImport&&typeof data.id==='string'?data.id:null;
@@ -4888,6 +4912,7 @@
         if(isCsdbCategory(kind)){
           if(data.format!=='ricos-csdb-ranking'||!Array.isArray(data.items)||data.items.length!==100)
             throw Error('CSDb ranking incomplete.');
+          data.items=data.items.filter(function(item){return !blockedHokutoMeta(item);});
           ricoRankCache[kind]=data;
           ricoRankEntries[kind]=data.items;
           ricoRankSongs[kind]=[];
@@ -4897,7 +4922,9 @@
               if(tracksResponse.ok){
                 var linked=await tracksResponse.json();
                 if(linked&&linked.format==='ricos-sid-playlist'&&Array.isArray(linked.tracks)){
-                  ricoRankSongs[kind]=linked.tracks;
+                  ricoRankSongs[kind]=linked.tracks.filter(function(track){
+                    return !blockedHokutoMeta(track);
+                  });
                 }
               }
             }catch(err){console.warn('CSDb SID associations unavailable',err);}
@@ -4917,6 +4944,7 @@
     function rankSongsFor(kind,item){
       var key=normalizeRankTitle(item.title);
       return (ricoRankSongs[kind]||[]).filter(function(track){
+        if(blockedHokutoMeta(track))return false;
         return normalizeRankTitle(kind==='groups'?track.group:track.demoTitle)===key;
       });
     }
@@ -5015,6 +5043,8 @@
     async function playRankSongs(kind,tracks,title){
       if(!Array.isArray(tracks)||!tracks.length)return;
       var cfg=ricoRankConfig[kind],version=tracks[0].sidBase64?1:2;
+      if(tracks.some(blockedHokutoMeta)||blockedHokutoText(title))
+        throw Error('Hokuto Force release blocked.');
       var selection={format:'ricos-sid-playlist',version:version,
         name:title||cfg.title,createdBy:'CSDb / HVSC',tracks:tracks};
       hvscStatus.textContent='Loading SID audio...';
@@ -6171,7 +6201,14 @@
             data=await res.json();shelfCache[item.file]=data;
           }
           if(request!==token)return;
-          shelfData=data;if(!preserveSearch)searchEl.value='';
+          shelfData=Object.assign({},data,{sections:(data.sections||[]).filter(function(section){
+            return !blockedHokutoText(section.name);
+          }).map(function(section){
+            return Object.assign({},section,{tracks:(section.tracks||[]).filter(function(track){
+              return !blockedHokutoMeta(track);
+            })});
+          }).filter(function(section){return section.tracks.length>0;})});
+          if(!preserveSearch)searchEl.value='';
           renderSections();
         }catch(e){if(request===token)status(e.message);}
       }
@@ -6244,6 +6281,8 @@
         catch(error){packCache.delete(sourcePack);throw error;}
       }
       async function addTrack(section,track){
+        if(blockedHokutoMeta(section)||blockedHokutoMeta(track))
+          throw Error('Hokuto Force release blocked.');
         var key=trackKey(section,track);
         if(draft.some(function(item){return item.key===key;}))return false;
         if(draft.length>=2000)throw Error('Playlist limit: 2000 SID.');
