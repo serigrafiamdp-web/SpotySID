@@ -3856,3 +3856,21 @@ html.rico-topaz-toolbar #sidControls #subsongInfo {
   text-overflow:ellipsis;
   white-space:nowrap;
 }
+
+/* TEST356 — enlarge only community playlist names and top navigation.
+   Right-side PLAY/SHARE/EDIT/DELETE buttons remain exactly as TEST355.
+   Preserve row heights, action widths and all palette variables. */
+#ricoCommunityItems .rico-community-row > span,
+#ricoCommunityItems .rico-community-row > span *,
+#ricoCommunityItems .rico-community-row .rico-community-label,
+#ricoCommunityItems .rico-community-row .rico-community-description {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:15px !important;
+  font-synthesis:none;
+}
+#chooseSidDialog #ricoListTabs button {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:13px !important;
+  font-synthesis:none;
+  white-space:nowrap;
+}
