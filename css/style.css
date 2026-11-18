@@ -3718,3 +3718,95 @@ html.rico-topaz-toolbar #sidControls label,
 html.rico-topaz-toolbar #sidControls #subsongInfo {
   font-size:13px !important;
 }
+
+/* TEST354 — Amiga 1200 Workbench Topaz across navigation, lists and dialogs.
+   Keep all existing button dimensions, panel dimensions, gaps, padding and
+   positioning. Secondary text is compact; headings get more prominence. */
+#chooseSidDialog,
+#chooseSidDialog button,
+#chooseSidDialog input,
+#chooseSidDialog select,
+#sidListHolder,
+#ricoLivePlaylist,
+#ricoLivePlaylist button,
+#ricoLivePlaylist input,
+#ricoLivePlaylist select,
+#ricoRemixEditor,
+#ricoRemixEditor button,
+#ricoRemixEditor input,
+#ricoImportSidWindow,
+#ricoImportSidWindow button,
+#ricoImportSidWindow input,
+#ricoImportSidWindow select,
+#ricoHelpDialog,
+#ricoHelpDialog button,
+#aboutHolder,
+#aboutSIDHolder,
+#sidInfo,
+#songInfo {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-synthesis:none;
+}
+/* Main navigation: maintain button geometry and use the original 11px scale. */
+#chooseSidDialog #ricoListTabs button,
+#chooseSidDialog #ricoCommunityTabs button {
+  font-size:11px !important;
+  white-space:nowrap;
+}
+/* Sections and dialog titles: slightly larger, with measured line-height. */
+#chooseSidDialog > .title {
+  font-size:16px !important;
+  line-height:20px !important;
+}
+#chooseSidInfo > h2 {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:15px !important;
+  line-height:19px !important;
+}
+#ricoCommunityPanel .rico-community-toolbar > strong,
+#ricoHvscPanel > strong,
+#ricoLibraryPanel > strong,
+#ricoOurCollectionPanel > strong,
+#ricoImportSidHeader > strong,
+#ricoRemixFloatHeader > strong,
+#ricoLibraryBuilder .rico-library-builder-head > strong {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:16px !important;
+  line-height:20px !important;
+}
+#ricoLivePlaylistHeader {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:14px !important;
+}
+/* Compact secondary copy: no rows, padding or heights are changed. */
+#ricoCommunityPanel .rico-community-row,
+#ricoHvscItems .rico-hvsc-row,
+#ricoLibrarySections .rico-library-section,
+#ricoLibrarySongs .rico-library-track,
+#ricoOurItems,
+#sidList,
+#ricoLivePlaylistItems .rico-live-row {
+  font-size:11px !important;
+}
+#ricoCommunityOrderStatus,
+#ricoHvscIntro,
+#ricoHvscStatus,
+#ricoLibraryIntro,
+#ricoOurStatus,
+#ricoLiveStatus,
+#ricoImportSidFooter,
+#ricoImportSidWindow .rico-import-note,
+#ricoImportProgress,
+#ricoRemixStatus,
+#ricoSavedStatus,
+#ricoPlaylistStatus {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:10px !important;
+}
+/* Do not resize title-bearing controls or change their original line boxes. */
+#chooseSidDialog button,
+#ricoLivePlaylist button,
+#ricoRemixEditor button,
+#ricoImportSidWindow button {
+  font-synthesis:none;
+}
