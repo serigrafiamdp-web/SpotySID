@@ -3874,3 +3874,15 @@ html.rico-topaz-toolbar #sidControls #subsongInfo {
   font-synthesis:none;
   white-space:nowrap;
 }
+
+/* TEST357 — NEXT SID pending on keyboard N AND mouse click.
+   Palette-aware inverse ink. No layout, font, size or audio changes. */
+html #sidControls .rico-toolbar-main #nextSid.rico-next-pending,
+html #sidControls .rico-toolbar-main #nextSid.rico-next-pending:hover,
+html #sidControls .rico-toolbar-main #nextSid.rico-next-pending:focus,
+html #sidControls .rico-toolbar-main #nextSid.rico-next-pending:active {
+  background:var(--rico-theme-fg,#fff) !important;
+  background-color:var(--rico-theme-fg,#fff) !important;
+  color:var(--rico-theme-bg,#000) !important;
+  border-color:var(--rico-theme-fg,#fff) !important;
+}
