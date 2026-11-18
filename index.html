@@ -2,7 +2,7 @@
 <html  xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://ogp.me/ns/fb">
   <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="css/style.css?v=test346-confirm-xp">
+    <link rel="stylesheet" href="css/style.css?v=test351-amiga-topaz-toolbar">
     <title>SpotySid — Rico + James SID Player | Oscilloscope View</title>
 
     <link rel="shortcut icon" type="image/png" href="images/icon16.png"/>
@@ -860,6 +860,36 @@
     <script type="text/javascript" src="js/c64CharROM.test282.js?v=test282-all-512-glyphs"></script>
     <script type="text/javascript" src="js/petsciiMode.test282.js?v=test323-petscii-min-height"></script>
     <script type="text/javascript" src="js/scopeZoom.test342.js?v=test342-canvas-only-wheel-zoom"></script>
+    <!-- TEST351 — Topaz trial on lower toolbar only; geometry locked before applying the font. -->
+    <script>
+    (function(){
+      function applyTopazToolbar(){
+        var bar=document.getElementById('sidControls');
+        if(!bar||document.documentElement.classList.contains('rico-topaz-toolbar'))return;
+        // Read dimensions using the old font before switching. The toolbar's
+        // overflow/scrolling, spacing, heights and special fixed-width buttons stay as-is.
+        var buttons=Array.prototype.slice.call(bar.querySelectorAll('button'));
+        var measured=buttons.map(function(button){
+          return {button:button,width:button.getBoundingClientRect().width};
+        });
+        function enable(){
+          measured.forEach(function(item){
+            if(item.width<=0)return;
+            item.button.style.width=item.width+'px';
+            item.button.style.minWidth=item.width+'px';
+            item.button.style.maxWidth=item.width+'px';
+            item.button.style.flexShrink='0';
+          });
+          document.documentElement.classList.add('rico-topaz-toolbar');
+        }
+        if(document.fonts&&typeof document.fonts.load==='function'){
+          document.fonts.load('11px RicoAmigaTopaz','PLAYLIST').then(enable,enable);
+        }else enable();
+      }
+      if(document.readyState==='complete')applyTopazToolbar();
+      else window.addEventListener('load',applyTopazToolbar);
+    })();
+    </script>
     <!-- Cloudflare Web Analytics -->
   <script type='module' src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "af292b3c3f17490e93a382cb781e8f22"}'></script>
   <!-- End Cloudflare Web Analytics -->
