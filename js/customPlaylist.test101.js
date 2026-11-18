@@ -18,6 +18,9 @@
     if(!nextSidPending)nextSidWaitForAudio=false;
     if(nextSidButton){
       nextSidButton.setAttribute('aria-pressed',nextSidPending?'true':'false');
+      // Explicit visual state shared by keyboard N and physical NEXT click.
+      // Do not rely on :active (mouse only) or a fleeting focus state.
+      nextSidButton.classList.toggle('rico-next-pending',nextSidPending);
       nextSidButton.setAttribute('aria-label',nextSidPending?
         'NEXT SID — waiting for the next song to start':'NEXT SID');
     }
