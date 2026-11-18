@@ -3704,3 +3704,17 @@ html.rico-topaz-toolbar #sidControls button {
   text-overflow:clip;
   letter-spacing:-0.35px;
 }
+
+/* TEST353 — A1200 Topaz +2px. Existing button dimensions stay locked by
+   TEST351; only glyph sizes change, with no padding/height/width edits. */
+html.rico-topaz-toolbar #sidControls button,
+html.rico-topaz-toolbar #sidControls #oscilloscopeVisualButtons button {
+  font-size:13px !important;
+}
+html.rico-topaz-toolbar #sidControls .rico-bottom-about button {
+  font-size:12px !important;
+}
+html.rico-topaz-toolbar #sidControls label,
+html.rico-topaz-toolbar #sidControls #subsongInfo {
+  font-size:13px !important;
+}
