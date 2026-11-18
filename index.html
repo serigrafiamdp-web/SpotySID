@@ -1,8 +1,10 @@
 <!DOCTYPE HTML>
-<html  xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://ogp.me/ns/fb">
+<html class="rico-topaz-loading" xmlns="http://www.w3.org/1999/xhtml" xmlns:fb="http://ogp.me/ns/fb">
   <head>
     <meta charset="UTF-8">
-    <link rel="stylesheet" href="css/style.css?v=test357-next-pending">
+    <!-- TEST358: preload the actual A1200 Workbench font before displaying menus. -->
+    <link rel="preload" href="https://cdn.jsdelivr.net/gh/rewtnull/amigafonts@master/ttf/Topaz_a1200_v1.0.ttf" as="font" type="font/ttf" crossorigin="anonymous">
+    <link rel="stylesheet" href="css/style.css?v=test358-topaz-no-flash">
     <title>SpotySid — Rico + James SID Player | Oscilloscope View</title>
 
     <link rel="shortcut icon" type="image/png" href="images/icon16.png"/>
@@ -860,19 +862,21 @@
     <script type="text/javascript" src="js/c64CharROM.test282.js?v=test282-all-512-glyphs"></script>
     <script type="text/javascript" src="js/petsciiMode.test282.js?v=test323-petscii-min-height"></script>
     <script type="text/javascript" src="js/scopeZoom.test342.js?v=test342-canvas-only-wheel-zoom"></script>
-    <!-- TEST351 — Topaz trial on lower toolbar only; geometry locked before applying the font. -->
+    <!-- TEST358: measure original button widths while toolbar is concealed,
+         activate the exact Topaz font and reveal once ready. No visible fallback flash. -->
     <script>
     (function(){
-      function applyTopazToolbar(){
+      function activate(){
+        var root=document.documentElement;
         var bar=document.getElementById('sidControls');
-        if(!bar||document.documentElement.classList.contains('rico-topaz-toolbar'))return;
-        // Read dimensions using the old font before switching. The toolbar's
-        // overflow/scrolling, spacing, heights and special fixed-width buttons stay as-is.
+        if(!bar){root.classList.remove('rico-topaz-loading');return;}
+        if(root.classList.contains('rico-topaz-toolbar'))return;
         var buttons=Array.prototype.slice.call(bar.querySelectorAll('button'));
+        // Use the same pre-Topaz button geometry as TEST351.
         var measured=buttons.map(function(button){
           return {button:button,width:button.getBoundingClientRect().width};
         });
-        function enable(){
+        function show(){
           measured.forEach(function(item){
             if(item.width<=0)return;
             item.button.style.width=item.width+'px';
@@ -880,14 +884,16 @@
             item.button.style.maxWidth=item.width+'px';
             item.button.style.flexShrink='0';
           });
-          document.documentElement.classList.add('rico-topaz-toolbar');
+          root.classList.add('rico-topaz-toolbar');
+          root.classList.remove('rico-topaz-loading');
         }
         if(document.fonts&&typeof document.fonts.load==='function'){
-          document.fonts.load('11px RicoAmigaTopaz','PLAYLIST').then(enable,enable);
-        }else enable();
+          document.fonts.load('13px RicoAmigaTopaz','PLAYLIST').then(show,show);
+        }else show();
       }
-      if(document.readyState==='complete')applyTopazToolbar();
-      else window.addEventListener('load',applyTopazToolbar);
+      if(document.readyState==='loading')
+        document.addEventListener('DOMContentLoaded',activate,{once:true});
+      else activate();
     })();
     </script>
     <!-- Cloudflare Web Analytics -->
