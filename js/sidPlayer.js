@@ -27,7 +27,8 @@ var SidPlayer = function() {
     { name: 'Green Phosphor', line: '#78ff69', fill: 'rgba(65,255,88,0.55)', background: '#031208' },
     { name: 'Amber', line: '#ffcb60', fill: 'rgba(255,173,40,0.55)', background: '#160b00' },
     { name: 'Orange', line: '#ff7a28', fill: 'rgba(255,102,18,0.56)', background: '#130600' },
-    { name: 'P1 Phosphor', line: '#b3ff83', fill: 'rgba(165,255,105,0.52)', background: '#06170a' },
+    // TEST360: C64 color #5 (Pepto green), replacing only the lighter P1 green theme.
+    { name: 'P1 Phosphor', line: '#588D43', fill: '#588D43', background: '#06170a' },
     { name: 'C64 BASIC', line: '#a6a6ff', fill: 'rgba(166,166,255,0.52)', background: '#3836a6' },
     { name: 'C64 Cyan', line: '#70d7c7', fill: 'rgba(112,215,199,0.55)', background: '#24244f' },
     { name: 'Retro Magenta', line: '#ff88d0', fill: 'rgba(255,95,183,0.5)', background: '#16091d' },
