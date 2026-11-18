@@ -700,6 +700,13 @@
     var list=player.sidList||[];
     if(index<0||index>=list.length)return;
     var entry=list[index];
+    // TEST359: NEXT highlights for a manual playlist row selection too,
+    // whether that row is clicked by mouse or activated with Enter.
+    // Reject same-song/no-op and handoff-busy requests before highlighting.
+    if((source==='manual'||source==='next') &&
+       !transitionAwaitingStart &&
+       !(index===player.sidListIndex&&!transitionBusy&&player.isPlaying))
+      setNextSidPending(true);
     // TEST122: on a progressive list, do NOT wait for an unprepared SID
     // before starting the fade. The upcoming SID can decode during the
     // existing five-second fade, with the outgoing audio still playing.
