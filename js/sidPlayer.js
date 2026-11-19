@@ -1848,7 +1848,7 @@ SidPlayer.prototype = {
     var html = '';
     html += '<span class="songInfoLabel">Name:</span>&nbsp;<span class="songInfoValue">' + this.songInfo.songName + '</span>';
     html += ', ';
-    html += '<span class="songInfoLabel">Author:</span>&nbsp;<span class="songInfoValue">' + this.songInfo.songAuthor + '</span>';
+    html += '<span class="songInfoLabel">Author:</span>&nbsp;<span class="songInfoValue rico-top-artist">' + this.songInfo.songAuthor + '</span>';
     html += ', ';
     html += '<span class="songInfoLabel">Released:</span>&nbsp;<span class="songInfoValue">' + this.songInfo.songReleased + '</span>';
 
