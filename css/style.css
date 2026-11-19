@@ -3961,3 +3961,121 @@ html #songInfo #showSIDInfoLink {
   font-synthesis:none;
   line-height:18px;
 }
+
+/* TEST367 — small single-ink keyboard ? icon next to Tile Artwork pencil.
+   No changes to the 33px toolbar height, other button sizes or audio. */
+#sidControls .rico-bottom-about #ricoKeysButton {
+  width:24px !important;
+  min-width:24px !important;
+  max-width:24px !important;
+  padding:0 !important;
+  flex:0 0 24px;
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+}
+#ricoKeysButton svg {
+  width:18px;
+  height:18px;
+  display:block;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.6;
+  stroke-linecap:square;
+  stroke-linejoin:miter;
+  pointer-events:none;
+}
+/* All popup colors are the SAME TWO colors as the active SpotySID theme. */
+#ricoKeysPanel[hidden] {display:none !important;}
+#ricoKeysPanel {
+  position:fixed;
+  z-index:1250;
+  box-sizing:border-box;
+  width:362px;
+  max-width:calc(100vw - 12px);
+  max-height:calc(100vh - 52px);
+  overflow:auto;
+  border:1px solid var(--rico-theme-fg,#fff);
+  box-shadow:2px 2px 0 var(--rico-theme-fg,#fff);
+  background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:12px;
+  font-synthesis:none;
+}
+#ricoKeysPanel .rico-keys-heading {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  height:27px;
+  padding:0 5px 0 9px;
+  border-bottom:1px solid var(--rico-theme-fg,#fff);
+}
+#ricoKeysPanel .rico-keys-heading strong {
+  font:normal 15px/20px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+}
+#ricoKeysPanel #ricoKeysClose {
+  width:22px;
+  height:21px;
+  min-width:22px;
+  padding:0;
+  border:1px solid var(--rico-theme-fg,#fff);
+  border-radius:0;
+  color:var(--rico-theme-fg,#fff);
+  background:var(--rico-theme-bg,#000);
+  font:normal 13px/19px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+  cursor:pointer;
+}
+#ricoKeysPanel #ricoKeysClose:is(:hover,:focus-visible) {
+  background:var(--rico-theme-fg,#fff);
+  color:var(--rico-theme-bg,#000);
+}
+#ricoKeysPanel .rico-keys-grid {
+  display:flex;
+  flex-wrap:wrap;
+  gap:5px 8px;
+  padding:9px;
+}
+#ricoKeysPanel .rico-key-row {
+  box-sizing:border-box;
+  flex:0 0 calc(50% - 4px);
+  min-width:0;
+  min-height:29px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  white-space:nowrap;
+}
+#ricoKeysPanel .rico-key-row > span:last-child {
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+#ricoKeysPanel .rico-keys-double {
+  display:inline-flex;
+  gap:2px;
+  flex:0 0 auto;
+}
+#ricoKeysPanel kbd {
+  display:inline-flex;
+  flex:0 0 auto;
+  justify-content:center;
+  align-items:center;
+  box-sizing:border-box;
+  min-width:24px;
+  height:22px;
+  padding:0 4px;
+  border:1px solid var(--rico-theme-fg,#fff);
+  border-radius:0;
+  background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font:normal 12px/20px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+}
+#ricoKeysPanel .rico-keys-foot {
+  padding:5px 9px;
+  border-top:1px solid var(--rico-theme-fg,#fff);
+  font-size:10px;
+}
+@media(max-width:390px) {
+  #ricoKeysPanel {width:260px;}
+  #ricoKeysPanel .rico-key-row {flex-basis:100%;}
+}
