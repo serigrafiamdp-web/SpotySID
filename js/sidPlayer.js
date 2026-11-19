@@ -1448,14 +1448,17 @@ SidPlayer.prototype = {
     // Active special modes invert the button in the current palette.
     function syncScopeDisplayButton() {
       var mode=sidPlayer.scopeDisplayMode;
+      var modes=['hires','petscii','pixel','off'];
+      var current=modes.indexOf(mode);
+      var next=modes[(current+1+modes.length)%modes.length];
       $('#ricoPetsciiButton').text(mode==='hires'?'HI-RES':mode.toUpperCase())
-        .attr('aria-pressed',mode==='hires'?'false':'true')
+        .attr('aria-pressed',mode==='hires'||mode==='off'?'false':'true')
         .attr('aria-label','Oscilloscope display mode: '+(mode==='hires'?'HI-RES':mode.toUpperCase())+
-          '. Click for '+(mode==='hires'?'PETSCII':mode==='petscii'?'PIXEL':'HI-RES')+'.');
+          '. Click for '+(next==='hires'?'HI-RES':next.toUpperCase())+'.');
     }
     syncScopeDisplayButton();
     $('#ricoPetsciiButton').on('click', function() {
-      var modes=['hires','petscii','pixel'];
+      var modes=['hires','petscii','pixel','off'];
       var current=modes.indexOf(sidPlayer.scopeDisplayMode);
       sidPlayer.scopeDisplayMode=modes[(current+1)%modes.length];
       sidPlayer.petsciiEnabled=sidPlayer.scopeDisplayMode==='petscii';
