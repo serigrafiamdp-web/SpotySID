@@ -93,7 +93,7 @@
     for(var i=0;i<dialogs.length;i++){
       if(dialogs[i]!==chooser&&isVisible(dialogs[i]))return true;
     }
-    var ids=['ricoRemixEditor','ricoImportSidWindow','ricoDonateDialog'];
+    var ids=['ricoRemixEditor','ricoImportSidWindow','ricoDonateDialog','ricoKeysPanel'];
     for(var j=0;j<ids.length;j++){
       if(isVisible(document.getElementById(ids[j])))return true;
     }
