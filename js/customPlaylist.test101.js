@@ -2784,7 +2784,8 @@
         }
       }
       var row = $('<button type="button">').addClass('rico-live-row');
-      if(artistGroups)row.attr('data-sid-index',index);
+      // Stable lookup for progressive HVSC metadata updates (TEST366).
+      row.attr('data-sid-index',index);
       var active = index === player.sidListIndex;
       if (active) row.addClass('rico-live-active').attr('aria-current', 'true');
       if(index===selectedLiveIndex)row.addClass('rico-live-selected');
@@ -3974,7 +3975,7 @@
       var slots=refs.map(function(ref,i){
         return normalizeUctumiListDisplay({id:'hvsc-slot-'+i,
           name:ref.title||ref.file.split('/').pop().replace(/\.sid$/i,'').replace(/_/g,' '),
-          author:ref.author||(unknownAuthors?'<?>':'Loading from HVSC…'),released:'',file:ref.file,size:0,
+          author:ref.author||ref.artist||(unknownAuthors?'<?>':'HVSC'),released:'',file:ref.file,size:0,
           numSubtunes:1,startSubtune:1,sidFormat:'PSID',localBytes:null,
           _hvscRef:remixCanonicalRef(ref),_hvscPromise:null},ref);
       });
@@ -4012,6 +4013,27 @@
           // Preserve slot identity: arrows may move entries while fetching.
           Object.assign(slot,parsed,{id:slot.id});
           normalizeUctumiListDisplay(slot,slot._hvscRef);
+          // TEST366: long-list rows are already painted. Patch only the
+          // newly resolved title/artist instead of rebuilding hundreds of
+          // controls or interrupting ScriptProcessor audio.
+          if(!cancelled&&activeReferenceStream===stream&&customActive){
+            var slotIndex=slots.indexOf(slot);
+            var liveRow=slotIndex>=0?document.querySelector(
+              '#ricoLivePlaylistItems .rico-live-row[data-sid-index="'+slotIndex+'"]'):null;
+            if(liveRow){
+              var resolvedTitle=slot.name||slot.file||'SID';
+              var resolvedArtist=formatArtistCredit(slot.author||'Unknown artist');
+              var titleNode=liveRow.querySelector('.rico-live-title');
+              if(titleNode)titleNode.textContent=resolvedTitle+' — '+resolvedArtist;
+              var songNode=liveRow.querySelector('.rico-live-song');
+              if(songNode)songNode.textContent=resolvedTitle;
+              var composerNode=liveRow.querySelector('.rico-live-composer');
+              if(composerNode)composerNode.textContent=resolvedArtist;
+              var csdbArtist=liveRow.querySelector('.rico-csdb-artist');
+              if(csdbArtist)csdbArtist.textContent=resolvedArtist;
+              liveRow.setAttribute('aria-label',resolvedTitle+' — '+resolvedArtist);
+            }
+          }
           return slot;
         })().catch(function(error){slot._hvscPromise=null;throw error;});
         return slot._hvscPromise;
