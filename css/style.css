@@ -3917,3 +3917,24 @@ html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-row.rico-keyboard-
 ) {
   color:var(--rico-theme-bg) !important;
 }
+
+/* TEST362 — LCD COLOR 10: queued/automatically selected next SID must
+   remain legible. TEST334's hover-style selection made both text and
+   background use the same dark LCD ink. Mirror TEST361's two-tone contrast
+   for automatic .rico-live-selected and .rico-live-queued states only.
+   Active playing rows and keyboard/mouse behavior are unchanged. */
+html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-row:is(
+  .rico-live-selected,.rico-live-queued
+):not(.rico-live-active) {
+  background:var(--rico-theme-fg) !important;
+  color:var(--rico-theme-bg) !important;
+}
+html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-row:is(
+  .rico-live-selected,.rico-live-queued
+):not(.rico-live-active) :is(
+  .rico-live-number,.rico-live-title,.rico-live-artist,
+  .rico-live-composer,.rico-live-group,.rico-live-current,
+  .rico-live-next,span,strong,small,b
+) {
+  color:var(--rico-theme-bg) !important;
+}
