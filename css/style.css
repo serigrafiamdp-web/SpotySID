@@ -3901,3 +3901,19 @@ html.rico-topaz-loading #sidInfo,
 html.rico-topaz-loading #songInfo {
   visibility:hidden !important;
 }
+
+/* TEST361 — Game & Watch LCD (COLOR 10): keyboard-selected floating SID row.
+   TEST334 assigned dark ink to both text and hover background in the LCD
+   palette, hiding the row lettering. Match the legible mouse selection.
+   Do not modify row geometry, mouse behavior or any other palette. */
+html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-row.rico-keyboard-current:not(.rico-live-active) {
+  background:var(--rico-theme-fg) !important;
+  color:var(--rico-theme-bg) !important;
+}
+html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-row.rico-keyboard-current:not(.rico-live-active) :is(
+  .rico-live-number,.rico-live-title,.rico-live-artist,
+  .rico-live-composer,.rico-live-group,.rico-live-current,
+  .rico-live-next,span,strong,small,b
+) {
+  color:var(--rico-theme-bg) !important;
+}
