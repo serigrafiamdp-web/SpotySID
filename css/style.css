@@ -3938,3 +3938,12 @@ html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-row:is(
 ) {
   color:var(--rico-theme-bg) !important;
 }
+
+/* TEST364 — Upper OSC artist only, close to bottom toolbar's 13px Topaz.
+   Preserve the rest of the top metadata and all dimensions. */
+#songInfo .rico-top-artist {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:14px !important;
+  line-height:inherit;
+  font-weight:400;
+}
