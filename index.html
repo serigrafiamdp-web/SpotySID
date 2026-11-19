@@ -836,13 +836,34 @@
       </div>
       <div class="rico-bottom-about">
         <button type="button" id="ricoToolbarTileArtworkButton" title="Create tile artwork for the current artist" aria-label="Create tile artwork for the current artist" aria-haspopup="dialog" aria-controls="ricoTileArtworkOverlay"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></button>
+        <button type="button" id="ricoKeysButton" title="Keyboard shortcuts" aria-label="Keyboard shortcuts" aria-haspopup="dialog" aria-controls="ricoKeysPanel" aria-expanded="false"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><rect x="1.8" y="5.5" width="20.4" height="13" rx="0.8"/><path d="M4.5 9h1.5m2 0h1.5m2 0h1.5M4.5 12.5h1.5m2 0h1.5M5 15.8h8"/><path d="M16.2 9.8c0-1.5 2.8-1.8 2.8-.1 0 1.1-1.5 1.4-1.5 2.4m0 2.3v.2"/></svg></button>
         <button type="button" id="ricoDonateButton" title="Support the maintenance and continued development of SpotySid" aria-haspopup="dialog" aria-controls="ricoDonateDialog">DONATE</button>
         <button type="button" id="aboutSIDButton" title="Learn about the SID chip">ABOUT SID CHIP</button>
         <button type="button" id="aboutButton" title="Project information and credits">ABOUT</button>
         <button type="button" id="ricoHelpButton" title="Player instructions and playlist guide" aria-label="Help" aria-haspopup="dialog" aria-controls="ricoHelpDialog">?</button>
       </div>
     </div>
-<!-- TEST136: retry native Pages publication after previous deploy timeout/cancellation; UI unchanged. -->
+<!-- TEST367 — pixel/monochrome quick keyboard reference, separate from HELP. -->
+    <section id="ricoKeysPanel" role="dialog" aria-modal="false" aria-label="Keyboard shortcuts" hidden>
+      <div class="rico-keys-heading">
+        <strong>KEYS</strong>
+        <button type="button" id="ricoKeysClose" aria-label="Close keyboard shortcuts">X</button>
+      </div>
+      <div class="rico-keys-grid">
+        <div class="rico-key-row"><kbd>M</kbd><span>MOS menu</span></div>
+        <div class="rico-key-row"><kbd>P</kbd><span>Playlist</span></div>
+        <div class="rico-key-row"><kbd>N</kbd><span>Next SID</span></div>
+        <div class="rico-key-row"><kbd>C</kbd><span>Next color</span></div>
+        <div class="rico-key-row"><kbd>I</kbd><span>Invert colors</span></div>
+        <div class="rico-key-row"><kbd>F</kbd><span>FILL / LINE</span></div>
+        <div class="rico-key-row"><kbd>D</kbd><span>Tile artwork</span></div>
+        <div class="rico-key-row"><span class="rico-keys-double"><kbd>↑</kbd><kbd>↓</kbd></span><span>Select row</span></div>
+        <div class="rico-key-row"><kbd>ENTER</kbd><span>Play selected</span></div>
+        <div class="rico-key-row"><kbd>ESC</kbd><span>Back / MOS</span></div>
+      </div>
+      <div class="rico-keys-foot">SHORTCUTS IGNORE TEXT INPUTS</div>
+    </section>
+    <!-- TEST136: retry native Pages publication after previous deploy timeout/cancellation; UI unchanged. -->
         <script type="text/javascript" src="js/jquery.js"></script>
     <script type="text/javascript" src="js/stats.min.js"></script>
     <script type="text/javascript" src="js/backend_tinysid.js"></script>
@@ -862,6 +883,41 @@
     <script type="text/javascript" src="js/c64CharROM.test282.js?v=test282-all-512-glyphs"></script>
     <script type="text/javascript" src="js/petsciiMode.test282.js?v=test363-scope-off"></script>
     <script type="text/javascript" src="js/scopeZoom.test342.js?v=test342-canvas-only-wheel-zoom"></script>
+    <!-- TEST367 — lightweight keyboard cheat sheet. No SID/audio changes. -->
+    <script>
+    (function(){
+      var button=document.getElementById('ricoKeysButton');
+      var panel=document.getElementById('ricoKeysPanel');
+      var close=document.getElementById('ricoKeysClose');
+      if(!button||!panel||!close)return;
+      function opened(){return !panel.hidden;}
+      function position(){
+        var rect=button.getBoundingClientRect();
+        var w=panel.offsetWidth,h=panel.offsetHeight;
+        panel.style.left=Math.round(Math.max(6,Math.min(window.innerWidth-w-6,rect.right-w)))+'px';
+        panel.style.top=Math.round(Math.max(6,Math.min(window.innerHeight-h-6,rect.top-h-7)))+'px';
+      }
+      function toggle(show,focusTrigger){
+        panel.hidden=!show;
+        button.setAttribute('aria-expanded',show?'true':'false');
+        if(show){position();close.focus();}
+        else if(focusTrigger)button.focus();
+      }
+      button.addEventListener('click',function(){toggle(!opened(),true);});
+      close.addEventListener('click',function(){toggle(false,true);});
+      document.addEventListener('keydown',function(event){
+        if(!opened()||(event.key!=='Escape'&&event.key!=='Esc'))return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        toggle(false,true);
+      },true);
+      document.addEventListener('pointerdown',function(event){
+        if(opened()&&!panel.contains(event.target)&&!button.contains(event.target))
+          toggle(false,false);
+      },true);
+      window.addEventListener('resize',function(){if(opened())position();});
+    })();
+    </script>
     <!-- TEST358: measure original button widths while toolbar is concealed,
          activate the exact Topaz font and reveal once ready. No visible fallback flash. -->
     <script>
