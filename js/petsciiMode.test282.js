@@ -281,6 +281,14 @@
       lastDisplayMode=mode;
       // First frame of each mode must draw immediately after clicking.
       lastPaint=-Infinity;
+      if(mode==='off'&&player.context&&player.canvas)
+        player.context.clearRect(0,0,player.canvas.width,player.canvas.height);
+    }
+    // TEST363: OFF blanks the oscillator canvas exactly once on entry.
+    // Do not render any waves until the user chooses HI-RES again.
+    // The SID audio renderer, timer and playlist logic are independent.
+    if(mode==='off'){
+      return;
     }
     if(mode==='petscii'||mode==='pixel'){
       var now=performance.now();
