@@ -2722,20 +2722,100 @@
   // never changes the playing SID, its engine, its timers, or the loaded list.
   var communityBrowsePreview=null,communityBrowsePaintToken=0;
   function createCommunityBrowse(data,item,playFrom){
-    return {
-      data:data,item:item,playFrom:playFrom,selected:new Set(),
-      entries:data.tracks.map(function(track,index){
-        var ref=track&&track.pack&&track.file?remixCanonicalRef(track):null;
-        var filename=track&&track.file||'SID';
-        var title=(track&&track.title)||(track&&track.name)||
-          filename.replace(/\.sid$/i,'').replace(/_/g,' ');
-        var artist=(track&&(track.author||track.artist))||'Unknown artist';
-        var entry={id:'community-browse-'+index,name:title,author:artist,
-          file:filename,_hvscRef:ref,_browseOriginalIndex:index};
-        if(ref)normalizeUctumiListDisplay(entry,ref);
-        return entry;
-      })
+    // Use the SAME SID header reader as regular PLAY so author/title metadata
+    // resolves accurately, even while the current SID continues sounding.
+    // Decode only visible tracks and never run mass prefetch on slow Windows XP.
+    var stream=null;
+    if(data.version===2&&typeof JSZip!=='undefined'&&
+       data.tracks.every(validRemixRef)){
+      stream=createProgressiveReferenceStream(data.tracks,false);
+    }
+    var entries=stream?stream.slots:data.tracks.map(function(track,index){
+      var ref=track&&track.pack&&track.file?remixCanonicalRef(track):null;
+      var filename=track&&track.file||'SID';
+      var title=(track&&track.title)||(track&&track.name)||
+        filename.replace(/\.sid$/i,'').replace(/_/g,' ');
+      var entry={id:'community-browse-'+index,name:title,
+        author:track&&(track.author||track.artist)||'Unknown artist',
+        file:filename,_hvscRef:ref};
+      if(ref)normalizeUctumiListDisplay(entry,ref);
+      return entry;
+    });
+    entries.forEach(function(entry,index){entry._browseOriginalIndex=index;});
+    var preview={data:data,item:item,playFrom:playFrom,entries:entries,
+      selected:new Set(),stream:stream,_disposed:false};
+    var pending=[],enqueued=new Set(),loading=false;
+    function refreshResolvedRow(entry){
+      if(preview._disposed||communityBrowsePreview!==preview)return;
+      var index=preview.entries.indexOf(entry);
+      if(index<0)return;
+      var row=document.querySelector(
+        '#ricoLivePlaylistItems .rico-live-row[data-sid-index="'+index+'"]');
+      if(!row)return;
+      var name=entry.name||entry.file||'SID';
+      var artist=formatArtistCredit(entry.author||'Unknown artist');
+      var title=row.querySelector('.rico-live-title');
+      if(title)title.textContent=name+' — '+artist;
+      var song=row.querySelector('.rico-live-song');
+      if(song)song.textContent=name;
+      var composer=row.querySelector('.rico-live-composer');
+      if(composer)composer.textContent=artist;
+      row.setAttribute('aria-label',name+' — '+artist);
+    }
+    function pump(){
+      if(loading||!pending.length||preview._disposed||
+         communityBrowsePreview!==preview)return;
+      loading=true;
+      var entry=pending.shift();
+      var task;
+      if(stream)task=stream.loadSlot(entry);
+      else{
+        var ref=data.tracks[preview.entries.indexOf(entry)];
+        task=Promise.resolve().then(function(){
+          if(!ref||typeof ref.sidBase64!=='string')return;
+          var bytes=decode(ref.sidBase64);
+          var parsed=parseSID(bytes,{name:ref.file,size:bytes.length});
+          if(parsed)Object.assign(entry,parsed);
+        });
+      }
+      Promise.resolve(task).then(function(){refreshResolvedRow(entry);})
+        .catch(function(error){
+          console.warn('Browse metadata unavailable for '+entry.file,error);
+        }).finally(function(){
+          loading=false;
+          if(!preview._disposed)setTimeout(pump,90);
+        });
+    }
+    preview.hydrateVisible=function(){
+      if(preview._disposed||communityBrowsePreview!==preview)return;
+      var holder=document.getElementById('ricoLivePlaylistItems');
+      if(!holder)return;
+      var rowHeight=46;
+      var from=Math.max(0,Math.floor(holder.scrollTop/rowHeight)-4);
+      var count=Math.min(26,Math.ceil((holder.clientHeight||480)/rowHeight)+12);
+      for(var index=from;index<Math.min(preview.entries.length,from+count);index++){
+        var entry=preview.entries[index];
+        if(enqueued.has(entry))continue;
+        enqueued.add(entry);pending.push(entry);
+      }
+      pump();
     };
+    preview.dispose=function(){
+      preview._disposed=true;
+      if(stream)stream.cancel();
+      var holder=document.getElementById('ricoLivePlaylistItems');
+      if(holder&&preview._onScroll)
+        holder.removeEventListener('scroll',preview._onScroll);
+      pending.length=0;
+    };
+    preview._onScroll=function(){preview.hydrateVisible();};
+    return preview;
+  }
+  function clearCommunityBrowse(){
+    if(communityBrowsePreview&&communityBrowsePreview.dispose)
+      communityBrowsePreview.dispose();
+    communityBrowsePreview=null;
+    ++communityBrowsePaintToken;
   }
   function browseMoveSong(index,step){
     var b=communityBrowsePreview;
@@ -3155,6 +3235,15 @@
         nextCsdbRank++;
       }
     }
+    // Metadata is resolved with the same SID parser used for PLAY.
+    // No audio is started and no new row controls are created.
+    if(preview&&preview.hydrateVisible){
+      if(scrollNode){
+        scrollNode.removeEventListener('scroll',preview._onScroll);
+        scrollNode.addEventListener('scroll',preview._onScroll,{passive:true});
+      }
+      preview.hydrateVisible();
+    }
     // Save remains fixed in the header, not in the scrolling track list.
     // TEST96: never force scrolling on a manual selection or a render refresh.
     // Follow the newly playing row only on NEXT/AUTO, within this list's scrollbox.
@@ -3267,9 +3356,7 @@
   }
   function showLivePlaylist(visible) {
     liveVisible = !!visible;
-    if(!liveVisible && communityBrowsePreview){
-      communityBrowsePreview=null; ++communityBrowsePaintToken;
-    }
+    if(!liveVisible && communityBrowsePreview)clearCommunityBrowse();
     // TEST314: hiding PLAYLIST always returns directly to the oscilloscope.
     // Never leave CHOOSE A SID visible underneath the floating playlist.
     if(!liveVisible&&player.dialogManager&&
@@ -6210,6 +6297,7 @@
               if(browseOnly){
                 if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
                   throw Error('Playlist has no songs to browse.');
+                clearCommunityBrowse();
                 communityBrowsePreview=createCommunityBrowse(chosen,item,
                   function(index,karaoke){
                     var browsing=communityBrowsePreview;
@@ -6227,8 +6315,7 @@
               // Ignore a late auto-load if the visitor picked a different source.
               if(isStartup && !startupPlaylistPending) return;
               if(isStartup) cancelStartupPlaylist();
-              communityBrowsePreview=null;
-              ++communityBrowsePaintToken;
+              clearCommunityBrowse();
               var startAt=isShared?sharedStartIndex:requestedIndex;
               var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
                 startAt); // An explicit PLAY button defaults to first song (#1).
