@@ -21,6 +21,11 @@
     title:'Seguir viviendo sin tu amor',
     originalArtist:'Luis Alberto Spinetta',
     sidCoverBy:'Esteban Palladino (Uctumi)',
+    // TEST383: real reference tempo from the supplied karaoke MIDI.
+    karaokeBpm: 108,
+    // A SID file has no standard BPM tag; do not fabricate an estimate.
+    // Future audio-onset analysis can populate this field per cover.
+    sidBpmApprox: null,
     secondsPerBeat: 60/108,
     firstBeat: 37,
     beats:beats
