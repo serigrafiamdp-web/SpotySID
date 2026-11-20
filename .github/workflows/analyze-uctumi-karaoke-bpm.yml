@@ -1,0 +1,72 @@
+name: OFFLINE Karaoke SID BPM analysis
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/analyze-uctumi-karaoke-bpm.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  sid-tempo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install offline SID renderer and audio analyzer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sidplayfp unzip
+          python3 -m pip install -q --break-system-packages numpy scipy
+      - name: Extract original Uctumi SID from site archive
+        run: |
+          unzip -p library/packs/musicians/U/Uctumi.zip Seguir_Viviendo_Sin_Tu_Amor.sid > /tmp/uctumi.sid
+          ls -lh /tmp/uctumi.sid
+          file /tmp/uctumi.sid
+      - name: Render SID OFFLINE to WAV, no browser timing updates
+        run: |
+          sidplayfp --help | head -65
+          timeout 150 sidplayfp -w/tmp/uctumi.wav -t120 -f11025 /tmp/uctumi.sid
+          ls -lh /tmp/uctumi.wav
+      - name: Measure tempo with offline onset autocorrelation
+        run: |
+          python3 - <<'PY'
+          import wave,numpy as np
+          from scipy.ndimage import gaussian_filter1d
+          p='/tmp/uctumi.wav'
+          with wave.open(p,'rb') as w:
+              sr=w.getframerate(); n=w.getnframes(); c=w.getnchannels(); sw=w.getsampwidth()
+              print('Audio:',sr,'Hz;',round(n/sr,1),'sec;',c,'channels;',sw,'bytes/sample')
+              raw=w.readframes(n)
+          if sw!=2: raise SystemExit('Expected 16-bit audio for analysis')
+          x=np.frombuffer(raw,dtype='<i2').astype('float32') / 32768
+          if c>1:x=x[:len(x)//c*c].reshape(-1,c).mean(axis=1)
+          hop=max(1,round(sr*0.02));rate=sr/hop
+          x=x[:len(x)//hop*hop].reshape(-1,hop)
+          e=np.sqrt(np.mean(x*x,axis=1)+1e-9)
+          log=np.log1p(80*e)
+          on=np.maximum(0,np.diff(gaussian_filter1d(log,1.2),prepend=log[0]))
+          on-=gaussian_filter1d(on,55)
+          on=np.maximum(0,on)
+          print('Envelope max:',round(float(e.max()),4),'RMS:',round(float(np.sqrt(np.mean(e**2))),4))
+          def peaks(a,b):
+              arr=on[int(a*rate):int(b*rate)].copy()
+              if len(arr)<100:return
+              arr-=np.mean(arr)
+              results=[]
+              for bpm in np.arange(75,140.05,.2):
+                  lag=int(round(rate*60/bpm))
+                  if lag<1 or lag>=len(arr)//2:continue
+                  coef=float(np.dot(arr[lag:],arr[:-lag])/
+                      (np.linalg.norm(arr[lag:])*np.linalg.norm(arr[:-lag])+1e-9))
+                  results.append((coef,round(float(bpm),2)))
+              ranked=sorted(results,reverse=True)
+              best=[]
+              for score,bpm in ranked:
+                  if all(abs(bpm-x[1])>2 for x in best):
+                      best.append((round(score,4),bpm))
+                  if len(best)>=8:break
+              print('WINDOW',a,'-',b,'sec: top BPM candidates corr-score:',best)
+          for a,b in [(5,110),(15,100),(25,85),(40,110),(60,110),(5,55)]:
+              peaks(a,b)
+          PY
