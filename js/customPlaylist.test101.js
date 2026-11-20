@@ -6391,7 +6391,12 @@
               if(browseOnly){
                 if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
                   throw Error('Playlist has no songs to browse.');
-                if(!communityBrowsePreview)showPlayingWindowAlongsideBrowse();
+                // TEST397: never duplicate the empty COMMUNITY landing panel.
+                // Keep the first selected list as the only visible panel; add
+                // the second window only when another list is selected.
+                if(communityBrowsePreview||
+                   (!landingPlaylists&&player.sidList&&player.sidList.length))
+                  showPlayingWindowAlongsideBrowse();
                 clearCommunityBrowse();
                 communityBrowsePreview=createCommunityBrowse(chosen,item,
                   function(index,karaoke){
