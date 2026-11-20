@@ -97,18 +97,54 @@
         ctx.fillRect(x+col*cell,y+row*cell,cell,cell);
     }
   }
-  // TEST387: Karaoke only RENDERS a waveform. Tempo is never guessed
-  // from the live signal or reestimated during ordinary playback.
+  // TEST387: Karaoke only RENDERS a waveform; BPM is precomputed.
+  // TEST391: draw both sides of the timeline from real SID PCM rendered
+  // offline before publishing Karaoke. No synthetic future waveform.
+  function offlineWaveformForSong(){
+    var wave=window.SpotySidKaraokeWaveform;
+    var i=player.sidListIndex;
+    var song=typeof i==='number'&&player.sidList?player.sidList[i]:null;
+    if(!wave||!song||wave.format!=='spotysid-offline-waveform'||
+       !Array.isArray(wave.samples)||!wave.samples.length||
+       !(wave.stepSeconds>0))return null;
+    var ref=song._hvscRef||null;
+    if(ref&&ref.pack===wave.sidPack&&ref.file===wave.sidFile)return wave;
+    if(song.file===wave.sidFile&&/uctumi|palladino/i.test(String(song.author||'')))
+      return wave;
+    return null;
+  }
+  function offlinePeak(wave,t){
+    if(t<0)return null;
+    var pos=t/wave.stepSeconds;
+    if(pos>=wave.samples.length)return null;
+    var a=Math.floor(pos),frac=pos-a;
+    var low=wave.samples[a],high=wave.samples[a+1];
+    if(!Number.isFinite(low))return null;
+    if(!Number.isFinite(high))high=low;
+    return Math.max(0,Math.min(1,(low+(high-low)*frac)/255));
+  }
   function drawMixedScope(){
     var ctx=player.context,canvas=player.canvas,c=palette();
     if(!ctx||!canvas)return;
     var width=canvas.width,height=canvas.height,band=Math.max(100,Math.min(height*.38,340));
     var center=band*.49,amplitude=Math.max(24,band*.39);
-    var cursor=width*.63,secondsPx=width/13;
+    var cursor=width*.5,secondsPx=width/13;
     var now=player.sampleRate?Math.max(0,(player.autoElapsedSamples||0)/player.sampleRate):0;
     var mode=player.scopeDisplayMode||'hires';
     ctx.clearRect(0,0,width,height);
     sampleRecentAudio(now);
+    var waveformRecords=history;
+    var offline=offlineWaveformForSong();
+    if(offline){
+      // Real pre-rendered audio also exists to the RIGHT of the current
+      // time; live history alone cannot provide future samples.
+      waveformRecords=[];
+      for(var xx=0;xx<=width;xx+=4){
+        var when=now+(xx-cursor)/secondsPx;
+        var peak=offlinePeak(offline,when);
+        if(peak!==null)waveformRecords.push({t:when,peak:peak});
+      }
+    }
     ctx.save();
     ctx.beginPath();ctx.rect(0,0,width,band);ctx.clip();
     // Moving time marks (one mark every 5 seconds) and permanent playhead.
@@ -125,7 +161,7 @@
       ctx.fillText(fmt(t),x+3,band-28);
     }
     ctx.globalAlpha=1;
-    if(mode!=='off'&&history.length>0){
+    if(mode!=='off'&&waveformRecords.length>0){
       if(mode==='petscii'){
         var step=8;
         for(var px=0;px<width;px+=step){
@@ -133,10 +169,10 @@
           if(second<0||second>now)continue;
           var pick=Math.floor((second-(now-historyWindow-2))/historyStep);
           var nearest=null,dist=.16;
-          for(var j=history.length-1;j>=0;j--){
-            var delta=Math.abs(history[j].t-second);
-            if(delta<dist){dist=delta;nearest=history[j];}
-            if(history[j].t<second-.16)break;
+          for(var j=waveformRecords.length-1;j>=0;j--){
+            var delta=Math.abs(waveformRecords[j].t-second);
+            if(delta<dist){dist=delta;nearest=waveformRecords[j];}
+            if(waveformRecords[j].t<second-.16)break;
           }
           if(!nearest)continue;
           var dots=Math.floor(nearest.peak*amplitude/8);
@@ -146,8 +182,8 @@
           }
         }
       }else if(mode==='pixel'){
-        for(var h=0;h<history.length;h++){
-          var rec=history[h],x=Math.round((cursor+(rec.t-now)*secondsPx)/4)*4;
+        for(var h=0;h<waveformRecords.length;h++){
+          var rec=waveformRecords[h],x=Math.round((cursor+(rec.t-now)*secondsPx)/4)*4;
           if(x<-4||x>width)continue;
           var a=Math.max(2,Math.round(rec.peak*amplitude/4)*4);
           ctx.fillRect(x,Math.round((center-a)/4)*4,4,2*a);
@@ -155,12 +191,12 @@
       }else{
         // HI-RES continuous waveform envelope, grounded in captured SID audio.
         ctx.beginPath();
-        for(var h=0;h<history.length;h++){
-          var rec=history[h],x=cursor+(rec.t-now)*secondsPx,y=center-rec.peak*amplitude;
+        for(var h=0;h<waveformRecords.length;h++){
+          var rec=waveformRecords[h],x=cursor+(rec.t-now)*secondsPx,y=center-rec.peak*amplitude;
           if(h===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
         }
-        for(var h=history.length-1;h>=0;h--){
-          var rec=history[h];ctx.lineTo(cursor+(rec.t-now)*secondsPx,center+rec.peak*amplitude);
+        for(var h=waveformRecords.length-1;h>=0;h--){
+          var rec=waveformRecords[h];ctx.lineTo(cursor+(rec.t-now)*secondsPx,center+rec.peak*amplitude);
         }
         ctx.closePath();
         if(player.oscilloscopeMode==='filled'){ctx.fillStyle=c.fill;ctx.fill();}
@@ -168,10 +204,9 @@
       }
     }
     ctx.strokeStyle=c.line;ctx.lineWidth=2;
-    ctx.beginPath();ctx.moveTo(cursor,27);ctx.lineTo(cursor,band-10);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cursor,44);ctx.lineTo(cursor,band-45);ctx.stroke();
     ctx.fillStyle=c.line;ctx.font='13px RicoAmigaTopaz,monospace';
     ctx.fillText('SOUND TIMELINE · '+(mode==='off'?'OFF':mode.toUpperCase()),14,20);
-    ctx.fillText(fmt(now),Math.max(12,Math.min(width-65,cursor+6)),20);
     ctx.restore();
   }
   player.render=function(){
