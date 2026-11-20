@@ -2800,7 +2800,7 @@
       for(;index<limit;index++){
         (function(pos){
           var track=tracks[pos]||{},file=track.file||'SID';
-          var song=track.title||track.name||file.replace(/\\.sid$/i,'').replace(/_/g,' ');
+          var song=track.title||track.name||file.replace(/\.sid$/i,'').replace(/_/g,' ');
           var artist=track.author||track.artist||'Unknown artist';
           var row=document.createElement('button');row.type='button';
           row.className='rico-live-row';row.setAttribute('data-sid-index',String(pos));
