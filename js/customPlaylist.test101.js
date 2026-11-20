@@ -2727,6 +2727,53 @@
   // module; browser only opens the same playlist presentation without audio.
   var browseReferenceStreamFactory=null,browseSidDecode=null;
   var communityBrowsePreview=null,communityBrowsePaintToken=0;
+  // TEST395: two independent visible playlist windows for silent browsing.
+  // The left window preserves the currently playing playlist's display.
+  // The original live window remains fully interactive for browsing.
+  var ricoPlayingWindow=null;
+  function removePlayingWindow(){
+    if(ricoPlayingWindow){ricoPlayingWindow.remove();ricoPlayingWindow=null;}
+  }
+  function showPlayingWindowAlongsideBrowse(){
+    if(ricoPlayingWindow)return;
+    var original=document.getElementById('ricoLivePlaylist');
+    if(!original||original.style.display==='none')return;
+    var copy=original.cloneNode(true);
+    copy.id='ricoPlayingPlaylistWindow';
+    copy.setAttribute('aria-label','Playlist currently playing');
+    // Never duplicate IDs: all existing control and row lookups must continue
+    // to address the original browser window.
+    copy.querySelectorAll('[id]').forEach(function(el){el.removeAttribute('id');});
+    copy.querySelectorAll('button,input,select,[tabindex]').forEach(function(el){
+      el.setAttribute('tabindex','-1');
+      if(el.matches('button,input,select'))el.disabled=true;
+    });
+    var rect=original.getBoundingClientRect();
+    var gutter=10;
+    var available=Math.max(240,window.innerWidth-3*gutter);
+    var half=Math.floor(available/2);
+    var w=Math.min(Math.max(220,rect.width),half);
+    copy.style.cssText+=';display:flex;position:fixed;left:'+gutter+
+      'px;top:'+Math.max(8,rect.top)+'px;width:'+w+
+      'px;height:'+Math.min(rect.height,window.innerHeight-75)+
+      'px;z-index:1000;pointer-events:auto;';
+    var h=copy.querySelector('#ricoLivePlaylistHeader')||
+      copy.querySelector('.rico-live-heading');
+    // The cloned title is intentionally static; audio keeps using the real engine.
+    copy.classList.add('rico-playing-window-snapshot');
+    var note=document.createElement('div');
+    note.textContent='PLAYING PLAYLIST';
+    note.style.cssText='font-size:11px;font-weight:bold;padding:3px 8px;letter-spacing:1px;';
+    copy.insertBefore(note,copy.firstChild);
+    original.parentElement.appendChild(copy);
+    ricoPlayingWindow=copy;
+    original.style.left=(2*gutter+w)+'px';
+    original.style.right='auto';
+    original.style.top=Math.max(8,rect.top)+'px';
+    original.style.width=w+'px';
+    original.style.transform='none';
+  }
+
   function createCommunityBrowse(data,item,playFrom){
     // Use the SAME SID header reader as regular PLAY so author/title metadata
     // resolves accurately, even while the current SID continues sounding.
@@ -3364,7 +3411,7 @@
   }
   function showLivePlaylist(visible) {
     liveVisible = !!visible;
-    if(!liveVisible && communityBrowsePreview)clearCommunityBrowse();
+    if(!liveVisible && communityBrowsePreview){clearCommunityBrowse();removePlayingWindow();}
     // TEST314: hiding PLAYLIST always returns directly to the oscilloscope.
     // Never leave CHOOSE A SID visible underneath the floating playlist.
     if(!liveVisible&&player.dialogManager&&
@@ -6334,6 +6381,7 @@
               if(browseOnly){
                 if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
                   throw Error('Playlist has no songs to browse.');
+                if(!communityBrowsePreview)showPlayingWindowAlongsideBrowse();
                 clearCommunityBrowse();
                 communityBrowsePreview=createCommunityBrowse(chosen,item,
                   function(index,karaoke){
@@ -6353,6 +6401,7 @@
               if(isStartup && !startupPlaylistPending) return;
               if(isStartup) cancelStartupPlaylist();
               clearCommunityBrowse();
+              removePlayingWindow();
               var startAt=isShared?sharedStartIndex:requestedIndex;
               var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
                 startAt); // An explicit PLAY button defaults to first song (#1).
