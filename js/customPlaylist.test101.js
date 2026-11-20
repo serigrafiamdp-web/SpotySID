@@ -1114,28 +1114,13 @@
     if (!credits) {
       credits = document.createElement('div');
       credits.id = 'ricoLivePlaylistCredits';
-      credits.setAttribute('aria-label', 'Playlist curator and future ratings');
+      credits.setAttribute('aria-label', 'Playlist curator');
       header.insertAdjacentElement('afterend', credits);
     }
     if (!document.getElementById('ricoLivePlaylistCreator')) {
       var curator = document.createElement('span');
       curator.id = 'ricoLivePlaylistCreator';
       credits.appendChild(curator);
-    }
-    if (!document.getElementById('ricoLivePlaylistStars')) {
-      var rating = document.createElement('span');
-      rating.id = 'ricoLivePlaylistStars';
-      rating.title = 'Ratings coming soon';
-      rating.setAttribute('aria-label', 'Ratings coming soon');
-      var stars = document.createElement('span');
-      stars.setAttribute('aria-hidden', 'true');
-      stars.textContent = '☆☆☆☆☆';
-      var note = document.createElement('span');
-      note.className = 'rico-rating-note';
-      note.textContent = 'Ratings coming soon';
-      rating.appendChild(stars);
-      rating.appendChild(note);
-      credits.appendChild(rating);
     }
     return credits;
   }
@@ -3400,7 +3385,7 @@
     $('#ricoLivePlaylistCreator').text(creatorText);
     $('#ricoLivePlaylistCredits').attr('data-loaded', hasLoadedPlaylist ? 'true' : 'false');
     $('#ricoLivePlaylistCredits').css('display','flex');
-    $('#ricoLivePlaylistStars').css('display', hasLoadedPlaylist ? 'inline-flex' : 'none');
+    // TEST404: no rating placeholders in the live title/curator line.
     if (landingPlaylists&&!preview) {
       $('<div>').addClass('rico-live-empty').text("Choose a playlist from COMMUNITY PLAYLISTS to start listening.").appendTo(holder);
       return;
@@ -5165,12 +5150,6 @@
           caption.className='rico-community-description';
           caption.textContent=item.name+' — Playlist by '+(item.createdBy||'Unknown')+' · '+item.tracks.length+' SID';
           label.appendChild(caption);
-          var stars=document.createElement('span');
-          stars.className='rico-community-stars';
-          stars.textContent='☆☆☆☆☆';
-          stars.setAttribute('aria-label','Ratings coming soon');
-          stars.title='Ratings coming soon — no votes yet';
-          label.appendChild(stars);
           var load=document.createElement('button');
           load.type='button';load.textContent='PLAY';
           load.addEventListener('click',async function(event){
@@ -6608,12 +6587,7 @@
           description.className='rico-community-description';
           description.textContent=item.title+' — Playlist by '+(item.createdBy||'Unknown')+' · '+(Number(item.tracks)||0)+' SID';
           row.dataset.communityBaseDescription=description.textContent;
-          var stars=document.createElement('span');
-          stars.className='rico-community-stars';
-          stars.textContent='☆☆☆';
-          stars.setAttribute('aria-label','Three sample stars; voting is not yet available');
           label.appendChild(description);
-          label.appendChild(stars);
           var orderButtons=document.createElement('span');
           orderButtons.className='rico-community-order-controls';
           var moveUp=document.createElement('button');
@@ -6623,8 +6597,7 @@
           bindReorderArrows($(moveUp),-1,function(step){moveCommunityRow(row,step);});
           bindReorderArrows($(moveDown),1,function(step){moveCommunityRow(row,step);});
           orderButtons.appendChild(moveUp);orderButtons.appendChild(moveDown);
-          label.appendChild(description);
-          label.appendChild(stars);
+
           var button=document.createElement('button');
           button.type='button';button.textContent='PLAY';
           row.appendChild(label);row.appendChild(orderButtons);row.appendChild(button);
