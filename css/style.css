@@ -4871,3 +4871,24 @@ html.rico-karaoke-active #songInfo {
 #ricoCommunityItems .rico-community-label > .rico-community-stars,
 #ricoHvscPanel .rico-community-stars,
 .rico-community-stars {display:none !important;}
+
+/* TEST409 — selected row ink must always contrast with its row paper.
+   Prior Topaz/theme overrides could leave the title white on a white
+   selected background, especially in the LCD palette and cloned panes.
+   Inherit the already palette-correct ROW ink instead of forcing fg. */
+#ricoLivePlaylistItems .rico-live-row:is(
+  :hover,.rico-live-active,.rico-live-selected,.rico-live-queued,
+  .rico-keyboard-current
+) :is(
+  .rico-live-number,.rico-live-title,.rico-live-artist,
+  .rico-live-composer,.rico-live-group,.rico-live-current,
+  .rico-live-next,.rico-csdb-release,.rico-csdb-song,
+  .rico-csdb-artist,span,strong,b,small
+) {
+  color:inherit !important;
+}
+#ricoCommunityItems .rico-community-row:is(
+  :hover,.rico-keyboard-current,.rico-community-selected
+) .rico-community-description {
+  color:inherit !important;
+}
