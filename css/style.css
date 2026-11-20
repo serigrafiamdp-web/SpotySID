@@ -4865,4 +4865,9 @@ html.rico-karaoke-active #songInfo {
 /* TEST404 — ratings intentionally removed. No reserved star columns.
    Also hides legacy placeholders when HTML/JS is served from cache. */
 #ricoLivePlaylistStars,
+#ricoLivePlaylist #ricoLivePlaylistStars,
+#ricoLivePlaylistHeader #ricoLivePlaylistStars,
+#ricoCommunityItems .rico-community-row .rico-community-stars,
+#ricoCommunityItems .rico-community-label > .rico-community-stars,
+#ricoHvscPanel .rico-community-stars,
 .rico-community-stars {display:none !important;}
