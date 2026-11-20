@@ -4793,3 +4793,68 @@ html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-edit-row:is(
   fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:miter;
   pointer-events:none;
 }
+
+
+/* TEST384 — Community NAME opens a silent preview in the same floating
+   playlist. The row's PLAY is the ONLY action that changes audio. */
+#ricoLivePlaylistItems .rico-live-browse-row{
+  display:flex;align-items:center;gap:7px;
+  box-sizing:border-box;min-height:37px;
+  padding:5px 9px;
+  border-bottom:1px solid var(--rico-theme-fg,#fff);
+  background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font:13px/1.25 "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+}
+#ricoLivePlaylistItems .rico-live-browse-name{
+  flex:1 1 auto;min-width:0;overflow-wrap:anywhere;
+}
+#ricoLivePlaylistItems .rico-live-browse-row > .rico-live-number{
+  flex:0 0 24px;min-width:24px;
+  color:var(--rico-theme-fg,#fff);
+  text-align:right;
+}
+#ricoLivePlaylistItems .rico-live-browse-row > button{
+  box-sizing:border-box;
+  flex:0 0 auto;min-height:26px;height:26px;
+  display:inline-flex;align-items:center;justify-content:center;
+  padding:0 6px;
+  border:1px solid var(--rico-theme-fg,#fff);
+  background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font:12px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+  cursor:pointer;
+}
+#ricoLivePlaylistItems .rico-live-browse-row > button:is(:hover,:focus-visible){
+  background:var(--rico-theme-fg,#fff);
+  color:var(--rico-theme-bg,#000);
+}
+#ricoLivePlaylistItems .rico-live-browse-row > .rico-live-browse-mic{
+  width:26px;min-width:26px;max-width:26px;
+  padding:0 !important;
+}
+#ricoLivePlaylistItems .rico-live-browse-mic svg{
+  width:17px;height:17px;fill:none;
+  stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:square;stroke-linejoin:miter;
+  pointer-events:none;
+}
+/* The second numeric calibration field is manual too: no spinner arrows. */
+#ricoKaraokeConfigForm input[type="number"]{
+  appearance:textfield;
+  -moz-appearance:textfield;
+}
+#ricoKaraokeConfigForm input[type="number"]::-webkit-inner-spin-button,
+#ricoKaraokeConfigForm input[type="number"]::-webkit-outer-spin-button{
+  -webkit-appearance:none;margin:0;
+}
+#ricoKaraokeConfigForm #ricoKaraokeBpm{
+  box-sizing:border-box;
+  width:100%;min-height:26px;
+  padding:3px 6px;
+  border:1px solid var(--rico-theme-fg,#fff);
+  border-radius:0;
+  background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font:13px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+}
