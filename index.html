@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- TEST358: preload the actual A1200 Workbench font before displaying menus. -->
     <link rel="preload" href="https://cdn.jsdelivr.net/gh/rewtnull/amigafonts@master/ttf/Topaz_a1200_v1.0.ttf" as="font" type="font/ttf" crossorigin="anonymous">
-    <link rel="stylesheet" href="css/style.css?v=test380-karaoke-ui">
+    <link rel="stylesheet" href="css/style.css?v=test381-karaoke-lyrics">
     <title>SpotySid — Rico + James SID Player | Oscilloscope View</title>
 
     <link rel="shortcut icon" type="image/png" href="images/icon16.png"/>
@@ -34,7 +34,7 @@
         <canvas id="ricoKaraokeBall" width="8" height="8" aria-label="Authentic PETSCII ball"></canvas>
         <div class="rico-karaoke-placeholder">LYRICS AREA</div>
       </div>
-      <div class="rico-karaoke-foot">PETSCII · TEXT &amp; TIMING IN NEXT TEST</div>
+      <div class="rico-karaoke-foot">PETSCII · MIDI LYRIC SYNC TEST</div>
     </section>
     <!-- TEST345: fixed to the oscilloscope background, outside the zoomed canvas and controls. -->
     <span id="ricoWindowsVersion" role="button" tabindex="0" aria-live="polite" title="Click to confirm Windows XP on this computer">WIN ?</span>
@@ -903,6 +903,9 @@
     <script type="text/javascript" src="js/scopeZoom.test342.js?v=test342-canvas-only-wheel-zoom"></script>
     <!-- TEST380: isolated karaoke OSC/lyric interface, after standard scope modes. -->
     <script type="text/javascript" src="js/karaoke.test380.js?v=test380-karaoke-ui"></script>
+    <!-- TEST381: MIDI source events and internal-only sync correction (no adjustment controls). -->
+    <script type="text/javascript" src="js/karaokeMidi.test381.js?v=test381-midi-data"></script>
+    <script type="text/javascript" src="js/karaokeSync.test381.js?v=test381-internal-sync"></script>
     <!-- TEST367 — lightweight keyboard cheat sheet. No SID/audio changes. -->
     <script>
     (function(){
