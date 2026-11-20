@@ -21,7 +21,12 @@
   // must remain useful even before the Cloudflare publication deployment.
   // Local overrides survive page reloads and are never overwritten by a GET.
   var storageKey='spotysid-karaoke-sync-v2:'+songKey;
-  var calibration={offsetSeconds:0,speed:1};
+  // Fixed initial suggestion from the prior OFFLINE SID tempo analysis.
+  // The source lyric timings always retain the original 108-BPM MIDI clock.
+  var initialKaraokeBpm=Number(data.initialKaraokeBpm)||
+    Number(data.sidBpmApprox)||Number(data.karaokeBpm)||108;
+  var calibration={offsetSeconds:0,speed:initialKaraokeBpm/
+    (Number(data.karaokeBpm)||108)};
   var localSaved=false,localSavedAt=0;
   var publicRevision=0,publicStatus='loading',publicUpdatedAt=0;
   var backend='https://ricos-sid-community.serigrafiamdp.workers.dev';
@@ -69,7 +74,7 @@
     publicStatus='ready';
     if(!localSaved){
       calibration.offsetSeconds=payload.offsetSeconds;
-      calibration.speed=(payload.karaokeBpm===null?referenceBpm():payload.karaokeBpm)/referenceBpm();
+      calibration.speed=(payload.karaokeBpm===null?initialKaraokeBpm:payload.karaokeBpm)/referenceBpm();
       invalidate();
     }
     return window.SpotySidKaraokeSync.get();
@@ -135,7 +140,8 @@
       return this.get();
     },
     reset:function(){
-      calibration={offsetSeconds:0,speed:1};invalidate();return this.get();
+      calibration={offsetSeconds:0,speed:initialKaraokeBpm/referenceBpm()};
+      invalidate();return this.get();
     },
     midiTimeFromSidTime:function(seconds){
       return Math.max(0,(safeNumber(seconds,0)-calibration.offsetSeconds)*calibration.speed);
