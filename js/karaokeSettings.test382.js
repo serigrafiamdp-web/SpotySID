@@ -1,155 +1,195 @@
-/* TEST382 — Karaoke Settings (one song at a time).
- * Read-only auth probe: invalid catalog-order payload is deliberately
- * rejected (400) AFTER the existing Cloudflare Worker checks X-Beta-Key.
- * A 400 with the exact expected validation error proves the key works,
- * without ever sending a valid write or changing playlist order.
- * No beta key stored, no backend mutation, no edit UI until authenticated.
+/* TEST383 — non-modal floating Karaoke Settings, theme-colored and movable.
+ * Authentication reuses the existing Cloudflare beta-key protected validation.
+ * Intentional invalid catalog-order validation cannot alter public state.
+ * Password is NEVER stored; BPM and offset remain local per registered SID.
  */
 (function(){
   'use strict';
-  var ROOT=document.getElementById('ricoKaraokeStage');
-  var OPEN=document.getElementById('ricoKaraokeSettings');
-  var MODE=document.getElementById('ricoKaraokeConfigOverlay');
-  var FORM=document.getElementById('ricoKaraokeConfigForm');
-  var KEY=document.getElementById('ricoKaraokeBetaKey');
-  var KEYGROUP=document.getElementById('ricoKaraokeAuthBlock');
-  var FIELDS=document.getElementById('ricoKaraokeAdjustmentFields');
-  var SPEED=document.getElementById('ricoKaraokeSpeed');
-  var SPEED_TEXT=document.getElementById('ricoKaraokeSpeedText');
-  var OFFSET=document.getElementById('ricoKaraokeOffset');
-  var SONG=document.getElementById('ricoKaraokeConfigSong');
-  var STATUS=document.getElementById('ricoKaraokeConfigStatus');
-  var CANCEL=document.getElementById('ricoKaraokeConfigCancel');
-  var RESET=document.getElementById('ricoKaraokeConfigReset');
-  var sync=window.SpotySidKaraokeSync, karaoke=window.SpotySidKaraoke;
-  var data=window.SpotySidKaraokeMidi;
-  if(!ROOT||!OPEN||!MODE||!FORM||!KEY||!FIELDS||!SPEED||!OFFSET||
-    !CANCEL||!RESET||!sync||!karaoke||!data)return;
+  var el=function(id){return document.getElementById(id);};
+  var OPEN=el('ricoKaraokeSettings'),WRAP=el('ricoKaraokeConfigOverlay'),
+    FORM=el('ricoKaraokeConfigForm'),TITLE=el('ricoKaraokeConfigTitle'),
+    KEY=el('ricoKaraokeBetaKey'),AUTH=el('ricoKaraokeAuthBlock'),
+    FIELDS=el('ricoKaraokeAdjustmentFields'),
+    BPM=el('ricoKaraokeBpm'),SIDBPM=el('ricoKaraokeSidBpm'),
+    OFFSET=el('ricoKaraokeOffset'),SONG=el('ricoKaraokeConfigSong'),
+    STATUS=el('ricoKaraokeConfigStatus'),CLOSE=el('ricoKaraokeConfigCancel'),
+    SAVE=el('ricoKaraokeConfigSave'),RESET=el('ricoKaraokeConfigReset'),
+    PLAY=el('ricoKaraokeConfigPlay');
+  var kara=window.SpotySidKaraoke,sync=window.SpotySidKaraokeSync,
+    data=window.SpotySidKaraokeMidi,player=window.sidPlayer;
+  if(!OPEN||!WRAP||!FORM||!TITLE||!KEY||!AUTH||!FIELDS||!BPM||!SIDBPM||
+    !OFFSET||!SONG||!STATUS||!CLOSE||!SAVE||!RESET||!PLAY||
+    !kara||!sync||!data||!player)return;
 
-  var api='https://ricos-sid-community.serigrafiamdp.workers.dev';
-  var authorized=false, busy=false;
-  var songKey=data.key;
-  function showStatus(s){STATUS.textContent=s||'';}
-  function selectedSong(){
-    var player=window.sidPlayer;
-    var index=player&&player.sidListIndex;
-    return player&&typeof index==='number'&&player.sidList&&player.sidList[index];
+  var authorized=false,busy=false,drag=null,lastPosition=null,authTicket=0;
+  var baseBpm=Number(data.karaokeBpm)||Math.round(60/data.secondsPerBeat)||108;
+  var backend='https://ricos-sid-community.serigrafiamdp.workers.dev';
+  function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
+  function activeEntry(){
+    var i=player.sidListIndex;
+    return typeof i==='number'&&player.sidList?player.sidList[i]:null;
   }
-  function supported(){
-    var item=selectedSong();
-    return !!(item&&((item._hvscRef&&item._hvscRef.file===data.sidFile&&
-      item._hvscRef.pack===data.sidPack)||
-      (item.file===data.sidFile&&/uctumi|palladino/i.test(item.author||''))));
+  function hasKaraoke(){
+    var item=activeEntry(),ref=item&&item._hvscRef;
+    return !!(item&&((ref&&ref.pack===data.sidPack&&ref.file===data.sidFile)||
+      (item.file===data.sidFile&&/uctumi|palladino/i.test(String(item.author||'')))));
   }
-  function refreshLabels(){
-    SPEED_TEXT.textContent=(Number(SPEED.value)*100).toFixed(1)+'%';
+  function feedback(message){STATUS.textContent=message||'';}
+  function updatePlay(){
+    PLAY.textContent=player.isPlaying?'PAUSE':'PLAY';
+    PLAY.setAttribute('aria-label',player.isPlaying?'Pause SID':'Play SID');
   }
-  function refreshControls(){
-    var x=sync.get();
-    SPEED.value=String(x.speed);
-    OFFSET.value=String(x.offsetSeconds);
-    refreshLabels();
+  function fit(left,top){
+    var w=FORM.offsetWidth||314,h=FORM.offsetHeight||160;
+    left=clamp(left,4,Math.max(4,window.innerWidth-w-4));
+    top=clamp(top,4,Math.max(4,window.innerHeight-h-4));
+    FORM.style.left=Math.round(left)+'px';
+    FORM.style.top=Math.round(top)+'px';
+    lastPosition={left:left,top:top};
+  }
+  function positionPanel(){
+    if(lastPosition){fit(lastPosition.left,lastPosition.top);return;}
+    fit(window.innerWidth-FORM.offsetWidth-15,Math.max(12,window.innerHeight*.31));
+  }
+  TITLE.addEventListener('pointerdown',function(e){
+    if(WRAP.hidden||e.button!==0)return;
+    var rect=FORM.getBoundingClientRect();
+    drag={id:e.pointerId,x:e.clientX-rect.left,y:e.clientY-rect.top};
+    TITLE.setPointerCapture(e.pointerId);
+    e.preventDefault();
+  });
+  TITLE.addEventListener('pointermove',function(e){
+    if(!drag||drag.id!==e.pointerId)return;
+    fit(e.clientX-drag.x,e.clientY-drag.y);
+  });
+  function stopDrag(e){
+    if(!drag||e.pointerId!==drag.id)return;
+    drag=null;
+    if(TITLE.hasPointerCapture(e.pointerId))TITLE.releasePointerCapture(e.pointerId);
+  }
+  TITLE.addEventListener('pointerup',stopDrag);
+  TITLE.addEventListener('pointercancel',stopDrag);
+  window.addEventListener('resize',function(){if(!WRAP.hidden)positionPanel();});
+
+  function renderValues(){
+    var setting=sync.get();
+    BPM.value=String(Math.round(baseBpm*setting.speed*10)/10);
+    OFFSET.value=String(setting.offsetSeconds);
+    // No fabricated tempo: source code does not contain measured SID BPM.
+    SIDBPM.textContent=Number.isFinite(Number(data.sidBpmApprox))&&
+      data.sidBpmApprox!==null?String(data.sidBpmApprox):'SIN MEDIR';
   }
   function close(){
-    MODE.hidden=true;
-    authorized=false;busy=false;
-    KEY.value='';
-    KEY.required=true;
-    KEYGROUP.hidden=false;FIELDS.hidden=true;
-    showStatus('');
+    ++authTicket;
+    WRAP.hidden=true;
+    authorized=false;busy=false;drag=null;
+    KEY.value='';KEY.required=true;
+    AUTH.hidden=false;FIELDS.hidden=true;
+    feedback('');
   }
   function open(){
-    if(!karaoke.isActive())return;
-    MODE.hidden=false;
-    authorized=false;busy=false;
-    KEYGROUP.hidden=false;FIELDS.hidden=true;
+    if(!kara.isActive())return;
+    ++authTicket;
+    WRAP.hidden=false;authorized=false;busy=false;
     KEY.value='';KEY.required=true;
-    SONG.textContent=data.title+' — '+data.originalArtist+' / COVER SID BY '+data.sidCoverBy;
-    showStatus(supported()?'BETA KEY REQUIRED':'No synchronized karaoke data for this song.');
-    refreshControls();
-    KEY.disabled=!supported();
-    if(supported())KEY.focus();
+    AUTH.hidden=false;FIELDS.hidden=true;
+    SAVE.textContent='VERIFY';
+    SONG.textContent=data.title+' — '+data.originalArtist+' / '+data.sidCoverBy;
+    renderValues();
+    KEY.disabled=!hasKaraoke();
+    feedback(hasKaraoke()?'BETA KEY REQUIRED':'NO KARAOKE DATA FOR THIS SID');
+    positionPanel();
+    updatePlay();
+    if(!KEY.disabled)KEY.focus();
   }
-  OPEN.addEventListener('click',function(event){
-    event.stopPropagation();
-    if(MODE.hidden)open();else close();
+  OPEN.addEventListener('click',function(e){
+    e.preventDefault();e.stopPropagation();
+    if(WRAP.hidden)open();else close();
   });
-  CANCEL.addEventListener('click',close);
-  MODE.addEventListener('mousedown',function(event){event.stopPropagation();});
-  MODE.addEventListener('click',function(event){if(event.target===MODE)close();});
-  SPEED.addEventListener('input',refreshLabels);
-
-  async function validateKey(secret){
-    // This pre-existing server validation route does not accept empty orders.
-    // If authorization is rejected, response is 403. Authorized request is
-    // guaranteed to fail validation with 400; no write path can be reached.
-    var response=await fetch(api+'/catalog-order',{
-      method:'PUT',
-      headers:{'Content-Type':'application/json','X-Beta-Key':secret},
+  CLOSE.addEventListener('click',function(e){e.preventDefault();close();});
+  // This window is deliberately NOT modal: clicks outside are delivered
+  // to the Karaoke, playlist, player and keyboard shortcuts behind it.
+  FORM.addEventListener('mousedown',function(e){e.stopPropagation();});
+  ['keydown','keyup','keypress'].forEach(function(t){
+    FORM.addEventListener(t,function(e){
+      if(e.target.closest('input,select,textarea'))e.stopPropagation();
+    });
+  });
+  PLAY.addEventListener('click',function(e){
+    e.preventDefault();e.stopPropagation();
+    var button=el('playButton');
+    if(button&&!button.disabled)button.click();
+    updatePlay();
+  });
+  // The normal playback button may also be used while this window is open.
+  el('playButton').addEventListener('click',function(){
+    if(!WRAP.hidden)Promise.resolve().then(updatePlay);
+  });
+  async function validateBetaKey(key){
+    // Authentication happens in the deployed Worker. The deliberately
+    // invalid payload can never mutate the public catalog.
+    var response=await fetch(backend+'/catalog-order',{
+      method:'PUT',headers:{'Content-Type':'application/json','X-Beta-Key':key},
       body:JSON.stringify({order:[],expectedRevision:-1}),
       cache:'no-store'
     });
-    var answer=await response.json().catch(function(){return {};});
+    var receipt=await response.json().catch(function(){return {};});
     return response.status===400&&
-      answer.error==='Invalid community order or revision';
+      receipt.error==='Invalid community order or revision';
   }
-  FORM.addEventListener('submit',async function(event){
-    event.preventDefault();event.stopPropagation();
-    if(busy||!supported())return;
-    if(!authorized){
-      var supplied=KEY.value;
-      KEY.value='';
-      if(!supplied){showStatus('Enter beta key.');return;}
-      busy=true;
-      showStatus('VERIFYING BETA KEY…');
-      try{
-        var passed=await validateKey(supplied);
-        if(!passed){
-          showStatus('INVALID KEY OR SERVER AUTH UNAVAILABLE');
-          return;
-        }
-        authorized=true;
-        KEY.required=false; // Hidden password cannot block SAVE validity.
-        KEYGROUP.hidden=true;FIELDS.hidden=false;
-        showStatus('AUTHORIZED · LOCAL SETTINGS FOR THIS SONG');
-        refreshControls();
-        SPEED.focus();
-      }catch(e){
-        showStatus('CANNOT CONTACT BETA AUTH SERVER');
-      }finally{
-        busy=false;
-      }
-      return;
-    }
-    if(!authorized||!supported())return;
-    var speed=Number(SPEED.value),offset=Number(OFFSET.value);
-    if(!Number.isFinite(speed)||speed<.8||speed>1.2||
+  function saveValues(){
+    if(!authorized||!hasKaraoke())return false;
+    var bpm=Number(BPM.value),offset=Number(OFFSET.value);
+    if(!Number.isFinite(bpm)||bpm<65||bpm>150||
       !Number.isFinite(offset)||offset< -30||offset>30){
-      showStatus('SPEED 80–120%, OFFSET ±30 SECONDS');
-      return;
+      feedback('KARAOKE BPM 65–150 · INICIO ±30 S');
+      return false;
     }
-    sync.set({speed:speed,offsetSeconds:offset});
-    showStatus('SAVED LOCALLY · '+songKey);
-    close();
+    sync.set({speed:bpm/baseBpm,offsetSeconds:offset});
+    feedback('GUARDADO PARA ESTE KARAOKE');
+    return true;
+  }
+  FORM.addEventListener('submit',async function(e){
+    e.preventDefault();e.stopPropagation();
+    if(busy||!hasKaraoke())return;
+    if(authorized){saveValues();return;}
+    var secret=KEY.value;
+    KEY.value='';
+    if(!secret){feedback('INGRESAR CLAVE BETA');return;}
+    var mine=++authTicket;
+    busy=true;
+    feedback('VERIFICANDO CLAVE…');
+    try{
+      var valid=await validateBetaKey(secret);
+      if(mine!==authTicket||WRAP.hidden)return;
+      if(!valid){feedback('CLAVE INVALIDA / SERVIDOR NO DISPONIBLE');return;}
+      authorized=true;
+      KEY.required=false;
+      AUTH.hidden=true;FIELDS.hidden=false;
+      SAVE.textContent='SAVE';
+      feedback('AJUSTES HABILITADOS');
+      positionPanel();
+    }catch(err){
+      if(mine===authTicket&&!WRAP.hidden)feedback('NO SE PUDO VERIFICAR LA CLAVE');
+    }finally{if(mine===authTicket)busy=false;}
   });
-  RESET.addEventListener('click',function(){
-    if(!authorized||!supported())return;
-    sync.reset();
-    refreshControls();
-    showStatus('RESTORED ORIGINAL CALIBRATION');
+  RESET.addEventListener('click',function(e){
+    e.preventDefault();e.stopPropagation();
+    if(!authorized||!hasKaraoke())return;
+    sync.reset();renderValues();feedback('SINCRONIZACION ORIGINAL RESTAURADA');
   });
   document.addEventListener('keydown',function(e){
-    if(MODE.hidden)return;
-    if(e.key==='Escape'){
-      e.preventDefault();e.stopImmediatePropagation();close();
-    }
+    if(WRAP.hidden||e.key!=='Escape')return;
+    e.preventDefault();e.stopImmediatePropagation();close();
   },true);
-  var oldClose=karaoke.close;
-  karaoke.close=function(){if(!MODE.hidden)close();return oldClose.apply(this,arguments);};
-  // A different SID must never inherit an open/authorized editor session.
-  var oldOpen=karaoke.open;
-  karaoke.open=function(item,index){
-    if(!MODE.hidden)close();
-    return oldOpen.apply(this,arguments);
+  // Close an authorized session as soon as Karaoke closes or switches.
+  var originalClose=kara.close,originalOpen=kara.open;
+  kara.close=function(){
+    if(!WRAP.hidden)close();
+    return originalClose.apply(this,arguments);
+  };
+  kara.open=function(){
+    if(!WRAP.hidden)close();
+    return originalOpen.apply(this,arguments);
   };
 })();
