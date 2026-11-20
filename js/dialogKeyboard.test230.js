@@ -149,7 +149,7 @@
     if(event.defaultPrevented||event.repeat||event.isComposing||
        event.ctrlKey||event.metaKey||event.altKey)return;
     var key=String(event.key||'').toLowerCase();
-    if(key!=='p'&&key!=='c'&&key!=='m'&&key!=='i'&&key!=='f'&&key!=='d'&&key!=='n'&&key!=='w')return;
+    if(key!=='p'&&key!=='c'&&key!=='m'&&key!=='i'&&key!=='f'&&key!=='d'&&key!=='n'&&key!=='w'&&key!=='k')return;
     var focused=document.activeElement;
     var source=event.target;
     function editable(node){
@@ -163,6 +163,30 @@
     if(hasOtherForegroundWindow()||
        isVisible(document.getElementById('ricoTileArtworkOverlay')))
       return;
+    // TEST382: K toggles only an existing Karaoke cover.
+    // Never hijack editing, browser/search, dialogs, or unrelated SIDs.
+    if(key==='k'){
+      var kara=window.SpotySidKaraoke;
+      var data=window.SpotySidKaraokeMidi;
+      var player=window.sidPlayer;
+      if(!kara||!data||!player||isVisible(chooser))return;
+      if(kara.isActive()){
+        event.preventDefault();kara.close();return;
+      }
+      var index=player.sidListIndex;
+      var item=typeof index==='number'&&player.sidList&&player.sidList[index];
+      var ref=item&&item._hvscRef;
+      var available=!!(item&&((ref&&ref.file===data.sidFile&&ref.pack===data.sidPack)||
+        (item.file===data.sidFile&&/uctumi|palladino/i.test(item.author||''))));
+      if(!available)return;
+      event.preventDefault();
+      kara.open(item,index);
+      if(isVisible(playlist)){
+        var closePlaylist=document.getElementById('ricoLiveClose');
+        if(closePlaylist)closePlaylist.click();
+      }
+      return;
+    }
     var shortcutButtons={
       p:'ricoPlaylistToggle',c:'oscilloscopeColorButton',m:'chooseSid',
       i:'ricoInvertColorsButton',f:'oscilloscopeModeButton',
