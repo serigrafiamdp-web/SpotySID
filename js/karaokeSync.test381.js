@@ -17,10 +17,12 @@
   if(!data||!karaoke||!player||!stage||!words||!ball)return;
 
   var songKey=data.key;
-  // TEST385: the Worker/D1 record is the only persistent source of
-  // calibration. Never let this browser's old localStorage override the
-  // values published for every SpotySID visitor.
+  // TEST388: Public values provide defaults, but beta-authorized local saves
+  // must remain useful even before the Cloudflare publication deployment.
+  // Local overrides survive page reloads and are never overwritten by a GET.
+  var storageKey='spotysid-karaoke-sync-v2:'+songKey;
   var calibration={offsetSeconds:0,speed:1};
+  var localSaved=false,localSavedAt=0;
   var publicRevision=0,publicStatus='loading',publicUpdatedAt=0;
   var backend='https://ricos-sid-community.serigrafiamdp.workers.dev';
   var requestedIndex=null,requestedItem=null;
@@ -44,14 +46,32 @@
         Number.isFinite(payload.karaokeBpm)&&
         payload.karaokeBpm>=65&&payload.karaokeBpm<=150)));
   }
+  function restoreLocal(){
+    try{
+      var saved=JSON.parse(localStorage.getItem(storageKey)||'null');
+      if(!saved||saved.version!==2||saved.key!==songKey||
+         typeof saved.karaokeBpm!=='number'||!Number.isFinite(saved.karaokeBpm)||
+         saved.karaokeBpm<65||saved.karaokeBpm>150||
+         typeof saved.offsetSeconds!=='number'||!Number.isFinite(saved.offsetSeconds)||
+         saved.offsetSeconds< -30||saved.offsetSeconds>30)return false;
+      calibration.speed=saved.karaokeBpm/referenceBpm();
+      calibration.offsetSeconds=saved.offsetSeconds;
+      localSaved=true;localSavedAt=Number(saved.updatedAt)||0;
+      return true;
+    }catch(err){return false;}
+  }
+  // Restore user-entered timing immediately, before any network response.
+  restoreLocal();
   function applyPublic(payload){
     if(!validatePublic(payload))throw Error('Invalid public Karaoke sync data');
     publicRevision=payload.revision;
     publicUpdatedAt=Number(payload.updatedAt)||0;
     publicStatus='ready';
-    calibration.offsetSeconds=payload.offsetSeconds;
-    calibration.speed=(payload.karaokeBpm===null?referenceBpm():payload.karaokeBpm)/referenceBpm();
-    invalidate();
+    if(!localSaved){
+      calibration.offsetSeconds=payload.offsetSeconds;
+      calibration.speed=(payload.karaokeBpm===null?referenceBpm():payload.karaokeBpm)/referenceBpm();
+      invalidate();
+    }
     return window.SpotySidKaraokeSync.get();
   }
   async function fetchPublic(){
@@ -75,11 +95,37 @@
   // SID PCM playback is never accelerated, slowed or restarted by settings.
   window.SpotySidKaraokeSync={
     get:function(){return {offsetSeconds:calibration.offsetSeconds,speed:calibration.speed};},
-    status:function(){return {state:publicStatus,revision:publicRevision,updatedAt:publicUpdatedAt};},
+    status:function(){return {
+      state:publicStatus,revision:publicRevision,updatedAt:publicUpdatedAt,
+      localSaved:localSaved,localSavedAt:localSavedAt,
+      source:localSaved?'local':publicStatus==='ready'?'public':'default'
+    };},
     readPublic:fetchPublic,
     applyPublic:applyPublic,
+    saveLocal:function(values){
+      // Called ONLY after the existing beta key is validated by the Worker.
+      // Never persist the beta key; only BPM, offset, and song identity.
+      if(!values||typeof values.karaokeBpm!=='number'||
+         !Number.isFinite(values.karaokeBpm)||values.karaokeBpm<65||
+         values.karaokeBpm>150||typeof values.offsetSeconds!=='number'||
+         !Number.isFinite(values.offsetSeconds)||
+         values.offsetSeconds< -30||values.offsetSeconds>30)
+        throw Error('Invalid Karaoke settings');
+      var record={version:2,key:songKey,karaokeBpm:values.karaokeBpm,
+        offsetSeconds:values.offsetSeconds,updatedAt:Date.now()};
+      localStorage.setItem(storageKey,JSON.stringify(record));
+      calibration.speed=values.karaokeBpm/referenceBpm();
+      calibration.offsetSeconds=values.offsetSeconds;
+      localSaved=true;localSavedAt=record.updatedAt;
+      invalidate();
+      return this.get();
+    },
+    clearLocal:function(){
+      localStorage.removeItem(storageKey);
+      localSaved=false;localSavedAt=0;
+    },
     set:function(values){
-      // In-memory only. A setting is committed globally by the Worker.
+      // Developer-only in-memory calibration; not a publication.
       if(!values||typeof values!=='object')return this.get();
       if(Object.prototype.hasOwnProperty.call(values,'offsetSeconds'))
         calibration.offsetSeconds=clamp(safeNumber(values.offsetSeconds,0),-30,30);
@@ -89,9 +135,7 @@
       return this.get();
     },
     reset:function(){
-      // Internal reset is NOT a public write; the UI must publish it.
-      calibration={offsetSeconds:0,speed:1};
-      invalidate();return this.get();
+      calibration={offsetSeconds:0,speed:1};invalidate();return this.get();
     },
     midiTimeFromSidTime:function(seconds){
       return Math.max(0,(safeNumber(seconds,0)-calibration.offsetSeconds)*calibration.speed);
