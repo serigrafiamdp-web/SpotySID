@@ -2731,6 +2731,7 @@
   // The left window preserves the currently playing playlist's display.
   // The original live window remains fully interactive for browsing.
   var ricoPlayingWindow=null, ricoOriginalPlaylistStyle=null;
+  var ricoLastBrowsedPlaylistKey='';
   function removePlayingWindow(){
     if(ricoPlayingWindow){ricoPlayingWindow.remove();ricoPlayingWindow=null;}
     var original=document.getElementById('ricoLivePlaylist');
@@ -2742,7 +2743,8 @@
   function showPlayingWindowAlongsideBrowse(){
     if(ricoPlayingWindow)return;
     var original=document.getElementById('ricoLivePlaylist');
-    if(!original||original.style.display==='none')return;
+    // MOS may temporarily hide the live panel; its previous content is valid.
+    if(!original)return;
     var rect=original.getBoundingClientRect();
     var gutter=10, width=Math.round(rect.width), height=Math.round(rect.height);
     var top=Math.max(8,Math.round(rect.top));
@@ -3421,7 +3423,9 @@
   }
   function showLivePlaylist(visible) {
     liveVisible = !!visible;
-    if(!liveVisible && communityBrowsePreview){clearCommunityBrowse();removePlayingWindow();}
+    if(!liveVisible && communityBrowsePreview){
+      clearCommunityBrowse();removePlayingWindow();ricoLastBrowsedPlaylistKey='';
+    }
     // TEST314: hiding PLAYLIST always returns directly to the oscilloscope.
     // Never leave CHOOSE A SID visible underneath the floating playlist.
     if(!liveVisible&&player.dialogManager&&
@@ -6391,19 +6395,18 @@
               if(browseOnly){
                 if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
                   throw Error('Playlist has no songs to browse.');
-                // TEST398: a FIRST name click only opens its playlist and
-                // closes MOS. The player may already contain an auto-started
-                // SID, but that must NEVER trigger a clone of COMMUNITY.
-                // Only clicking a DIFFERENT name while a browsed list is
-                // already visible may create the second window.
-                var previousBrowse=communityBrowsePreview;
+                // TEST399: MOS can hide the playlist without disposing it.
+                // Remember the FIRST list independently of preview visibility.
+                // The second DIFFERENT name creates a second window before
+                // painting its own tracks. Never clone the COMMUNITY landing.
                 var nextBrowseKey=String(item.remoteId||item.id||item.file||'');
-                var previousBrowseKey=previousBrowse?
-                  String(previousBrowse.item.remoteId||
-                    previousBrowse.item.id||previousBrowse.item.file||''):'';
-                if(previousBrowse&&previousBrowseKey!==nextBrowseKey)
+                if(ricoLastBrowsedPlaylistKey&&
+                   ricoLastBrowsedPlaylistKey!==nextBrowseKey){
                   showPlayingWindowAlongsideBrowse();
-                else if(!previousBrowse)removePlayingWindow();
+                }else if(!ricoLastBrowsedPlaylistKey){
+                  removePlayingWindow();
+                }
+                ricoLastBrowsedPlaylistKey=nextBrowseKey;
                 clearCommunityBrowse();
                 communityBrowsePreview=createCommunityBrowse(chosen,item,
                   function(index,karaoke){
@@ -6424,6 +6427,7 @@
               if(isStartup) cancelStartupPlaylist();
               clearCommunityBrowse();
               removePlayingWindow();
+              ricoLastBrowsedPlaylistKey='';
               var startAt=isShared?sharedStartIndex:requestedIndex;
               var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
                 startAt); // An explicit PLAY button defaults to first song (#1).
