@@ -31,6 +31,9 @@
     // Use the SID tempo as the starting proposal for editable Karaoke BPM.
     // Source MIDI timing stays at exactly 108 BPM (secondsPerBeat below).
     initialKaraokeBpm: 94,
+    // TEST392: confirmed songlength from the existing HVSC musicians-U
+    // metadata, NOT the 4-minute offline waveform rendering window.
+    sidDurationSeconds: 186,
     secondsPerBeat: 60/108,
     firstBeat: 37,
     beats:beats
