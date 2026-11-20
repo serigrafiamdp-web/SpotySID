@@ -6834,7 +6834,6 @@
                 if(promoted)finishSecondaryPlaylistPromotion(false);
                 return;
               }
-              if(promoted)finishSecondaryPlaylistPromotion(true);
               activeCuratedCatalogId=!item.remoteId&&item.id==='old-sid-collection-rico'
                 ? item.id:null;
               activeRemixDraftId=pending?pending.id:null;
@@ -6847,6 +6846,9 @@
               }:null;
               activeSharePlaylistId=pending?'':(item.remoteId||item.id||'');
               renderLivePlaylist();
+              // Keep the right-hand preview on top until the live player
+              // has rendered its first active rows. Window 1 never closes.
+              if(promoted)finishSecondaryPlaylistPromotion(true);
               selectedCommunityId=item.id||item.file;
               if(wantsKaraoke&&window.SpotySidKaraoke){
                 // TEST390: Shared song links reuse the MIC's view switch.
