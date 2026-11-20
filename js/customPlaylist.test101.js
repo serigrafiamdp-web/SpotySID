@@ -2796,7 +2796,13 @@
   function renderLivePlaylist() {
     if(communityBrowsePreview){renderCommunityBrowse();return;}
     var browseHolder=document.getElementById('ricoLivePlaylistItems');
-    if(browseHolder)browseHolder._ricoBrowsePreview=null;
+    if(browseHolder&&browseHolder._ricoBrowsePreview){
+      // TEST384: a preview DOM must be completely repainted on first PLAY.
+      // Fast marker updating would otherwise leave stale preview buttons.
+      largePlaylistPainted=null;
+      largePlaylistStructureRevision++;
+      browseHolder._ricoBrowsePreview=null;
+    }
     // TEST348: one painter at a time; structural list changes supersede
     // any unfinished chunks rather than appending stale rows.
     // TEST244: update SHARE even when a large playlist uses virtual painting
