@@ -6391,12 +6391,19 @@
               if(browseOnly){
                 if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
                   throw Error('Playlist has no songs to browse.');
-                // TEST397: never duplicate the empty COMMUNITY landing panel.
-                // Keep the first selected list as the only visible panel; add
-                // the second window only when another list is selected.
-                if(communityBrowsePreview||
-                   (!landingPlaylists&&player.sidList&&player.sidList.length))
+                // TEST398: a FIRST name click only opens its playlist and
+                // closes MOS. The player may already contain an auto-started
+                // SID, but that must NEVER trigger a clone of COMMUNITY.
+                // Only clicking a DIFFERENT name while a browsed list is
+                // already visible may create the second window.
+                var previousBrowse=communityBrowsePreview;
+                var nextBrowseKey=String(item.remoteId||item.id||item.file||'');
+                var previousBrowseKey=previousBrowse?
+                  String(previousBrowse.item.remoteId||
+                    previousBrowse.item.id||previousBrowse.item.file||''):'';
+                if(previousBrowse&&previousBrowseKey!==nextBrowseKey)
                   showPlayingWindowAlongsideBrowse();
+                else if(!previousBrowse)removePlayingWindow();
                 clearCommunityBrowse();
                 communityBrowsePreview=createCommunityBrowse(chosen,item,
                   function(index,karaoke){
