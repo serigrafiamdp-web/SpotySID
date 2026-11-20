@@ -705,7 +705,7 @@ left: 1px;
 #ricoCommunityItems .rico-community-description {
   display:inline-block;
   min-width:0;
-  flex:1 1 265px;
+  flex:1 1 auto;
 }
 #ricoCommunityItems .rico-community-label > .rico-community-stars {
   display:inline-block !important;
@@ -2154,7 +2154,7 @@ left: 1px;
   font:11px Tahoma,Arial,sans-serif;overflow:hidden;
 }
 #ricoLivePlaylistHeader #ricoLivePlaylistCreator {
-  min-width:0;flex:0 1 auto;
+  min-width:0;flex:1 1 auto;
   font:11px Tahoma,Arial,sans-serif;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
 }
@@ -4861,3 +4861,8 @@ html.rico-karaoke-active #songInfo {
   padding:0 4px;
   border-left:1px solid var(--rico-theme-border,#fff);
 }
+
+/* TEST404 — ratings intentionally removed. No reserved star columns.
+   Also hides legacy placeholders when HTML/JS is served from cache. */
+#ricoLivePlaylistStars,
+.rico-community-stars {display:none !important;}
