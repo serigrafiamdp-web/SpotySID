@@ -70,3 +70,13 @@ CREATE TABLE IF NOT EXISTS playlist_backup_versions (
 );
 CREATE INDEX IF NOT EXISTS playlist_backup_versions_by_playlist
   ON playlist_backup_versions(playlist_id,version_id DESC);
+
+-- TEST385: globally published Karaoke timing. Only the beta-protected
+-- Worker endpoint writes records; each track has a revision for safe edits.
+CREATE TABLE IF NOT EXISTS karaoke_sync (
+  song_key TEXT PRIMARY KEY,
+  karaoke_bpm REAL NOT NULL,
+  offset_seconds REAL NOT NULL,
+  revision INTEGER NOT NULL DEFAULT 0,
+  updated_at INTEGER NOT NULL DEFAULT 0
+);
