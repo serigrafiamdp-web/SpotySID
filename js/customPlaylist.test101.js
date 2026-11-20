@@ -2694,7 +2694,14 @@
       customActive&&!landingPlaylists&&!!activeSharePlaylistId?'inline-block':'none');
     // Ordinary short lists retain the original complete render behavior.
     // Update only the count on playback changes in a large SID collection.
-    if(!activeCsdbRankDisplay&&paintLargePlaylistMarkers()){
+    // TEST375: when a public list is first loaded, SHARE becomes available
+    // after its initial paint. Force one structural pass so even thousand-SID
+    // lists receive their new S buttons; later playback keeps fast markers.
+    var shareButtonsPainted=!!document.querySelector(
+      '#ricoLivePlaylistItems .rico-live-song-share');
+    if(!activeCsdbRankDisplay&&
+       shareButtonsPainted===!!activeSharePlaylistId&&
+       paintLargePlaylistMarkers()){
       updateCheckedSidCount();return;
     }
     var xpPaintToken=++xpLivePaintSerial;
