@@ -2899,6 +2899,31 @@
           .toggleClass('rico-live-edit-queued',index===queuedLiveIndex);
         if(artistGroups){wrap.attr('data-sid-index',index);groupedRowsByIndex[index]=wrap[0];}
         row.appendTo(wrap);
+        // TEST380: independent 26px MIC button beside the existing Share S.
+        // It does not trigger the row click, checkbox or batch selection.
+        // Keep the PLAY/next markers inside the song cell to its LEFT.
+        var karaokeSlot=$('<span>').addClass('rico-live-karaoke-slot');
+        var micIcon='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+
+          '<rect x="9" y="2.5" width="6" height="12" rx="3"></rect>'+
+          '<path d="M6 10.5v1.7a6 6 0 0 0 12 0v-1.7M12 18.2v3.3M8.5 21.5h7"></path>'+
+          '</svg>';
+        bindThemedPlaylistHint($('<button type="button">')
+          .addClass('rico-live-karaoke')
+          .html(micIcon)
+          .attr('aria-label','Open karaoke view for '+songTitle),
+          'Open experimental KARAOKE view for this SID')
+          .on('mousedown pointerdown',function(event){event.stopPropagation();})
+          .on('click',function(event){
+            event.preventDefault();event.stopPropagation();
+            hideReorderHint();
+            // The existing SID switch still owns audio, fades and song selection.
+            requestSidSwitch(index,'manual');
+            if(window.SpotySidKaraoke)
+              window.SpotySidKaraoke.open(item,index);
+            showLivePlaylist(false);
+          })
+          .appendTo(karaokeSlot);
+        karaokeSlot.appendTo(wrap);
         // TEST375: one tiny S at the far RIGHT of the song cell, immediately
         // BEFORE the checkbox border. A sibling button (not nested in PLAY)
         // keeps ▶ / queued markers visible and doesn't start playback.
