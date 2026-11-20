@@ -2993,15 +2993,17 @@
         row.attr('aria-label',songTitle+' — '+songArtist);
       }
       if (active) $('<span>').addClass('rico-live-current').text('▶').appendTo(row);
-      if(index===queuedLiveIndex) $('<span>').addClass('rico-live-next').text('›').appendTo(row);
+      if(!preview&&index===queuedLiveIndex)
+        $('<span>').addClass('rico-live-next').text('›').appendTo(row);
       row.on('click', function () {
-        requestSidSwitch(index,'manual');
+        if(preview)preview.playFrom(index,false);
+        else requestSidSwitch(index,'manual');
       });
-      if(!landingPlaylists){
+      if(!landingPlaylists||preview){
         var wrap=$('<div>').addClass('rico-live-edit-row')
           .toggleClass('rico-live-edit-active',active)
-          .toggleClass('rico-live-edit-selected',index===selectedLiveIndex)
-          .toggleClass('rico-live-edit-queued',index===queuedLiveIndex);
+          .toggleClass('rico-live-edit-selected',!preview&&index===selectedLiveIndex)
+          .toggleClass('rico-live-edit-queued',!preview&&index===queuedLiveIndex);
         if(artistGroups){wrap.attr('data-sid-index',index);groupedRowsByIndex[index]=wrap[0];}
         row.appendTo(wrap);
         // TEST380: independent 26px MIC button beside the existing Share S.
@@ -3027,10 +3029,13 @@
             // TEST384: defer ALL SID resets to the normal 5s fade +
             // prepared audio handoff, including the already-playing SID.
             // It starts at 00:00 only AFTER the previous audio fades.
-            requestSidSwitch(index,'manual',true);
-            if(window.SpotySidKaraoke)
-              window.SpotySidKaraoke.open(item,index);
-            showLivePlaylist(false);
+            if(preview)preview.playFrom(index,true);
+            else{
+              requestSidSwitch(index,'manual',true);
+              if(window.SpotySidKaraoke)
+                window.SpotySidKaraoke.open(item,index);
+              showLivePlaylist(false);
+            }
           })
           .appendTo(karaokeSlot);
         karaokeSlot.appendTo(wrap);
@@ -3038,7 +3043,7 @@
         // TEST375: one tiny S at the far RIGHT of the song cell, immediately
         // BEFORE the checkbox border. A sibling button (not nested in PLAY)
         // keeps ▶ / queued markers visible and doesn't start playback.
-        if(activeSharePlaylistId){
+        if(displayedShareId){
           // TEST379: shared highlight surface surrounds the outlined S,
           // including its 6px clearance before the checkbox. The clickable
           // S stays independent from the PLAY button and ▶ marker.
@@ -3050,7 +3055,8 @@
             .on('click',function(event){
               event.preventDefault();event.stopPropagation();
               hideReorderHint();
-              void copyPlaylistShareLink(activeSharePlaylistId,index,this);
+              void copyPlaylistShareLink(displayedShareId,
+                preview?item._browseOriginalIndex:index,this);
             })
             .appendTo(shareSlot);
           shareSlot.appendTo(wrap);
@@ -3060,25 +3066,36 @@
         var checkLabel=$('<label>').addClass('rico-live-batch-toggle')
           .attr('aria-label','Select '+songTitle+' for batch actions');
         $('<input type="checkbox">').addClass('rico-live-batch-check')
-          .prop('checked',batchSelectedSids.has(item))
+          .prop('checked',preview?preview.selected.has(item):batchSelectedSids.has(item))
           .attr('aria-label','Select '+songTitle)
           .on('click mousedown pointerdown',function(event){event.stopPropagation();})
           .on('change',function(event){
             event.stopPropagation();
-            if(this.checked)batchSelectedSids.add(item);
-            else batchSelectedSids.delete(item);
+            var selectedSet=preview?preview.selected:batchSelectedSids;
+            if(this.checked)selectedSet.add(item);
+            else selectedSet.delete(item);
             wrap.toggleClass('rico-live-batch-checked',this.checked);
-            updateCheckedSidCount();
-            updateBatchArrowAvailability();
+            if(preview){
+              $('#ricoLiveCount').text('('+list.length+
+                (preview.selected.size?' · '+preview.selected.size+' CHECKED':'')+')');
+            }else{
+              updateCheckedSidCount();
+              updateBatchArrowAvailability();
+            }
           }).appendTo(checkLabel);
-        wrap.toggleClass('rico-live-batch-checked',batchSelectedSids.has(item));
+        wrap.toggleClass('rico-live-batch-checked',
+          preview?preview.selected.has(item):batchSelectedSids.has(item));
         checkLabel.appendTo(wrap);
         bindThemedPlaylistHint($('<button type="button">').addClass('rico-live-add').text('+')
           .attr('aria-label','Add '+songTitle+' to selected remix'),
           'Add to selected REMIX PLAYLIST without changing playback')
           .on('click',function(event){
             event.stopPropagation();hideReorderHint();
-            if(checkedSidIndices().length)void bulkAddCheckedSids();
+            if(preview){
+              var selected=browseSelectedIndices();
+              if(selected.length)selected.forEach(function(i){void browseAddToRemix(i);});
+              else void browseAddToRemix(index);
+            }else if(checkedSidIndices().length)void bulkAddCheckedSids();
             else void addRemixTrack(index);
           })
           .appendTo(wrap);
@@ -3088,6 +3105,7 @@
         var canMoveDown=artistPosition
           ?artistPosition.position<artistPosition.indices.length-1:index<list.length-1;
         function moveWithinVisibleGroup(step){
+          if(preview){browseMoveSong(index,step);return;}
           if(checkedSidIndices().length){bulkMoveCheckedSids(step);return;}
           if(!artistPosition){moveLiveSong(index,step);return;}
           var next=Math.max(0,Math.min(artistPosition.indices.length-1,
@@ -3107,7 +3125,7 @@
           .prop('disabled',isRanked||savingCommunityEdits||
             (!hasCheckedBatch&&!canMoveDown)),1,moveWithinVisibleGroup)
           .appendTo(wrap);
-        if(!activePublicCollection){
+        if(preview||!activePublicCollection){
         bindThemedPlaylistHint($('<button type="button">').addClass('rico-live-remove')
           .toggleClass('rico-ranked-disabled',isRanked).text('×')
           .attr('aria-label','Remove '+songTitle+' temporarily')
@@ -3115,7 +3133,8 @@
           isRanked?'Fixed original ranking entry':'Remove song temporarily')
           .on('click',function(event){
             event.stopPropagation();hideReorderHint();
-            if(checkedSidIndices().length)bulkRemoveCheckedSids();
+            if(preview)browseRemoveSong(index);
+            else if(checkedSidIndices().length)bulkRemoveCheckedSids();
             else removeLiveSong(index);
           })
           .appendTo(wrap);
