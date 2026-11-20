@@ -4570,3 +4570,92 @@ html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-edit-row:is(
 @media(prefers-reduced-motion:reduce){
   #ricoKaraokeStage #ricoKaraokeBall {animation:none;transition:none;}
 }
+
+
+/* TEST382 — authentic-feeling MIC + GEAR settings shortcut.
+   Visible only while Karaoke is active, anchored at its lower-right.
+   Pure theme ink/paper, no independent non-palette colors. */
+#ricoKaraokeSettings{
+  position:absolute;bottom:34px;right:12px;z-index:4;
+  width:34px;height:34px;min-height:34px;box-sizing:border-box;
+  display:flex;align-items:center;justify-content:center;
+  padding:0;margin:0;border:1px solid var(--rico-theme-fg,#fff);
+  border-radius:2px;background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);cursor:pointer;
+}
+#ricoKaraokeSettings svg{
+  display:block;width:29px;height:29px;
+  fill:none;stroke:currentColor;pointer-events:none;
+}
+#ricoKaraokeSettings:is(:hover,:focus-visible){
+  background:var(--rico-theme-fg,#fff);
+  color:var(--rico-theme-bg,#000);
+}
+#ricoKaraokeConfigOverlay[hidden],
+#ricoKaraokeAdjustmentFields[hidden],
+#ricoKaraokeAuthBlock[hidden]{display:none !important;}
+#ricoKaraokeConfigOverlay{
+  position:fixed;inset:0;z-index:9800;display:flex;
+  align-items:center;justify-content:center;
+  padding:16px;box-sizing:border-box;
+  background:rgba(0,0,0,.65);
+}
+#ricoKaraokeConfigForm{
+  width:min(510px,calc(100vw - 30px));max-height:calc(100vh - 32px);
+  overflow:auto;box-sizing:border-box;display:flex;
+  flex-direction:column;gap:12px;padding:18px;
+  border:1px solid var(--rico-theme-fg,#fff);
+  border-radius:0;background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+  box-shadow:0 10px 34px rgba(0,0,0,.5);
+}
+#ricoKaraokeConfigForm .rico-karaoke-config-title{
+  font-size:19px;line-height:1.3;
+  border-bottom:1px solid var(--rico-theme-fg,#fff);padding-bottom:10px;
+}
+#ricoKaraokeConfigForm .rico-karaoke-config-song{
+  font-size:12px;line-height:1.5;overflow-wrap:anywhere;
+}
+#ricoKaraokeConfigForm .rico-karaoke-config-auth,
+#ricoKaraokeConfigForm .rico-karaoke-config-fields{
+  display:flex;flex-direction:column;gap:9px;min-width:0;
+}
+#ricoKaraokeConfigForm label{
+  display:block;font-size:13px;line-height:1.5;
+}
+#ricoKaraokeConfigForm input[type="password"],
+#ricoKaraokeConfigForm input[type="number"]{
+  box-sizing:border-box;width:100%;min-height:30px;padding:5px 9px;
+  border:1px solid var(--rico-theme-fg,#fff);border-radius:0;
+  background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font:15px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+}
+#ricoKaraokeConfigForm input[type="range"]{
+  width:100%;accent-color:var(--rico-theme-fg,#fff);
+}
+#ricoKaraokeConfigForm button{
+  flex:none;box-sizing:border-box;min-height:29px;padding:4px 10px;
+  border:1px solid var(--rico-theme-fg,#fff);border-radius:2px;
+  background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);cursor:pointer;
+  font:13px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+}
+#ricoKaraokeConfigForm button:hover,
+#ricoKaraokeConfigForm button:focus-visible{
+  color:var(--rico-theme-bg,#000);background:var(--rico-theme-fg,#fff);
+}
+#ricoKaraokeConfigForm .rico-karaoke-config-actions{
+  display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;
+}
+#ricoKaraokeConfigForm .rico-karaoke-config-note{
+  font-size:12px;line-height:1.4;margin:0;opacity:.78;
+}
+#ricoKaraokeConfigStatus{
+  min-height:16px;font-size:12px;line-height:1.4;
+}
+@media(max-width:600px){
+  #ricoKaraokeSettings{bottom:34px;right:5px;}
+  #ricoKaraokeConfigForm{padding:12px;}
+}
