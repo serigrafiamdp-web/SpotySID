@@ -2732,6 +2732,7 @@
   // The original live window remains fully interactive for browsing.
   var ricoPlayingWindow=null, ricoOriginalPlaylistStyle=null;
   var ricoLastBrowsedPlaylistKey='';
+  var ricoFirstBrowseSnapshot=null;
   function removePlayingWindow(){
     if(ricoPlayingWindow){ricoPlayingWindow.remove();ricoPlayingWindow=null;}
     var original=document.getElementById('ricoLivePlaylist');
@@ -2745,7 +2746,8 @@
     var original=document.getElementById('ricoLivePlaylist');
     // MOS may temporarily hide the live panel; its previous content is valid.
     if(!original)return;
-    var rect=original.getBoundingClientRect();
+    var snapshot=ricoFirstBrowseSnapshot;
+    var rect=snapshot?snapshot.rect:original.getBoundingClientRect();
     var gutter=10, width=Math.round(rect.width), height=Math.round(rect.height);
     var top=Math.max(8,Math.round(rect.top));
     ricoOriginalPlaylistStyle=original.getAttribute('style')||'';
@@ -2759,7 +2761,9 @@
     link.rel='stylesheet';
     link.href='css/style.css?v=test396-dual-interactive';
     shadow.appendChild(link);
-    var copy=$(original).clone(true,true)[0];
+    // TEST400: use the FIRST list snapshot captured immediately after its
+    // successful paint. MOS and later renders may replace the live contents.
+    var copy=snapshot?snapshot.node:$(original).clone(true,true)[0];
     // Only the PLAYING view retains playback-linked listeners;
     // never initialize a second SID engine.
     copy.style.cssText+=';display:flex;left:'+gutter+'px;right:auto;top:'+top+
@@ -3425,6 +3429,7 @@
     liveVisible = !!visible;
     if(!liveVisible && communityBrowsePreview){
       clearCommunityBrowse();removePlayingWindow();ricoLastBrowsedPlaylistKey='';
+      ricoFirstBrowseSnapshot=null;
     }
     // TEST314: hiding PLAYLIST always returns directly to the oscilloscope.
     // Never leave CHOOSE A SID visible underneath the floating playlist.
@@ -6406,6 +6411,8 @@
                 }else if(!ricoLastBrowsedPlaylistKey){
                   removePlayingWindow();
                 }
+                var isSecondDistinct=!!ricoLastBrowsedPlaylistKey&&
+                  ricoLastBrowsedPlaylistKey!==nextBrowseKey;
                 ricoLastBrowsedPlaylistKey=nextBrowseKey;
                 clearCommunityBrowse();
                 communityBrowsePreview=createCommunityBrowse(chosen,item,
@@ -6420,6 +6427,18 @@
                 selectedCommunityId=item.id||item.file;
                 showLivePlaylist(true);
                 closeChooseAfterPlaylistPlay(true);
+                // Snapshot after rendering, not before. Preserve the first
+                // window's actual rows even when reopening MOS hides it.
+                if(!isSecondDistinct){
+                  var liveNode=document.getElementById('ricoLivePlaylist');
+                  if(liveNode){
+                    var liveRect=liveNode.getBoundingClientRect();
+                    ricoFirstBrowseSnapshot={
+                      node:$(liveNode).clone(true,true)[0],
+                      rect:{width:liveRect.width,height:liveRect.height,top:liveRect.top}
+                    };
+                  }
+                }
                 return;
               }
               // Ignore a late auto-load if the visitor picked a different source.
@@ -6428,6 +6447,7 @@
               clearCommunityBrowse();
               removePlayingWindow();
               ricoLastBrowsedPlaylistKey='';
+              ricoFirstBrowseSnapshot=null;
               var startAt=isShared?sharedStartIndex:requestedIndex;
               var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
                 startAt); // An explicit PLAY button defaults to first song (#1).
