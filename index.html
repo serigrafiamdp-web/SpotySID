@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- TEST358: preload the actual A1200 Workbench font before displaying menus. -->
     <link rel="preload" href="https://cdn.jsdelivr.net/gh/rewtnull/amigafonts@master/ttf/Topaz_a1200_v1.0.ttf" as="font" type="font/ttf" crossorigin="anonymous">
-    <link rel="stylesheet" href="css/style.css?v=test382b-karaoke-settings">
+    <link rel="stylesheet" href="css/style.css?v=test383-karaoke-floating">
     <title>SpotySid — Rico + James SID Player | Oscilloscope View</title>
 
     <link rel="shortcut icon" type="image/png" href="images/icon16.png"/>
@@ -50,8 +50,8 @@
     </section>
     <div id="ricoKaraokeConfigOverlay" class="rico-karaoke-config-overlay" hidden>
       <form id="ricoKaraokeConfigForm" class="rico-karaoke-config-dialog"
-            role="dialog" aria-modal="true" aria-label="Karaoke Settings">
-        <div class="rico-karaoke-config-title">KARAOKE SETTINGS</div>
+            role="dialog" aria-modal="false" aria-label="Karaoke Settings">
+        <div id="ricoKaraokeConfigTitle" class="rico-karaoke-config-title" title="Drag to move Karaoke Settings">KARAOKE SETTINGS</div>
         <div id="ricoKaraokeConfigSong" class="rico-karaoke-config-song"></div>
         <div id="ricoKaraokeAuthBlock" class="rico-karaoke-config-auth">
           <label for="ricoKaraokeBetaKey">BETA KEY</label>
@@ -68,7 +68,8 @@
         </div>
         <div id="ricoKaraokeConfigStatus" role="status" aria-live="polite"></div>
         <div class="rico-karaoke-config-actions">
-          <button type="button" id="ricoKaraokeConfigCancel">CANCEL</button>
+          <button type="button" id="ricoKaraokeConfigPlay" aria-label="Play selected SID">PLAY</button>
+          <button type="button" id="ricoKaraokeConfigCancel">CLOSE</button>
           <button type="submit" id="ricoKaraokeConfigSave">VERIFY / SAVE</button>
         </div>
       </form>
@@ -944,7 +945,7 @@
     <!-- TEST381: MIDI source events and internal-only sync correction (no adjustment controls). -->
     <script type="text/javascript" src="js/karaokeMidi.test381.js?v=test381-midi-data"></script>
     <script type="text/javascript" src="js/karaokeSync.test381.js?v=test382-auto-next-normal"></script>
-    <script type="text/javascript" src="js/karaokeSettings.test382.js?v=test382b-beta-save"></script>
+    <script type="text/javascript" src="js/karaokeSettings.test382.js?v=test383-nonmodal-drag-play"></script>
     <!-- TEST367 — lightweight keyboard cheat sheet. No SID/audio changes. -->
     <script>
     (function(){
