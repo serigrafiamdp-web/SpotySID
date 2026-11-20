@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- TEST358: preload the actual A1200 Workbench font before displaying menus. -->
     <link rel="preload" href="https://cdn.jsdelivr.net/gh/rewtnull/amigafonts@master/ttf/Topaz_a1200_v1.0.ttf" as="font" type="font/ttf" crossorigin="anonymous">
-    <link rel="stylesheet" href="css/style.css?v=test381-karaoke-lyrics">
+    <link rel="stylesheet" href="css/style.css?v=test382-karaoke-timeline">
     <title>SpotySid — Rico + James SID Player | Oscilloscope View</title>
 
     <link rel="shortcut icon" type="image/png" href="images/icon16.png"/>
@@ -34,8 +34,45 @@
         <canvas id="ricoKaraokeBall" width="8" height="8" aria-label="Authentic PETSCII ball"></canvas>
         <div class="rico-karaoke-placeholder">LYRICS AREA</div>
       </div>
+      <!-- TEST382: handheld MIC + GEAR at the karaoke screen lower-right. -->
+      <button id="ricoKaraokeSettings" type="button"
+        aria-label="Karaoke Settings for the current song" title="KARAOKE SETTINGS">
+        <svg viewBox="0 0 34 34" aria-hidden="true" focusable="false">
+          <g fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="square" stroke-linejoin="miter">
+            <path d="M12.6 3.5A4.3 4.3 0 0 1 18 9.2l-2.4 2.5-5.6-5.4Z"/>
+            <path d="m10 6.3-1.5 1.5 5.7 5.6 1.4-1.7M8.5 8.2 3 17l1.6 1.6 8.8-5.5M2.6 19.8l1.8-1.8"/>
+            <path d="M25 20.2v-2M25 32v-2M20.4 25h-2M31.6 25h-2M21.5 21.5l-1.4-1.4M29.9 29.9l-1.4-1.4M21.5 28.5l-1.4 1.4M29.9 20.1l-1.4 1.4"/>
+            <circle cx="25" cy="25" r="5.1"/><circle cx="25" cy="25" r="1.8"/>
+          </g>
+        </svg>
+      </button>
       <div class="rico-karaoke-foot">PETSCII · MIDI LYRIC SYNC TEST</div>
     </section>
+    <div id="ricoKaraokeConfigOverlay" class="rico-karaoke-config-overlay" hidden>
+      <form id="ricoKaraokeConfigForm" class="rico-karaoke-config-dialog"
+            role="dialog" aria-modal="true" aria-label="Karaoke Settings">
+        <div class="rico-karaoke-config-title">KARAOKE SETTINGS</div>
+        <div id="ricoKaraokeConfigSong" class="rico-karaoke-config-song"></div>
+        <div id="ricoKaraokeAuthBlock" class="rico-karaoke-config-auth">
+          <label for="ricoKaraokeBetaKey">BETA KEY</label>
+          <input type="password" id="ricoKaraokeBetaKey" autocomplete="off" required>
+          <div class="rico-karaoke-config-note">AUTHORIZED CALIBRATION ONLY</div>
+        </div>
+        <div id="ricoKaraokeAdjustmentFields" class="rico-karaoke-config-fields" hidden>
+          <label for="ricoKaraokeSpeed">LYRICS TIMELINE SPEED <output id="ricoKaraokeSpeedText">100.0%</output></label>
+          <input id="ricoKaraokeSpeed" type="range" min="0.8" max="1.2" value="1" step="0.005">
+          <label for="ricoKaraokeOffset">LYRICS START OFFSET (SECONDS)</label>
+          <input id="ricoKaraokeOffset" type="number" min="-30" max="30" value="0" step="0.1">
+          <p class="rico-karaoke-config-note">LOWER SPEED = SLOWER LYRICS. SID AUDIO STAYS UNCHANGED.</p>
+          <button id="ricoKaraokeConfigReset" type="button">RESET SYNC</button>
+        </div>
+        <div id="ricoKaraokeConfigStatus" role="status" aria-live="polite"></div>
+        <div class="rico-karaoke-config-actions">
+          <button type="button" id="ricoKaraokeConfigCancel">CANCEL</button>
+          <button type="submit" id="ricoKaraokeConfigSave">VERIFY / SAVE</button>
+        </div>
+      </form>
+    </div>
     <!-- TEST345: fixed to the oscilloscope background, outside the zoomed canvas and controls. -->
     <span id="ricoWindowsVersion" role="button" tabindex="0" aria-live="polite" title="Click to confirm Windows XP on this computer">WIN ?</span>
 
@@ -891,7 +928,7 @@
     <script type="text/javascript" src="js/sidPlayer.js?v=test364-top-artist-14"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script type="text/javascript" src="js/sidImport.test221.js?v=test221import"></script>
-    <script type="text/javascript" src="js/customPlaylist.test101.js?v=test380-karaoke-mic"></script>
+    <script type="text/javascript" src="js/customPlaylist.test101.js?v=test382-handheld-mic"></script>
     <script type="text/javascript" src="js/stil.test223.js?v=test275-publish-artwork-verified"></script>
     <script type="text/javascript" src="js/tileArtwork.test264.js?v=test331-esc-save-before-exit"></script>
     <script type="text/javascript" src="lft-test/lft-mode.experimental.js?v=test239fingerprint"></script>
@@ -902,10 +939,11 @@
     <script type="text/javascript" src="js/petsciiMode.test282.js?v=test363-scope-off"></script>
     <script type="text/javascript" src="js/scopeZoom.test342.js?v=test342-canvas-only-wheel-zoom"></script>
     <!-- TEST380: isolated karaoke OSC/lyric interface, after standard scope modes. -->
-    <script type="text/javascript" src="js/karaoke.test380.js?v=test380-karaoke-ui"></script>
+    <script type="text/javascript" src="js/karaoke.test380.js?v=test382-moving-timeline"></script>
     <!-- TEST381: MIDI source events and internal-only sync correction (no adjustment controls). -->
     <script type="text/javascript" src="js/karaokeMidi.test381.js?v=test381-midi-data"></script>
     <script type="text/javascript" src="js/karaokeSync.test381.js?v=test381-internal-sync"></script>
+    <script type="text/javascript" src="js/karaokeSettings.test382.js?v=test382-mic-gear-calibration"></script>
     <!-- TEST367 — lightweight keyboard cheat sheet. No SID/audio changes. -->
     <script>
     (function(){
