@@ -9,6 +9,8 @@
   var beats=[
 "Si ","a ","tu corazón ","yo llego ","i","gu","a","l ~","todo ","siempre ","se ","podrá ","e","le","gir ~","no ","me ","escribas ","la ","p","a","r","e","d ~^","sólo ","quiero ","estar ","entre ","tu ","pi","e","l ~^","Y ","si ","acaso ","no ","brillara ","el ","s","o","l ~","y ","quedara ","yo ","atrapado ","a","qu","i ~","no ","veria ","la ","ra","zó","n ~","de ","seguir ","viviendo ","sin ","tu ","a","m","o","r ~","","","","~^","y ","hoy ","que ","enlo","quecido ","vuelvo ~^","buscan","do ","tu ","q","u","e","r","e","r ~^","no ","queda ","más ","que ","vi","en","t","o ~^","no ","queda ","mas ","que ","viento ~^","Y ","si ","acaso ","no ","brillara ","el ","s","o","l ~^","y ","quedara ","yo ","atrapado ","a","q","u","í ~","no ","veria ","la ","ra","z","ó","n ~","de ","seguir ","viviendo ","sin ","tu ","a","m","o","r ","","","","","","","","~","","","","","","","","","","","","","","","","","","","","","","","y ","hoy ","que ","enlo","quecido ","vuelvo ~^","buscan","do ","tu ","q","u","e","r","e","r ~^","no ","queda ","más ","que ","vi","en","to ~^","no ","queda ","mas ","que ","vi","en","t","o ~","","~","Y ","si ","acaso ","no ","brillara ","el ","s","o","l ~^","y ","quedara ","yo ","atrapado ","a","qu","í ~","no ","veria ","la ","ra","z","ó","n ~","de ","seguir ","viviendo ","sin ","tu ","a","m","o","r "
   ];
+  // The source also has two consecutive empty timing beats in the long bridge.
+  beats.splice(158,0,'','');
   // Original MIDI had 312 lyric meta-events including 89 empty markers.
   // The array above is a sparse, one-beat serialization of the 223 non-empty
   // lyric events; "~" separates lines and "^" marks a paragraph boundary.
