@@ -3635,9 +3635,21 @@
       (hatNumber===2?HAT_TUNE2_END_SECONDS:
       (hatNumber===3?HAT_TUNE3_END_SECONDS:
       (hatNumber===4?HAT_TUNE4_END_SECONDS:null)));
+    // TEST392: the only registered Karaoke SID already has a verified HVSC
+    // duration of 03:06. Apply it immediately; do not display the generic
+    // 03:00 while its asynchronous Songlengths shard loads. Manual TIMER
+    // overrides still win, and every other SID follows its original path.
+    var karaokeDuration=source&&source.sub===0&&
+      source.shard==='library/songlengths/musicians-U.json'&&
+      source.relative==='Uctumi/Seguir_Viviendo_Sin_Tu_Amor.sid'&&
+      window.SpotySidKaraokeMidi?
+      Number(window.SpotySidKaraokeMidi.sidDurationSeconds):null;
+    if(!Number.isInteger(karaokeDuration)||karaokeDuration<5||
+       karaokeDuration>3600)karaokeDuration=null;
     updateAutoTime(override===undefined||override===null?
-      (hatDuration===null?180:hatDuration):override);
-    if(hatDuration!==null||!source||!source.shard||
+      (hatDuration===null?(karaokeDuration===null?180:karaokeDuration):hatDuration):
+      override);
+    if(hatDuration!==null||karaokeDuration!==null||!source||!source.shard||
        (override!==undefined&&override!==null))return;
     loadSonglengthShard(source.shard).then(function(durations){
       if(ticket!==songlengthTicket||playingTimerKey!==source.key||
