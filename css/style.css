@@ -4390,3 +4390,20 @@ html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-edit-row:has(
   background:var(--rico-theme-bg,#000) !important;
   color:var(--rico-theme-fg,#fff) !important;
 }
+
+/* TEST379 legacy selector fallback: JS maintains these lightweight wrapper
+   classes as playback moves. CSS :has() above handles pointer/keyboard
+   selection in modern browsers, while XP gets the same active highlight. */
+#ricoLivePlaylistItems .rico-live-edit-row:is(
+  .rico-live-edit-selected,.rico-live-edit-queued
+) > .rico-live-song-share-slot {
+  background:var(--rico-theme-hover,#555) !important;
+}
+#ricoLivePlaylistItems .rico-live-edit-row.rico-live-edit-active > .rico-live-song-share-slot {
+  background:var(--rico-theme-fg,#fff) !important;
+}
+html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-edit-row:is(
+  .rico-live-edit-selected,.rico-live-edit-queued
+):not(.rico-live-edit-active) > .rico-live-song-share-slot {
+  background:var(--rico-theme-fg,#fff) !important;
+}
