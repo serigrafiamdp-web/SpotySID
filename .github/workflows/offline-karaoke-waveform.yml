@@ -1,0 +1,51 @@
+# TEST391 — generate a true SID waveform envelope offline for Karaoke UI.
+# GitHub log output is read to create static audio-sampled data in the site.
+# No live timing modification or automatic BPM analysis.
+name: Generate offline Karaoke waveform
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/offline-karaoke-waveform.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  render-waveform:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install offline SID renderer
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq sidplayfp
+          python3 -m pip install -q --break-system-packages numpy
+      - name: Render real Uctumi SID to offline WAV
+        run: |
+          unzip -p library/packs/musicians/U/Uctumi.zip Seguir_Viviendo_Sin_Tu_Amor.sid > /tmp/uctumi.sid
+          timeout 150 sidplayfp -w/tmp/uctumi.wav -t240 -f11025 /tmp/uctumi.sid
+      - name: Compute normalized waveform envelope for 240 seconds
+        run: |
+          python3 - <<'PY'
+          import json,wave,numpy as np
+          with wave.open('/tmp/uctumi.wav','rb') as w:
+              sr=w.getframerate(); nch=w.getnchannels(); samples=w.getnframes()
+              assert w.getsampwidth()==2
+              audio=np.frombuffer(w.readframes(samples),dtype='<i2').astype(np.float32)/32768
+              if nch>1:
+                  audio=audio[:len(audio)//nch*nch].reshape(-1,nch).mean(axis=1)
+          step=0.08
+          hop=int(round(sr*step))
+          n=len(audio)//hop
+          rms=np.sqrt((audio[:n*hop].reshape(n,hop)**2).mean(axis=1))
+          q=float(np.quantile(rms,0.96))
+          # Stable offline normalization. No future-audio guesses or user-tempo math.
+          values=np.rint(np.clip((rms/max(q*1.5,0.00001))**0.85,0,1)*255).astype(np.uint8)
+          payload={'format':'spotysid-offline-waveform','version':1,
+            'sidPack':'library/packs/musicians/U/Uctumi.zip',
+            'sidFile':'Seguir_Viviendo_Sin_Tu_Amor.sid',
+            'stepSeconds':round(hop/sr,7),'durationSeconds':round(n*hop/sr,3),
+            'samples':values.tolist()}
+          print('WAVEFORM_JSON='+json.dumps(payload,separators=(',',':')))
+          PY
