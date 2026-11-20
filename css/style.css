@@ -4846,3 +4846,18 @@ html.rico-karaoke-active #songInfo {
   opacity:1;
   cursor:wait;
 }
+
+/* TEST394 — Dedicated SHARE column in floating playlist.
+   Give S the same full-height left divider as the checkbox / + / arrows / X
+   cells, rather than making it look attached to the song title. The checkbox
+   already draws the right divider. Preserve its own selection/playing color
+   and the short copied-to-clipboard pulse from TEST378/379. */
+#ricoLivePlaylistItems .rico-live-edit-row > .rico-live-song-share-slot {
+  flex:0 0 35px;
+  width:35px;
+  min-width:35px;
+  max-width:35px;
+  justify-content:center;
+  padding:0 4px;
+  border-left:1px solid var(--rico-theme-border,#fff);
+}
