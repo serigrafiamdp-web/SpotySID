@@ -1039,6 +1039,16 @@
 
 
 
+  // TEST383: the handheld MIC is drawn ONLY for registered Karaoke songs.
+  // The source file+HVSC pack distinguish covers with identical titles.
+  function karaokeAvailableFor(item,ref){
+    var known=window.SpotySidKaraokeMidi;
+    if(!known||!item)return false;
+    var origin=ref||item._hvscRef||item;
+    if(origin.pack===known.sidPack&&origin.file===known.sidFile)return true;
+    return item.file===known.sidFile &&
+      /uctumi|palladino/i.test(String(item.author||item.artist||''));
+  }
   function escapeFilename(name) {
     return (name || '').replace(/\.[sS][iI][dD]$/, '')
       .replace(/^\s*\d+[\s._-]+/, '').replace(/[_]+/g, ' ').trim();
@@ -2902,6 +2912,7 @@
         // TEST380: independent 26px MIC button beside the existing Share S.
         // It does not trigger the row click, checkbox or batch selection.
         // Keep the PLAY/next markers inside the song cell to its LEFT.
+        if(karaokeAvailableFor(item)){
         var karaokeSlot=$('<span>').addClass('rico-live-karaoke-slot');
         // TEST382: handheld vocalist mic, angled, NOT a studio/stand microphone.
         var micIcon='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+
@@ -2918,14 +2929,21 @@
           .on('click',function(event){
             event.preventDefault();event.stopPropagation();
             hideReorderHint();
-            // The existing SID switch still owns audio, fades and song selection.
-            requestSidSwitch(index,'manual');
+            // TEST383: clicking MIC on an already playing SID restarts
+            // its actual synth track at 00:00, including the normal timer.
+            if(index===player.sidListIndex&&!transitionBusy&&
+               (player.isPlaying||player.isPaused)){
+              player.playSong(player.currentSubsong||0);
+            }else{
+              requestSidSwitch(index,'manual');
+            }
             if(window.SpotySidKaraoke)
               window.SpotySidKaraoke.open(item,index);
             showLivePlaylist(false);
           })
           .appendTo(karaokeSlot);
         karaokeSlot.appendTo(wrap);
+        } // Only registered Karaoke entries receive a MIC.
         // TEST375: one tiny S at the far RIGHT of the song cell, immediately
         // BEFORE the checkbox border. A sibling button (not nested in PLAY)
         // keeps ▶ / queued markers visible and doesn't start playback.
