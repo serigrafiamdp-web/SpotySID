@@ -2727,67 +2727,98 @@
   // module; browser only opens the same playlist presentation without audio.
   var browseReferenceStreamFactory=null,browseSidDecode=null;
   var communityBrowsePreview=null,communityBrowsePaintToken=0;
-  // TEST395: two independent visible playlist windows for silent browsing.
-  // The left window preserves the currently playing playlist's display.
-  // The original live window remains fully interactive for browsing.
-  var ricoPlayingWindow=null, ricoOriginalPlaylistStyle=null;
-  var ricoLastBrowsedPlaylistKey='';
-  var ricoFirstBrowseSnapshot=null;
+  // TEST401: keep the first live window intact; browse another playlist
+  // by NAME in a separate window, without touching the SID player.
+  var ricoPrimaryBrowseKey='';
+  var ricoSecondaryHost=null,ricoPrimaryOriginalStyle=null,ricoSecondaryPaintId=0;
   function removePlayingWindow(){
-    if(ricoPlayingWindow){ricoPlayingWindow.remove();ricoPlayingWindow=null;}
-    var original=document.getElementById('ricoLivePlaylist');
-    if(original&&ricoOriginalPlaylistStyle!==null){
-      original.setAttribute('style',ricoOriginalPlaylistStyle);
-      ricoOriginalPlaylistStyle=null;
-    }
+    ++ricoSecondaryPaintId;
+    if(ricoSecondaryHost){ricoSecondaryHost.remove();ricoSecondaryHost=null;}
+    var primary=document.getElementById('ricoLivePlaylist');
+    if(primary&&ricoPrimaryOriginalStyle!==null)
+      primary.setAttribute('style',ricoPrimaryOriginalStyle);
+    ricoPrimaryOriginalStyle=null;
   }
-  function showPlayingWindowAlongsideBrowse(){
-    if(ricoPlayingWindow)return;
-    var original=document.getElementById('ricoLivePlaylist');
-    // MOS may temporarily hide the live panel; its previous content is valid.
-    if(!original)return;
-    var snapshot=ricoFirstBrowseSnapshot;
-    var rect=snapshot?snapshot.rect:original.getBoundingClientRect();
-    var gutter=10, width=Math.round(rect.width), height=Math.round(rect.height);
-    var top=Math.max(8,Math.round(rect.top));
-    ricoOriginalPlaylistStyle=original.getAttribute('style')||'';
-    // Copy jQuery's actual event listeners, not only the visual DOM.
-    // Thus the playing list remains selectable while the other list browses.
+  function showSecondaryBrowseWindow(data,item,playFrom){
+    var primary=document.getElementById('ricoLivePlaylist');
+    if(!primary)return false;
+    var rect=primary.getBoundingClientRect(),gutter=12;
+    var width=Math.max(230,Math.round(rect.width||510));
+    var height=Math.max(110,Math.round(rect.height||520));
+    var top=Math.max(8,Math.round(rect.top||20));
+    var left=Math.max(8,Math.round((window.innerWidth-(2*width+gutter))/2));
+    if(ricoPrimaryOriginalStyle===null)
+      ricoPrimaryOriginalStyle=primary.getAttribute('style')||'';
+    if(ricoSecondaryHost){ricoSecondaryHost.remove();ricoSecondaryHost=null;}
+    ++ricoSecondaryPaintId;
     var host=document.createElement('div');
-    host.id='ricoPlayingPlaylistWindow';
-    host.style.cssText='position:fixed;inset:0;z-index:196;pointer-events:none;';
+    host.id='ricoSecondaryPlaylistWindow';
+    host.style.cssText='position:fixed;inset:0;z-index:197;pointer-events:none;';
     var shadow=host.attachShadow({mode:'open'});
-    var link=document.createElement('link');
-    link.rel='stylesheet';
-    link.href='css/style.css?v=test396-dual-interactive';
-    shadow.appendChild(link);
-    // TEST400: use the FIRST list snapshot captured immediately after its
-    // successful paint. MOS and later renders may replace the live contents.
-    var copy=snapshot?snapshot.node:$(original).clone(true,true)[0];
-    // Only the PLAYING view retains playback-linked listeners;
-    // never initialize a second SID engine.
-    copy.style.cssText+=';display:flex;left:'+gutter+'px;right:auto;top:'+top+
+    var css=document.createElement('link');
+    css.rel='stylesheet';css.href='css/style.css?v=test401-independent-window';
+    shadow.appendChild(css);
+    // The clone is only a visual shell; it has no live playback handlers.
+    // Original IDs are safely scoped to the shadow tree.
+    var secondary=primary.cloneNode(true);
+    var items=secondary.querySelector('#ricoLivePlaylistItems');
+    var title=secondary.querySelector('#ricoLivePlaylistTitle');
+    var count=secondary.querySelector('#ricoLiveCount');
+    var creator=secondary.querySelector('#ricoLivePlaylistCreator');
+    var status=secondary.querySelector('#ricoLiveStatus');
+    if(title)title.textContent=data.name||item.title||'PLAYLIST';
+    if(count)count.textContent='('+(data.tracks||[]).length+')';
+    if(creator)creator.textContent='Playlist by '+
+      (data.createdBy||item.createdBy||'Unknown curator');
+    if(status)status.textContent='BROWSE · CLICK SONG TO PLAY';
+    if(items){items.textContent='';items.scrollTop=0;}
+    ['ricoRemixBar','ricoLiveShare','ricoLiveSave'].forEach(function(id){
+      var element=secondary.querySelector('#'+id);
+      if(element)element.style.display='none';
+    });
+    var close=secondary.querySelector('#ricoLiveClose');
+    if(close)close.addEventListener('click',function(event){
+      event.stopPropagation();removePlayingWindow();
+    });
+    secondary.style.cssText+=';position:fixed;display:flex;left:'+
+      (left+width+gutter)+'px;right:auto;top:'+top+
       'px;bottom:auto;width:'+width+'px;height:'+height+
       'px;transform:none;pointer-events:auto;';
-    shadow.appendChild(copy);
-    original.parentElement.appendChild(host);
-    ricoPlayingWindow=host;
-    // Keep precisely the original width/height in BOTH windows.
-    // Start side-by-side; allow off-screen overflow only if the viewport
-    // physically cannot contain two original-size lists.
-    var left=gutter+width+gutter;
-    if(left+width>window.innerWidth-gutter){
-      var combined=2*width+gutter;
-      left=Math.max(gutter,Math.round((window.innerWidth+combined)/2)-width);
-      copy.style.left=(left-width-gutter)+'px';
+    shadow.appendChild(secondary);
+    document.body.appendChild(host);
+    ricoSecondaryHost=host;
+    primary.style.display='flex';
+    primary.style.left=left+'px';primary.style.right='auto';
+    primary.style.top=top+'px';primary.style.bottom='auto';
+    primary.style.width=width+'px';primary.style.height=height+'px';
+    primary.style.transform='none';
+    // Render in small batches: no mass DOM construction while SID plays.
+    var tracks=data.tracks||[],index=0,paintId=++ricoSecondaryPaintId;
+    function paintChunk(){
+      if(paintId!==ricoSecondaryPaintId||!host.isConnected||!items)return;
+      var limit=Math.min(index+24,tracks.length);
+      for(;index<limit;index++){
+        (function(pos){
+          var track=tracks[pos]||{},file=track.file||'SID';
+          var song=track.title||track.name||file.replace(/\\.sid$/i,'').replace(/_/g,' ');
+          var artist=track.author||track.artist||'Unknown artist';
+          var row=document.createElement('button');row.type='button';
+          row.className='rico-live-row';row.setAttribute('data-sid-index',String(pos));
+          row.setAttribute('aria-label',song+' — '+artist);
+          var number=document.createElement('span');
+          number.className='rico-live-number';number.textContent=String(pos+1);
+          var text=document.createElement('span');text.className='rico-live-title';
+          text.textContent=song+' — '+artist;
+          row.appendChild(number);row.appendChild(text);
+          // Explicit song click uses existing playback transition.
+          row.addEventListener('click',function(){playFrom(pos,false);});
+          items.appendChild(row);
+        })(index);
+      }
+      if(index<tracks.length)setTimeout(paintChunk,30);
     }
-    original.style.left=left+'px';
-    original.style.right='auto';
-    original.style.bottom='auto';
-    original.style.top=top+'px';
-    original.style.width=width+'px';
-    original.style.height=height+'px';
-    original.style.transform='none';
+    paintChunk();
+    return true;
   }
 
   function createCommunityBrowse(data,item,playFrom){
@@ -3428,8 +3459,7 @@
   function showLivePlaylist(visible) {
     liveVisible = !!visible;
     if(!liveVisible && communityBrowsePreview){
-      clearCommunityBrowse();removePlayingWindow();ricoLastBrowsedPlaylistKey='';
-      ricoFirstBrowseSnapshot=null;
+      clearCommunityBrowse();removePlayingWindow();ricoPrimaryBrowseKey='';
     }
     // TEST314: hiding PLAYLIST always returns directly to the oscilloscope.
     // Never leave CHOOSE A SID visible underneath the floating playlist.
@@ -6400,20 +6430,27 @@
               if(browseOnly){
                 if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
                   throw Error('Playlist has no songs to browse.');
-                // TEST399: MOS can hide the playlist without disposing it.
-                // Remember the FIRST list independently of preview visibility.
-                // The second DIFFERENT name creates a second window before
-                // painting its own tracks. Never clone the COMMUNITY landing.
+                // TEST401: another NAME opens a SECOND window, never
+                // replacing the original panel or starting any audio.
                 var nextBrowseKey=String(item.remoteId||item.id||item.file||'');
-                if(ricoLastBrowsedPlaylistKey&&
-                   ricoLastBrowsedPlaylistKey!==nextBrowseKey){
-                  showPlayingWindowAlongsideBrowse();
-                }else if(!ricoLastBrowsedPlaylistKey){
-                  removePlayingWindow();
+                var primaryPanel=document.getElementById('ricoLivePlaylist');
+                var playingReady=!landingPlaylists&&!!loadedPlaylistTitle&&
+                  primaryPanel&&!!primaryPanel.querySelector(
+                    '#ricoLivePlaylistItems .rico-live-row');
+                if(!ricoPrimaryBrowseKey&&playingReady)
+                  ricoPrimaryBrowseKey='playing:'+loadedPlaylistTitle;
+                if(ricoPrimaryBrowseKey&&ricoPrimaryBrowseKey!==nextBrowseKey){
+                  if(showSecondaryBrowseWindow(chosen,item,function(index,karaoke){
+                    void openPlaylist(false,false,{
+                      startIndex:index,karaoke:karaoke,previewData:chosen
+                    });
+                  })){
+                    selectedCommunityId=item.id||item.file;
+                    closeChooseAfterPlaylistPlay(true);
+                    return;
+                  }
                 }
-                var isSecondDistinct=!!ricoLastBrowsedPlaylistKey&&
-                  ricoLastBrowsedPlaylistKey!==nextBrowseKey;
-                ricoLastBrowsedPlaylistKey=nextBrowseKey;
+                if(!ricoPrimaryBrowseKey)ricoPrimaryBrowseKey=nextBrowseKey;
                 clearCommunityBrowse();
                 communityBrowsePreview=createCommunityBrowse(chosen,item,
                   function(index,karaoke){
@@ -6427,18 +6464,6 @@
                 selectedCommunityId=item.id||item.file;
                 showLivePlaylist(true);
                 closeChooseAfterPlaylistPlay(true);
-                // Snapshot after rendering, not before. Preserve the first
-                // window's actual rows even when reopening MOS hides it.
-                if(!isSecondDistinct){
-                  var liveNode=document.getElementById('ricoLivePlaylist');
-                  if(liveNode){
-                    var liveRect=liveNode.getBoundingClientRect();
-                    ricoFirstBrowseSnapshot={
-                      node:$(liveNode).clone(true,true)[0],
-                      rect:{width:liveRect.width,height:liveRect.height,top:liveRect.top}
-                    };
-                  }
-                }
                 return;
               }
               // Ignore a late auto-load if the visitor picked a different source.
@@ -6446,8 +6471,7 @@
               if(isStartup) cancelStartupPlaylist();
               clearCommunityBrowse();
               removePlayingWindow();
-              ricoLastBrowsedPlaylistKey='';
-              ricoFirstBrowseSnapshot=null;
+              ricoPrimaryBrowseKey='';
               var startAt=isShared?sharedStartIndex:requestedIndex;
               var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
                 startAt); // An explicit PLAY button defaults to first song (#1).
