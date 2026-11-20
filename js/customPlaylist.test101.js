@@ -2805,8 +2805,8 @@
     // any unfinished chunks rather than appending stale rows.
     // TEST244: update SHARE even when a large playlist uses virtual painting
     // and returns early before the ordinary row renderer.
-    $('#ricoLiveShare').css('display',
-      customActive&&!landingPlaylists&&!!activeSharePlaylistId?'inline-block':'none');
+    var displayedShareId=preview?(preview.item.remoteId||preview.item.id||''):activeSharePlaylistId;
+    $('#ricoLiveShare').css('display',displayedShareId?'inline-block':'none');
     // Ordinary short lists retain the original complete render behavior.
     // Update only the count on playback changes in a large SID collection.
     // TEST375: when a public list is first loaded, SHARE becomes available
@@ -2829,8 +2829,11 @@
     ensureLivePlaylistCredits();
     var list = preview?preview.entries:(player.sidList || []);
     if(selectedLiveIndex!==null && selectedLiveIndex>=list.length)selectedLiveIndex=null;
-    $('#ricoRemixBar').css('display',(!landingPlaylists&&list.length)?'flex':'none');
-    updateCheckedSidCount();
+    $('#ricoRemixBar').css('display',((!landingPlaylists||preview)&&list.length)?'flex':'none');
+    if(preview){
+      $('#ricoLiveCount').text('('+list.length+')');
+      $('#ricoLiveStatus').text('BROWSE · CLICK SONG TO PLAY');
+    }else updateCheckedSidCount();
     // TEST106: SAVE is visible for any editable loaded list, never TOP 100.
     var canSave=!!(!preview&&customActive&&!landingPlaylists&&!isRanked&&list.length);
     var pendingDraft=remixDrafts.find(function(d){
@@ -2857,15 +2860,20 @@
     var routeInfo=!landingPlaylists&&customActive&&window.RicoLftMode;
     var rayModeTitle=routeInfo&&window.RicoLftMode.playingRay();
     var lftModeTitle=routeInfo&&!rayModeTitle&&window.RicoLftMode.playingApproved();
-    $('#ricoLivePlaylistTitle').text((landingPlaylists ? "COMMUNITY PLAYLISTS" :
+    $('#ricoLivePlaylistTitle').text(preview?
+      (preview.data.name||preview.item.title||'PLAYLIST'):
+      ((landingPlaylists ? "COMMUNITY PLAYLISTS" :
       (customActive ? (loadedPlaylistTitle || 'CUSTOM PLAYLIST') : 'GAMES'))+
-      (rayModeTitle?' · RAY MANTA MODE ON':lftModeTitle?' · LFT MODE ON':''));
+      (rayModeTitle?' · RAY MANTA MODE ON':lftModeTitle?' · LFT MODE ON':'')));
     // TEST34: keep the creator/ratings strip visible while a playlist is loaded.
     // Never confuse the playlist creator with each SID's composer.
-    var hasLoadedPlaylist = !!loadedPlaylistTitle && customActive;
-    var creatorText = hasLoadedPlaylist
-      ? 'Playlist by ' + (loadedPlaylistCreator || 'Unknown curator')
-      : (landingPlaylists ? 'Select a playlist' : 'Playlist by ' + (customActive ? 'You' : 'Original collection'));
+    var hasLoadedPlaylist = !!preview || (!!loadedPlaylistTitle && customActive);
+    var creatorText = preview?
+      ('Playlist by '+(preview.data.createdBy||preview.item.createdBy||'Unknown curator')):
+      hasLoadedPlaylist
+        ? 'Playlist by ' + (loadedPlaylistCreator || 'Unknown curator')
+        : (landingPlaylists ? 'Select a playlist' :
+          'Playlist by ' + (customActive ? 'You' : 'Original collection'));
     $('#ricoLivePlaylistCreator').text(creatorText);
     $('#ricoLivePlaylistCredits').attr('data-loaded', hasLoadedPlaylist ? 'true' : 'false');
     $('#ricoLivePlaylistCredits').css('display','flex');
@@ -2958,8 +2966,8 @@
       row.attr('data-sid-index',index);
       var active = !preview&&index === player.sidListIndex;
       if (active) row.addClass('rico-live-active').attr('aria-current', 'true');
-      if(index===selectedLiveIndex)row.addClass('rico-live-selected');
-      if(index===queuedLiveIndex)row.addClass('rico-live-queued');
+      if(!preview&&index===selectedLiveIndex)row.addClass('rico-live-selected');
+      if(!preview&&index===queuedLiveIndex)row.addClass('rico-live-queued');
       var rankIndex=(!preview&&activeCsdbRankDisplay)?activeCsdbRankDisplay.trackRanks[index]:null;
       var csdbEntry=rankIndex!==null?activeCsdbRankDisplay.items[rankIndex]:null;
       $('<span>').addClass('rico-live-number').text(csdbEntry?rankIndex+1:index+1).appendTo(row);
@@ -3224,7 +3232,10 @@
 
   $('#ricoLiveShare').on('click',function(event){
     event.preventDefault();
-    if(activeSharePlaylistId)void copyPlaylistShareLink(activeSharePlaylistId);
+    var visibleId=communityBrowsePreview?
+      (communityBrowsePreview.item.remoteId||communityBrowsePreview.item.id||''):
+      activeSharePlaylistId;
+    if(visibleId)void copyPlaylistShareLink(visibleId);
   });
   // TEST315: close the browser only after a real PLAY successfully loads.
   // Never close it on a failed/stale load or for background song advances.
@@ -6170,7 +6181,7 @@
                 return d.remoteEditId===item.remoteId&&Array.isArray(d.baseTracks)&&
                   remixTrackKeys(d.tracks)!==remixTrackKeys(d.baseTracks);
               }):null;
-              var chosen=pending?{
+              var chosen=options&&options.previewData?options.previewData:pending?{
                 format:'ricos-sid-playlist',version:2,
                 name:pending.name,createdBy:pending.creator,
                 tracks:pending.tracks.map(remixCanonicalRef)
@@ -6180,12 +6191,15 @@
               if(browseOnly){
                 if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
                   throw Error('Playlist has no songs to browse.');
-                communityBrowsePreview={
-                  data:chosen,item:item,
-                  playFrom:function(index,karaoke){
-                    void openPlaylist(false,false,{startIndex:index,karaoke:karaoke});
-                  }
-                };
+                communityBrowsePreview=createCommunityBrowse(chosen,item,
+                  function(index,karaoke){
+                    var browsing=communityBrowsePreview;
+                    if(!browsing)return;
+                    void openPlaylist(false,false,{
+                      startIndex:index,karaoke:karaoke,
+                      previewData:browsing.data
+                    });
+                  });
                 selectedCommunityId=item.id||item.file;
                 showLivePlaylist(true);
                 closeChooseAfterPlaylistPlay(true);
@@ -6204,9 +6218,11 @@
                 ? item.id:null;
               activeRemixDraftId=pending?pending.id:null;
               activePublicPlaylist=!pending&&item.remoteId&&data.version===2?{
-                remoteId:item.remoteId,name:data.name,createdBy:data.createdBy,
-                tracks:data.tracks.map(remixCanonicalRef),
-                originalCount:data.tracks.length,dirtyOrder:false
+                remoteId:item.remoteId,name:chosen.name,createdBy:chosen.createdBy,
+                tracks:chosen.tracks.map(remixCanonicalRef),
+                originalCount:data.tracks.length,
+                dirtyOrder:!!(options&&options.previewData&&
+                  JSON.stringify(chosen.tracks)!==JSON.stringify(data.tracks))
               }:null;
               activeSharePlaylistId=pending?'':(item.remoteId||item.id||'');
               renderLivePlaylist();
