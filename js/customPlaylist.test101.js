@@ -2738,39 +2738,37 @@
     if(ricoPlayingWindow)return;
     var original=document.getElementById('ricoLivePlaylist');
     if(!original||original.style.display==='none')return;
+    var rect=original.getBoundingClientRect();
+    var gutter=10;
+    var half=Math.floor(Math.max(460,window.innerWidth-3*gutter)/2);
+    var width=Math.min(Math.max(230,rect.width),half);
+    // Shadow DOM keeps the copied original IDs and original stylesheet in
+    // a separate scope. Existing document IDs and handlers are untouched.
+    var host=document.createElement('div');
+    host.id='ricoPlayingPlaylistWindow';
+    host.style.cssText='position:fixed;inset:0;z-index:194;pointer-events:none;';
+    var shadow=host.attachShadow({mode:'open'});
+    var link=document.createElement('link');
+    link.rel='stylesheet';
+    link.href='css/style.css?v=test395-dual-window';
+    shadow.appendChild(link);
     var copy=original.cloneNode(true);
-    copy.id='ricoPlayingPlaylistWindow';
-    copy.setAttribute('aria-label','Playlist currently playing');
-    // Never duplicate IDs: all existing control and row lookups must continue
-    // to address the original browser window.
-    copy.querySelectorAll('[id]').forEach(function(el){el.removeAttribute('id');});
     copy.querySelectorAll('button,input,select,[tabindex]').forEach(function(el){
       el.setAttribute('tabindex','-1');
       if(el.matches('button,input,select'))el.disabled=true;
     });
-    var rect=original.getBoundingClientRect();
-    var gutter=10;
-    var available=Math.max(240,window.innerWidth-3*gutter);
-    var half=Math.floor(available/2);
-    var w=Math.min(Math.max(220,rect.width),half);
-    copy.style.cssText+=';display:flex;position:fixed;left:'+gutter+
-      'px;top:'+Math.max(8,rect.top)+'px;width:'+w+
-      'px;height:'+Math.min(rect.height,window.innerHeight-75)+
-      'px;z-index:1000;pointer-events:auto;';
-    var h=copy.querySelector('#ricoLivePlaylistHeader')||
-      copy.querySelector('.rico-live-heading');
-    // The cloned title is intentionally static; audio keeps using the real engine.
-    copy.classList.add('rico-playing-window-snapshot');
-    var note=document.createElement('div');
-    note.textContent='PLAYING PLAYLIST';
-    note.style.cssText='font-size:11px;font-weight:bold;padding:3px 8px;letter-spacing:1px;';
-    copy.insertBefore(note,copy.firstChild);
-    original.parentElement.appendChild(copy);
-    ricoPlayingWindow=copy;
-    original.style.left=(2*gutter+w)+'px';
+    var top=Math.max(8,rect.top);
+    copy.style.cssText+=';display:flex;left:'+gutter+'px;right:auto;top:'+top+
+      'px;bottom:auto;width:'+width+'px;height:'+
+      Math.max(110,Math.min(rect.height,window.innerHeight-top-45))+
+      'px;transform:none;pointer-events:auto;';
+    shadow.appendChild(copy);
+    original.parentElement.appendChild(host);
+    ricoPlayingWindow=host;
+    original.style.left=(2*gutter+width)+'px';
     original.style.right='auto';
-    original.style.top=Math.max(8,rect.top)+'px';
-    original.style.width=w+'px';
+    original.style.top=top+'px';
+    original.style.width=width+'px';
     original.style.transform='none';
   }
 
