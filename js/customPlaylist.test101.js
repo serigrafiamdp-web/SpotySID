@@ -2903,9 +2903,11 @@
         // It does not trigger the row click, checkbox or batch selection.
         // Keep the PLAY/next markers inside the song cell to its LEFT.
         var karaokeSlot=$('<span>').addClass('rico-live-karaoke-slot');
+        // TEST382: handheld vocalist mic, angled, NOT a studio/stand microphone.
         var micIcon='<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+
-          '<rect x="9" y="2.5" width="6" height="12" rx="3"></rect>'+
-          '<path d="M6 10.5v1.7a6 6 0 0 0 12 0v-1.7M12 18.2v3.3M8.5 21.5h7"></path>'+
+          '<path d="M15.2 3.7a4.2 4.2 0 0 1 5.1 6.6l-2.5 2.5-6.1-6.1z"></path>'+
+          '<path d="m11.7 6.7-2 2 5.8 5.8 2.3-1.7M10.2 8.9 4.5 18.2l1.7 1.7 9.2-5.7M3.5 20.6l2.1-2.1"></path>'+
+          '<path d="m14 5 3.6 3.6M12.6 6.5l3.6 3.6"></path>'+
           '</svg>';
         bindThemedPlaylistHint($('<button type="button">')
           .addClass('rico-live-karaoke')
