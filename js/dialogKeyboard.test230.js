@@ -93,7 +93,9 @@
     for(var i=0;i<dialogs.length;i++){
       if(dialogs[i]!==chooser&&isVisible(dialogs[i]))return true;
     }
-    var ids=['ricoRemixEditor','ricoImportSidWindow','ricoDonateDialog','ricoKeysPanel','ricoKaraokeConfigOverlay'];
+    // Karaoke Settings is deliberately nonmodal in TEST383; do not block
+    // K, Play, N, W or other shortcuts while it remains open.
+    var ids=['ricoRemixEditor','ricoImportSidWindow','ricoDonateDialog','ricoKeysPanel'];
     for(var j=0;j<ids.length;j++){
       if(isVisible(document.getElementById(ids[j])))return true;
     }
@@ -106,6 +108,9 @@
   document.addEventListener('keydown',function(event){
     if((event.key!=='Escape'&&event.key!=='Esc')||
        event.defaultPrevented||event.repeat)return;
+    // A floating Karaoke Settings panel owns ESC; do not open MOS behind it.
+    var settings=document.getElementById('ricoKaraokeConfigOverlay');
+    if(settings&&!settings.hidden)return;
     if(hasOtherForegroundWindow()||
        isVisible(document.getElementById('ricoTileArtworkOverlay')))return;
     if(isVisible(playlist)){
