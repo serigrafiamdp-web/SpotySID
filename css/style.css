@@ -4261,3 +4261,23 @@ button.rico-community-pin.rico-pin-on {
   overflow-wrap:break-word;
 }
 #ricoThemedHint[hidden] {display:none !important;}
+
+/* TEST374 — Do not let dragging or double-clicking the player UI turn
+   playlist labels, buttons or panel captions into browser selection blue.
+   This changes text selection only; existing mouse clicks, keyboard
+   navigation, dragging, waveforms and list highlights stay functional. */
+body, body * {
+  -webkit-user-select:none !important;
+  -moz-user-select:none !important;
+  -ms-user-select:none !important;
+  user-select:none !important;
+}
+/* Text fields and editable content still accept normal caret movement,
+   text selection, copying and typing (TIMER, search, playlist names, etc.). */
+body input, body textarea, body select,
+body [contenteditable], body [contenteditable] * {
+  -webkit-user-select:text !important;
+  -moz-user-select:text !important;
+  -ms-user-select:text !important;
+  user-select:text !important;
+}
