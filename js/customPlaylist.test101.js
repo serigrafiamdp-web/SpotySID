@@ -2724,6 +2724,57 @@
   // song. The inactive window retains its own source and row indices.
   var ricoCurrentWindowSource=null,ricoInactiveWindowSource=null;
   var ricoPinnedReturnPromotion=null,ricoPinnedSongSwitchPending=false;
+  // TEST407: cloned (inactive) playlist panels retain their own drag and
+  // resize gestures. A cloned DOM does not inherit JS event listeners.
+  function ricoEnablePinnedWindowMovement(shadow){
+    if(!shadow)return;
+    var panel=shadow.querySelector('#ricoLivePlaylist');
+    if(!panel)return;
+    function bind(handle,mode){
+      if(!handle)return;
+      var gesture=null;
+      function end(event){
+        if(!gesture||event.pointerId!==gesture.id)return;
+        gesture=null;
+        window.removeEventListener('pointermove',move,true);
+        window.removeEventListener('pointerup',end,true);
+        window.removeEventListener('pointercancel',end,true);
+      }
+      function move(event){
+        if(!gesture||event.pointerId!==gesture.id)return;
+        var dx=event.clientX-gesture.x,dy=event.clientY-gesture.y;
+        if(mode==='move'){
+          panel.style.left=Math.max(0,gesture.left+dx)+'px';
+          panel.style.top=Math.max(0,gesture.top+dy)+'px';
+        }else if(mode==='width'){
+          panel.style.width=Math.max(230,gesture.width+dx)+'px';
+        }else{
+          panel.style.height=Math.max(110,gesture.height+dy)+'px';
+        }
+        panel.style.right='auto';
+        panel.style.bottom='auto';
+        panel.style.transform='none';
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      handle.addEventListener('pointerdown',function(event){
+        if(event.button!==0)return;
+        if(mode==='move'&&event.target&&event.target.closest&&
+           event.target.closest('button,input,select,a,label'))return;
+        var rect=panel.getBoundingClientRect();
+        gesture={id:event.pointerId,x:event.clientX,y:event.clientY,
+          left:rect.left,top:rect.top,width:rect.width,height:rect.height};
+        window.addEventListener('pointermove',move,true);
+        window.addEventListener('pointerup',end,true);
+        window.addEventListener('pointercancel',end,true);
+        event.preventDefault();
+        event.stopPropagation();
+      });
+    }
+    bind(shadow.querySelector('#ricoLivePlaylistHeader'),'move');
+    bind(shadow.querySelector('#ricoLiveWidthGrip'),'width');
+    bind(shadow.querySelector('#ricoLiveResizeGrip'),'height');
+  }
   function ricoBindPinnedSongClicks(shadow,source){
     if(!shadow||!source||typeof source.playFrom!=='function')return;
     var rows=shadow.querySelector('#ricoLivePlaylistItems');
@@ -2807,6 +2858,7 @@
       if(ricoPinnedFirstHost===pinned)ricoPinnedFirstHost=null;
     });
     shadow.appendChild(first);
+    ricoEnablePinnedWindowMovement(shadow);
     // TEST405: cloned control titles must not render native white tooltips.
     if(window.ricoPrepareShadowHints)window.ricoPrepareShadowHints(shadow);
     if(window.ricoDismissTransientHints)window.ricoDismissTransientHints();
@@ -2897,6 +2949,7 @@
       if(ricoPinnedFirstHost===null)ricoInactiveWindowSource=null;
     });
     shadow.appendChild(copy);
+    ricoEnablePinnedWindowMovement(shadow);
     if(window.ricoPrepareShadowHints)window.ricoPrepareShadowHints(shadow);
     if(window.ricoDismissTransientHints)window.ricoDismissTransientHints();
     document.body.appendChild(nextPinned);
