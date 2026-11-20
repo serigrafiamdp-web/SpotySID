@@ -134,6 +134,17 @@
   // TEST100: restore gain only when the FIRST newly rendered SID buffer plays.
   // Doing it inside playSong exposes previously queued ScriptProcessor audio.
   var pendingNewSidUnmute=false;
+  // TEST409: expensive playlist/UI work must not steal the first callbacks
+  // from ScriptProcessor when a new SID starts.
+  var ricoAudioRecoveryUntil=0;
+  function ricoDualWindowsVisible(){
+    return !!(ricoSecondaryHost||ricoPinnedFirstHost||
+      ricoSecondaryPromotion||ricoPinnedReturnPromotion);
+  }
+  function ricoAudioNeedsHeadroom(){
+    return !!(pendingNewSidUnmute||transitionBusy||
+      Date.now()<ricoAudioRecoveryUntil);
+  }
   // TEST202: if AudioProcessingEvent.playbackTime is unusable, preserve the
   // complete first buffer instead of silently losing its first ~93 ms.
   var openingBufferReplay=null;
@@ -631,6 +642,8 @@
     openingReplayFallbackBlocks=0;
     resetSilenceDetector();
     var result=originalPlaySong.apply(this,arguments);
+    // Keep ZIP metadata and other nonessential work away from the attack.
+    ricoAudioRecoveryUntil=Date.now()+1800;
     // TEST199: the active SID/subtune chooses its initial TIMER value.
     selectTentativeSidTimer();
     if(transitionAwaitingStart){
@@ -2724,6 +2737,49 @@
   // song. The inactive window retains its own source and row indices.
   var ricoCurrentWindowSource=null,ricoInactiveWindowSource=null;
   var ricoPinnedReturnPromotion=null,ricoPinnedSongSwitchPending=false;
+  // TEST409: a full cloneNode(true) of 100/500/1000 playlist rows freezes
+  // the main thread while the SID output still uses ScriptProcessor.
+  // Copy the fixed chrome once and paint each inactive playlist in small
+  // batches. This preserves the exact original controls and song order.
+  function ricoClonePinnedPanel(primary){
+    var clone=primary.cloneNode(false);
+    var sourceRows=primary.querySelector('#ricoLivePlaylistItems');
+    Array.prototype.forEach.call(primary.children,function(child){
+      clone.appendChild(child.cloneNode(child!==sourceRows));
+    });
+    var dest=clone.querySelector('#ricoLivePlaylistItems');
+    if(!sourceRows||!dest)return clone;
+    var originals=Array.prototype.slice.call(sourceRows.children);
+    var originalScroll=sourceRows.scrollTop;
+    var cursor=0;
+    function appendSome(limit){
+      var end=Math.min(originals.length,cursor+limit);
+      for(;cursor<end;cursor++){
+        var node=originals[cursor].cloneNode(true);
+        // Inactive list cannot retain a falsely active PLAY/next marker.
+        var flags=node.querySelectorAll('.rico-live-current,.rico-live-next');
+        for(var i=0;i<flags.length;i++)flags[i].remove();
+        var active=node.querySelectorAll('.rico-live-active,.rico-live-edit-active');
+        for(var j=0;j<active.length;j++)
+          active[j].classList.remove('rico-live-active','rico-live-edit-active');
+        dest.appendChild(node);
+      }
+      if(dest.scrollHeight)dest.scrollTop=originalScroll;
+    }
+    // Enough rows to show the list immediately; the rest never block audio.
+    appendSome(Math.min(12,originals.length));
+    function remaining(){
+      if(!clone.isConnected)return;
+      if(ricoAudioNeedsHeadroom()){
+        setTimeout(remaining,260);
+        return;
+      }
+      appendSome(8);
+      if(cursor<originals.length)setTimeout(remaining,95);
+    }
+    if(cursor<originals.length)setTimeout(remaining,120);
+    return clone;
+  }
   // TEST407: cloned (inactive) playlist panels retain their own drag and
   // resize gestures. A cloned DOM does not inherit JS event listeners.
   function ricoEnablePinnedWindowMovement(shadow){
@@ -2841,7 +2897,7 @@
     shadow.appendChild(css);
     // Copy the first playlist BEFORE playback changes its contents. Do not
     // duplicate event handlers: only the RIGHT window controls the player.
-    var first=primary.cloneNode(true);
+    var first=ricoClonePinnedPanel(primary);
     first.style.cssText+=';position:fixed;display:flex;left:'+left.left+
       'px;right:auto;top:'+left.top+'px;bottom:auto;width:'+left.width+
       'px;height:'+left.height+'px;transform:none;pointer-events:auto;';
@@ -2930,7 +2986,7 @@
     css.rel='stylesheet';
     css.href='css/style.css?v=test406-switch-either-playlist';
     shadow.appendChild(css);
-    var copy=primary.cloneNode(true);
+    var copy=ricoClonePinnedPanel(primary);
     copy.style.cssText+=';position:fixed;display:flex;left:'+current.left+
       'px;right:auto;top:'+current.top+'px;bottom:auto;width:'+
       current.width+'px;height:'+current.height+
@@ -3196,7 +3252,8 @@
       paintId=chunkId;
       function paint(){
         if(!mount.isActive())return;
-        var stop=Math.min(at+16,preview.entries.length);
+        // TEST409: render the non-playing window in audio-safe batches.
+        var stop=Math.min(at+(player.isPlaying?8:16),preview.entries.length);
         for(;at<stop;at++){
           (function(index){
             var entry=preview.entries[index]||{};
@@ -3275,7 +3332,7 @@
             items.appendChild(wrap);
           })(at);
         }
-        if(at<preview.entries.length)setTimeout(paint,35);
+        if(at<preview.entries.length)setTimeout(paint,player.isPlaying?100:45);
         else{
           items.scrollTop=scroll;
           preview.hydrateVisible();
@@ -5041,6 +5098,10 @@
         return slot._hvscPromise;
       }
       function prefetch(){
+        // TEST409: when two playlists are open, idle ZIP decompression
+        // competes with the ScriptProcessor audio thread. An explicit
+        // click still loads the chosen SID on demand through loadSlot().
+        if(ricoDualWindowsVisible())return;
         // TEST122: 1,376 UNKNOWN tracks are intentionally on-demand.
         // Decompressing every tiny SID continuously in the browser and
         // re-rendering their rows can starve ScriptProcessor audio on click.
@@ -5049,6 +5110,10 @@
           (async function(){
             var failures=0;
             for(var i=1;i<Math.min(slots.length,10)&&!cancelled;i++){
+              if(ricoDualWindowsVisible())return;
+              if(ricoAudioNeedsHeadroom())await new Promise(function(done){
+                setTimeout(done,320);
+              });
               await new Promise(function(resolve){setTimeout(resolve,55);});
               if(cancelled)return;
               try{await loadSlot(slots[i]);}
@@ -5064,6 +5129,11 @@
         var next=1,finished=1,failures=0,ended=0;
         async function worker(){
           while(!cancelled&&next<slots.length){
+            if(ricoDualWindowsVisible())return;
+            if(ricoAudioNeedsHeadroom()){
+              await new Promise(function(done){setTimeout(done,320);});
+              if(cancelled||ricoDualWindowsVisible())return;
+            }
             var slot=slots[next++];
             try{await loadSlot(slot);}
             catch(error){
