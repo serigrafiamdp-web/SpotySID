@@ -4145,7 +4145,7 @@ button.rico-community-pin.rico-pin-on {
   height:24px !important;
   min-height:24px !important;
   padding:0 !important;
-  margin:0 !important;
+  margin:0 4px 0 0 !important; /* TEST370: extra 4px before TIMER label */
   border:1px solid var(--rico-theme-fg,#fff) !important;
   border-radius:2px;
   color:var(--rico-theme-fg,#fff) !important;
