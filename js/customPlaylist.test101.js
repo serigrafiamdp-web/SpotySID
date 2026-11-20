@@ -734,7 +734,10 @@
       prepareSidDuringFade(index,entry,generation);
     },250);
   }
-  function requestSidSwitch(index,source){
+  function requestSidSwitch(index,source,forceRestart){
+    // TEST384: MIC restarts a playing SID through the SAME fade+prepare
+    // transition as regular PLAY/NEXT, never by calling playSong directly.
+    forceRestart=!!forceRestart;
     var list=player.sidList||[];
     if(index<0||index>=list.length)return;
     var entry=list[index];
@@ -744,7 +747,7 @@
     // Reject same-song/no-op and handoff-busy requests before highlighting.
     if((source==='manual'||source==='next') &&
        !transitionAwaitingStart &&
-       !(index===player.sidListIndex&&!transitionBusy&&player.isPlaying))
+       !(index===player.sidListIndex&&!transitionBusy&&player.isPlaying&&!forceRestart))
       setNextSidPending(true);
     // TEST122: on a progressive list, do NOT wait for an unprepared SID
     // before starting the fade. The upcoming SID can decode during the
@@ -770,7 +773,7 @@
       renderPlaybackStatus();
       return;
     }
-    if(index===player.sidListIndex&&player.isPlaying){
+    if(index===player.sidListIndex&&player.isPlaying&&!forceRestart){
       renderPlaybackStatus();return;
     }
     player.initWebAudio();
@@ -2929,14 +2932,10 @@
           .on('click',function(event){
             event.preventDefault();event.stopPropagation();
             hideReorderHint();
-            // TEST383: clicking MIC on an already playing SID restarts
-            // its actual synth track at 00:00, including the normal timer.
-            if(index===player.sidListIndex&&!transitionBusy&&
-               (player.isPlaying||player.isPaused)){
-              player.playSong(player.currentSubsong||0);
-            }else{
-              requestSidSwitch(index,'manual');
-            }
+            // TEST384: defer ALL SID resets to the normal 5s fade +
+            // prepared audio handoff, including the already-playing SID.
+            // It starts at 00:00 only AFTER the previous audio fades.
+            requestSidSwitch(index,'manual',true);
             if(window.SpotySidKaraoke)
               window.SpotySidKaraoke.open(item,index);
             showLivePlaylist(false);
