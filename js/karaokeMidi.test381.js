@@ -23,9 +23,14 @@
     sidCoverBy:'Esteban Palladino (Uctumi)',
     // TEST383: real reference tempo from the supplied karaoke MIDI.
     karaokeBpm: 108,
-    // A SID file has no standard BPM tag; do not fabricate an estimate.
-    // Future audio-onset analysis can populate this field per cover.
-    sidBpmApprox: null,
+    // TEST389: precomputed OFFLINE by rendering 120s of this actual Uctumi SID
+    // with sidplayfp and analyzing the waveform in multiple intervals.
+    // Across 5–110s the rhythmic autocorrelation peaked near 93–95 BPM.
+    // This is an approximate fixed estimate, never measured while playing.
+    sidBpmApprox: 94,
+    // Use the SID tempo as the starting proposal for editable Karaoke BPM.
+    // Source MIDI timing stays at exactly 108 BPM (secondsPerBeat below).
+    initialKaraokeBpm: 94,
     secondsPerBeat: 60/108,
     firstBeat: 37,
     beats:beats
