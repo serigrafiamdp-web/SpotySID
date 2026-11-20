@@ -6657,19 +6657,91 @@
         }catch(error){status(error.message+' · '+added+' SID added before stopping.');}
         finally{draftBusy=false;renderSongs();}
       }
+      // TEST383: opening an artist's NAME only browses songs.
+      // PLAY FIRST plays from its first SID, while PLAY beside a song
+      // starts at exactly that song within the artist's existing SID order.
+      async function playArtistSong(track,openKaraoke){
+        var section=selected;
+        if(!section||!track)return;
+        var position=section.tracks.indexOf(track);
+        if(position<0)return;
+        var ref={pack:track.pack||section.pack,file:track.file};
+        if(openKaraoke&&!karaokeAvailableFor(track,ref))return;
+        var refs=section.tracks.map(function(song){
+          return {pack:song.pack||section.pack,file:song.file,
+            title:song.title||song.file,author:song.author||section.name};
+        });
+        var playlist={format:'ricos-sid-playlist',version:2,
+          name:section.name,createdBy:'HVSC · '+section.name,tracks:refs};
+        status('PLAY '+(track.title||track.file)+'…');
+        try{
+          var applied=await loadStoredPlaylist(playlist,false,null,position);
+          if(applied===false)return;
+          closeChooseAfterPlaylistPlay(true);
+          status('Playing '+(track.title||track.file)+' · '+(position+1)+' / '+refs.length);
+          if(openKaraoke&&window.SpotySidKaraoke){
+            var playing=(player.sidList||[])[position]||track;
+            window.SpotySidKaraoke.open(playing,position);
+          }
+        }catch(error){status('SID unavailable: '+error.message);}
+      }
+      function handheldMicSVG(){
+        return '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">'+
+          '<path d="M15.2 3.7a4.2 4.2 0 0 1 5.1 6.6l-2.5 2.5-6.1-6.1z"></path>'+
+          '<path d="m11.7 6.7-2 2 5.8 5.8 2.3-1.7M10.2 8.9 4.5 18.2l1.7 1.7 9.2-5.7M3.5 20.6l2.1-2.1"></path>'+
+          '</svg>';
+      }
       function renderSongs(){
         songsEl.textContent='';
         if(!selected){renderDraft();return;}
-        var heading=document.createElement('div');heading.className='rico-library-heading';
-        heading.textContent=selected.name+' · '+selected.tracks.length+' SID';songsEl.appendChild(heading);
+        var heading=document.createElement('div');
+        heading.className='rico-library-heading';
+        var artistName=document.createElement('strong');
+        artistName.textContent=selected.name+' · '+selected.tracks.length+' SID';
+        heading.appendChild(artistName);
+        var playFirst=makeButton('PLAY',function(){
+          if(selected&&selected.tracks.length)void playArtistSong(selected.tracks[0],false);
+        },'rico-library-play-first');
+        playFirst.title='Play artist from first song';
+        playFirst.setAttribute('aria-label','Play '+selected.name+' from first song');
+        heading.appendChild(playFirst);
+        songsEl.appendChild(heading);
         filteredTracks().forEach(function(track){
           var key=trackKey(selected,track);
-          var row=makeButton(track.title+(track.author?' — '+formatArtistCredit(track.author):''),function(){
-            addSelection(selected,[track]);
-          },'rico-library-track');
-          row.title='Add to MY PLAYLIST · '+(track.origin||selected.name)+' / '+track.file;
-          if(draft.some(function(item){return item.key===key;}))row.classList.add('rico-draft-added');
-          songsEl.appendChild(row);
+          var row=document.createElement('div');
+          row.className='rico-library-track-with-actions';
+          if(draft.some(function(item){return item.key===key;}))
+            row.classList.add('rico-draft-added');
+          var title=document.createElement('span');
+          title.className='rico-library-track-name';
+          title.textContent=(track.title||track.file)+
+            (track.author?' — '+formatArtistCredit(track.author):'');
+          row.appendChild(title);
+          var actions=document.createElement('span');
+          actions.className='rico-library-track-actions';
+          var play=makeButton('PLAY',function(){
+            void playArtistSong(track,false);
+          },'rico-library-play');
+          play.setAttribute('aria-label','Play '+(track.title||track.file));
+          actions.appendChild(play);
+          var add=makeButton('+',function(){
+            void addSelection(selected,[track]);
+          },'rico-library-add');
+          add.title='Add to MY PLAYLIST without playback';
+          add.setAttribute('aria-label','Add '+(track.title||track.file)+' to MY PLAYLIST');
+          actions.appendChild(add);
+          // Do not show disabled microphones or reserve empty 26px slots.
+          var ref={pack:track.pack||selected.pack,file:track.file};
+          if(karaokeAvailableFor(track,ref)){
+            var mic=makeButton('',function(){
+              void playArtistSong(track,true);
+            },'rico-library-karaoke-mic');
+            mic.innerHTML=handheldMicSVG();
+            mic.title='Play Karaoke from 00:00';
+            mic.setAttribute('aria-label','Play Karaoke '+(track.title||track.file));
+            actions.appendChild(mic);
+          }
+          row.appendChild(actions);songsEl.appendChild(row);
         });
         renderDraft();
       }
