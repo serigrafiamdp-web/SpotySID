@@ -100,8 +100,8 @@
   function drawMixedScope(){
     var ctx=player.context,canvas=player.canvas,c=palette();
     if(!ctx||!canvas)return;
-    var width=canvas.width,height=canvas.height,band=Math.max(70,Math.min(height*.28,220));
-    var center=band*.49,amplitude=Math.max(15,band*.33);
+    var width=canvas.width,height=canvas.height,band=Math.max(100,Math.min(height*.38,340));
+    var center=band*.49,amplitude=Math.max(24,band*.39);
     var cursor=width*.63,secondsPx=width/13;
     var now=player.sampleRate?Math.max(0,(player.autoElapsedSamples||0)/player.sampleRate):0;
     var mode=player.scopeDisplayMode||'hires';
@@ -113,7 +113,8 @@
     ctx.fillStyle=c.line;
     ctx.strokeStyle=c.line;
     ctx.font='12px RicoAmigaTopaz,monospace';
-    ctx.globalAlpha=.45;
+    // Use theme ink without alpha: no intermediate grey-colored ticks.
+    ctx.globalAlpha=1;
     var visibleStart=Math.max(0,now-cursor/secondsPx);
     var visibleEnd=now+(width-cursor)/secondsPx;
     for(var t=Math.ceil(visibleStart/5)*5;t<=visibleEnd;t+=5){
@@ -160,7 +161,7 @@
           var rec=history[h];ctx.lineTo(cursor+(rec.t-now)*secondsPx,center+rec.peak*amplitude);
         }
         ctx.closePath();
-        if(player.oscilloscopeMode==='filled'){ctx.globalAlpha=.63;ctx.fillStyle=c.fill;ctx.fill();ctx.globalAlpha=1;}
+        if(player.oscilloscopeMode==='filled'){ctx.fillStyle=c.fill;ctx.fill();}
         ctx.strokeStyle=c.line;ctx.lineWidth=2;ctx.stroke();
       }
     }
