@@ -2720,6 +2720,29 @@
   // TEST403: the original playlist remains visible after playback is
   // deliberately transferred to a song in the SECOND window.
   var ricoPinnedFirstHost=null,ricoSecondaryPromotion=null;
+  // TEST406: every visible playlist can ask the same audio player to load a
+  // song. The inactive window retains its own source and row indices.
+  var ricoCurrentWindowSource=null,ricoInactiveWindowSource=null;
+  var ricoPinnedReturnPromotion=null;
+  function ricoBindPinnedSongClicks(shadow,source){
+    if(!shadow||!source||typeof source.playFrom!=='function')return;
+    var rows=shadow.querySelector('#ricoLivePlaylistItems');
+    if(!rows)return;
+    rows.addEventListener('click',function(event){
+      var target=event.target;
+      var row=target&&target.closest&&target.closest('button.rico-live-row');
+      if(!row||ricoInactiveWindowSource!==source||
+         ricoPinnedReturnPromotion||ricoSecondaryPromotion)return;
+      var index=Number(row.getAttribute('data-sid-index'));
+      if(!Number.isInteger(index)||index<0||
+         !source.data||!source.data.tracks||
+         index>=source.data.tracks.length)return;
+      // This click is explicit playback intent; no audio or list changes
+      // happen just by focusing the inactive playlist.
+      event.preventDefault();event.stopPropagation();
+      source.playFrom(index,false,true);
+    },true);
+  }
   function removePlayingWindow(){
     ++ricoSecondaryPaintId;
     if(ricoSecondaryPreview&&ricoSecondaryPreview.dispose)
@@ -2727,7 +2750,12 @@
     ricoSecondaryPreview=null;
     if(ricoSecondaryHost){ricoSecondaryHost.remove();ricoSecondaryHost=null;}
     if(ricoPinnedFirstHost){ricoPinnedFirstHost.remove();ricoPinnedFirstHost=null;}
+    if(ricoPinnedReturnPromotion){
+      ricoPinnedReturnPromotion.replacementHost.remove();
+      ricoPinnedReturnPromotion=null;
+    }
     ricoSecondaryPromotion=null;
+    ricoInactiveWindowSource=null;
     var primary=document.getElementById('ricoLivePlaylist');
     if(primary&&ricoPrimaryOriginalStyle!==null)
       primary.setAttribute('style',ricoPrimaryOriginalStyle);
@@ -2780,7 +2808,8 @@
     if(ricoPinnedFirstHost&&ricoPinnedFirstHost!==pinned)
       ricoPinnedFirstHost.remove();
     ricoPinnedFirstHost=pinned;
-    ricoSecondaryPromotion={primary:primary,pinned:pinned,oldStyle:oldStyle};
+    ricoSecondaryPromotion={primary:primary,pinned:pinned,
+      oldStyle:oldStyle,firstSource:ricoCurrentWindowSource};
     // Move the real player UI behind the still-visible right-hand preview.
     // This avoids either window disappearing during the existing audio fade.
     primary.style.display='flex';
@@ -2808,6 +2837,10 @@
       ricoSecondaryPreview=null;
       if(ricoSecondaryHost){ricoSecondaryHost.remove();ricoSecondaryHost=null;}
       primary.style.visibility='visible';
+      // TEST406: the pinned A is a selectable playlist, not a dead picture.
+      ricoInactiveWindowSource=transfer.firstSource;
+      ricoBindPinnedSongClicks(transfer.pinned.shadowRoot,
+        ricoInactiveWindowSource);
       ricoPrimaryBrowseKey='playing:'+loadedPlaylistTitle;
     }else{
       // A failed or superseded load must not strand an invisible window.
@@ -2816,6 +2849,84 @@
         ricoPinnedFirstHost.remove();ricoPinnedFirstHost=null;
       }
     }
+  }
+  // TEST406: when a song in pinned A is selected, move the REAL player UI
+  // back to A and pin the previously active B at its existing coordinates.
+  // Keep both views visible throughout the unchanged audio handoff.
+  function beginPinnedPlaylistPromotion(){
+    if(!ricoPinnedFirstHost||ricoPinnedReturnPromotion||
+       !ricoInactiveWindowSource||!ricoCurrentWindowSource)return false;
+    var primary=document.getElementById('ricoLivePlaylist');
+    var inactive=ricoPinnedFirstHost.shadowRoot&&
+      ricoPinnedFirstHost.shadowRoot.querySelector('#ricoLivePlaylist');
+    if(!primary||!inactive)return false;
+    var target=inactive.getBoundingClientRect();
+    var current=primary.getBoundingClientRect();
+    if(!target.width||!current.width)return false;
+    var previousStyle=primary.getAttribute('style')||'';
+    var nextPinned=document.createElement('div');
+    nextPinned.id='ricoPinnedOtherPlaylistWindow';
+    nextPinned.style.cssText='position:fixed;inset:0;z-index:197;pointer-events:none;';
+    var shadow=nextPinned.attachShadow({mode:'open'});
+    var css=document.createElement('link');
+    css.rel='stylesheet';
+    css.href='css/style.css?v=test406-switch-either-playlist';
+    shadow.appendChild(css);
+    var copy=primary.cloneNode(true);
+    copy.style.cssText+=';position:fixed;display:flex;left:'+current.left+
+      'px;right:auto;top:'+current.top+'px;bottom:auto;width:'+
+      current.width+'px;height:'+current.height+
+      'px;transform:none;pointer-events:auto;';
+    copy.querySelectorAll('.rico-live-current,.rico-live-next')
+      .forEach(function(marker){marker.remove();});
+    copy.querySelectorAll('.rico-live-active,.rico-live-edit-active')
+      .forEach(function(row){
+        row.classList.remove('rico-live-active','rico-live-edit-active');
+      });
+    var close=copy.querySelector('#ricoLiveClose');
+    if(close)close.addEventListener('click',function(event){
+      event.preventDefault();event.stopPropagation();
+      nextPinned.remove();
+      if(ricoPinnedFirstHost===nextPinned)ricoPinnedFirstHost=null;
+      if(ricoPinnedFirstHost===null)ricoInactiveWindowSource=null;
+    });
+    shadow.appendChild(copy);
+    if(window.ricoPrepareShadowHints)window.ricoPrepareShadowHints(shadow);
+    if(window.ricoDismissTransientHints)window.ricoDismissTransientHints();
+    document.body.appendChild(nextPinned);
+    ricoPinnedReturnPromotion={
+      primary:primary,oldPinned:ricoPinnedFirstHost,
+      replacementHost:nextPinned,oldStyle:previousStyle,
+      previousSource:ricoCurrentWindowSource
+    };
+    primary.style.display='flex';
+    primary.style.left=target.left+'px';
+    primary.style.right='auto';
+    primary.style.top=target.top+'px';
+    primary.style.bottom='auto';
+    primary.style.width=target.width+'px';
+    primary.style.height=target.height+'px';
+    primary.style.transform='none';
+    primary.style.visibility='hidden';
+    return true;
+  }
+  function finishPinnedPlaylistPromotion(success){
+    var transfer=ricoPinnedReturnPromotion;
+    if(!transfer)return;
+    ricoPinnedReturnPromotion=null;
+    if(!success){
+      transfer.primary.setAttribute('style',transfer.oldStyle);
+      transfer.replacementHost.remove();
+      return;
+    }
+    // Original UI is now A; B becomes the selectable inactive window.
+    transfer.oldPinned.remove();
+    ricoPinnedFirstHost=transfer.replacementHost;
+    ricoInactiveWindowSource=transfer.previousSource;
+    ricoBindPinnedSongClicks(transfer.replacementHost.shadowRoot,
+      ricoInactiveWindowSource);
+    transfer.primary.style.visibility='visible';
+    ricoPrimaryBrowseKey='playing:'+loadedPlaylistTitle;
   }
   // TEST402: fully rendered *second* playlist uses the SAME SID decoder and
   // row/control classes as the first. Its own preview, selection, and scroll
@@ -6754,6 +6865,19 @@
                 name:pending.name,createdBy:pending.creator,
                 tracks:pending.tracks.map(remixCanonicalRef)
               }:data;
+              // TEST406: retain a callable source for each playlist window.
+              // The catalog row closure can still request the original audio
+              // loader even after MOS is closed and the other list is active.
+              var windowSource={
+                item:item,data:chosen,
+                playFrom:function(index,karaoke,fromPinned){
+                  void openPlaylist(false,false,{
+                    startIndex:index,karaoke:!!karaoke,
+                    previewData:windowSource.data,
+                    fromPinnedFirst:!!fromPinned
+                  });
+                }
+              };
               // Browsing the name does not call loadStoredPlaylist, loadSIDData,
               // playSong, or any fade/audio method. Keep playing music intact.
               if(browseOnly){
@@ -6781,6 +6905,7 @@
                   }
                 }
                 if(!ricoPrimaryBrowseKey)ricoPrimaryBrowseKey=nextBrowseKey;
+                ricoCurrentWindowSource=windowSource;
                 clearCommunityBrowse();
                 communityBrowsePreview=createCommunityBrowse(chosen,item,
                   function(index,karaoke){
@@ -6802,9 +6927,12 @@
               // TEST403: a PLAY from window 2 transfers the active controls
               // to window 2 but preserves window 1 on screen.
               var fromSecond=!!(options&&options.fromSecondary&&ricoSecondaryHost);
+              var fromPinned=!!(options&&options.fromPinnedFirst&&
+                ricoPinnedFirstHost&&ricoInactiveWindowSource);
               var promoted=fromSecond&&beginSecondaryPlaylistPromotion();
+              var returned=fromPinned&&!promoted&&beginPinnedPlaylistPromotion();
               clearCommunityBrowse();
-              if(!promoted){
+              if(!promoted&&!returned){
                 removePlayingWindow();
                 ricoPrimaryBrowseKey='';
               }
@@ -6815,10 +6943,12 @@
                   startAt); // Keep the existing audio transition unchanged.
               }catch(loadError){
                 if(promoted)finishSecondaryPlaylistPromotion(false);
+                if(returned)finishPinnedPlaylistPromotion(false);
                 throw loadError;
               }
               if(applied===false){
                 if(promoted)finishSecondaryPlaylistPromotion(false);
+                if(returned)finishPinnedPlaylistPromotion(false);
                 return;
               }
               activeCuratedCatalogId=!item.remoteId&&item.id==='old-sid-collection-rico'
@@ -6833,9 +6963,11 @@
               }:null;
               activeSharePlaylistId=pending?'':(item.remoteId||item.id||'');
               renderLivePlaylist();
-              // Keep the right-hand preview on top until the live player
-              // has rendered its first active rows. Window 1 never closes.
+              // The original player owns only the active side. The inactive
+              // side stays visible and can transfer control back at any time.
+              ricoCurrentWindowSource=windowSource;
               if(promoted)finishSecondaryPlaylistPromotion(true);
+              if(returned)finishPinnedPlaylistPromotion(true);
               selectedCommunityId=item.id||item.file;
               if(wantsKaraoke&&window.SpotySidKaraoke){
                 // TEST390: Shared song links reuse the MIC's view switch.
