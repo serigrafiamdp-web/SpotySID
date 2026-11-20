@@ -21,7 +21,7 @@
     !OFFSET||!SONG||!STATUS||!CLOSE||!SAVE||!RESET||!PLAY||
     !kara||!sync||!data||!player)return;
 
-  var authorized=false,busy=false,drag=null,lastPosition=null,authTicket=0;
+  var authorized=false,busy=false,drag=null,lastPosition=null,authTicket=0,bpmPoll=null;
   var baseBpm=Number(data.karaokeBpm)||Math.round(60/data.secondsPerBeat)||108;
   var backend='https://ricos-sid-community.serigrafiamdp.workers.dev';
   function clamp(v,min,max){return Math.max(min,Math.min(max,v));}
@@ -71,16 +71,26 @@
   TITLE.addEventListener('pointercancel',stopDrag);
   window.addEventListener('resize',function(){if(!WRAP.hidden)positionPanel();});
 
+  function refreshSidBpm(){
+    // Estimate is computed from the running SID sound, never from the
+    // total SID song length (which can contain an extra instrumental tail).
+    var estimate=kara&&typeof kara.estimateSidBpm==='function'
+      ?kara.estimateSidBpm():null;
+    if(Number.isFinite(estimate)&&estimate>0)
+      SIDBPM.textContent='≈ '+estimate;
+    else if(Number.isFinite(data.sidBpmApprox)&&data.sidBpmApprox>0)
+      SIDBPM.textContent='≈ '+data.sidBpmApprox;
+    else SIDBPM.textContent='SIN MEDIR';
+  }
   function renderValues(){
     var setting=sync.get();
     BPM.value=String(Math.round(baseBpm*setting.speed*10)/10);
     OFFSET.value=String(setting.offsetSeconds);
-    // No fabricated tempo: source code does not contain measured SID BPM.
-    SIDBPM.textContent=Number.isFinite(Number(data.sidBpmApprox))&&
-      data.sidBpmApprox!==null?String(data.sidBpmApprox):'SIN MEDIR';
+    refreshSidBpm();
   }
   function close(){
     ++authTicket;
+    if(bpmPoll!==null){clearInterval(bpmPoll);bpmPoll=null;}
     WRAP.hidden=true;
     authorized=false;busy=false;drag=null;
     KEY.value='';KEY.required=true;
@@ -100,6 +110,12 @@
     feedback(hasKaraoke()?'BETA KEY REQUIRED':'NO KARAOKE DATA FOR THIS SID');
     positionPanel();
     updatePlay();
+    if(bpmPoll!==null)clearInterval(bpmPoll);
+    bpmPoll=setInterval(function(){
+      if(WRAP.hidden)return;
+      refreshSidBpm();
+      updatePlay();
+    },1300);
     if(!KEY.disabled)KEY.focus();
   }
   OPEN.addEventListener('click',function(e){
