@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- TEST358: preload the actual A1200 Workbench font before displaying menus. -->
     <link rel="preload" href="https://cdn.jsdelivr.net/gh/rewtnull/amigafonts@master/ttf/Topaz_a1200_v1.0.ttf" as="font" type="font/ttf" crossorigin="anonymous">
-    <link rel="stylesheet" href="css/style.css?v=test379-share-wrap-6px">
+    <link rel="stylesheet" href="css/style.css?v=test380-karaoke-ui">
     <title>SpotySid — Rico + James SID Player | Oscilloscope View</title>
 
     <link rel="shortcut icon" type="image/png" href="images/icon16.png"/>
@@ -22,6 +22,20 @@
     </form>
 
     <canvas id="sidDisplay" style="background-color: #000000;"></canvas>
+    <!-- TEST380: karaoke stage is separate from the original 3-voice OSC.
+         Only UI scaffolding for now: lyrics/timing are added in a later test. -->
+    <section id="ricoKaraokeStage" aria-label="Karaoke view" hidden>
+      <div class="rico-karaoke-header">
+        <strong class="rico-karaoke-brand">KARAOKE</strong>
+        <span id="ricoKaraokeTitle">SELECTED SID</span>
+        <button type="button" id="ricoKaraokeClose" aria-label="Return to normal oscilloscope">OSC ✕</button>
+      </div>
+      <div class="rico-karaoke-lyrics" id="ricoKaraokeLyricArea" aria-label="Reserved karaoke lyrics area">
+        <canvas id="ricoKaraokeBall" width="8" height="8" aria-label="Authentic PETSCII ball"></canvas>
+        <div class="rico-karaoke-placeholder">LYRICS AREA</div>
+      </div>
+      <div class="rico-karaoke-foot">PETSCII · TEXT &amp; TIMING IN NEXT TEST</div>
+    </section>
     <!-- TEST345: fixed to the oscilloscope background, outside the zoomed canvas and controls. -->
     <span id="ricoWindowsVersion" role="button" tabindex="0" aria-live="polite" title="Click to confirm Windows XP on this computer">WIN ?</span>
 
@@ -877,7 +891,7 @@
     <script type="text/javascript" src="js/sidPlayer.js?v=test364-top-artist-14"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script type="text/javascript" src="js/sidImport.test221.js?v=test221import"></script>
-    <script type="text/javascript" src="js/customPlaylist.test101.js?v=test379-share-wrap-6px"></script>
+    <script type="text/javascript" src="js/customPlaylist.test101.js?v=test380-karaoke-mic"></script>
     <script type="text/javascript" src="js/stil.test223.js?v=test275-publish-artwork-verified"></script>
     <script type="text/javascript" src="js/tileArtwork.test264.js?v=test331-esc-save-before-exit"></script>
     <script type="text/javascript" src="lft-test/lft-mode.experimental.js?v=test239fingerprint"></script>
@@ -887,6 +901,8 @@
     <script type="text/javascript" src="js/c64CharROM.test282.js?v=test282-all-512-glyphs"></script>
     <script type="text/javascript" src="js/petsciiMode.test282.js?v=test363-scope-off"></script>
     <script type="text/javascript" src="js/scopeZoom.test342.js?v=test342-canvas-only-wheel-zoom"></script>
+    <!-- TEST380: isolated karaoke OSC/lyric interface, after standard scope modes. -->
+    <script type="text/javascript" src="js/karaoke.test380.js?v=test380-karaoke-ui"></script>
     <!-- TEST367 — lightweight keyboard cheat sheet. No SID/audio changes. -->
     <script>
     (function(){
