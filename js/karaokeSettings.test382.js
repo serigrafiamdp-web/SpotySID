@@ -278,7 +278,8 @@
   RESET.addEventListener('click',function(e){
     e.preventDefault();e.stopPropagation();
     // Reset is only a pending edit; no changes until SAVE + beta key.
-    BPM.value=String(baseBpm);
+    // Reset to the initial OFFLINE-calibrated SID tempo, not MIDI 108.
+    BPM.value=String(Number(data.initialKaraokeBpm)||Number(data.sidBpmApprox)||baseBpm);
     OFFSET.value='0';
     editTouched=true;
     discardKeyPrompt();
