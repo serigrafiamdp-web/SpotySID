@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <!-- TEST358: preload the actual A1200 Workbench font before displaying menus. -->
     <link rel="preload" href="https://cdn.jsdelivr.net/gh/rewtnull/amigafonts@master/ttf/Topaz_a1200_v1.0.ttf" as="font" type="font/ttf" crossorigin="anonymous">
-    <link rel="stylesheet" href="css/style.css?v=test383-karaoke-floating">
+    <link rel="stylesheet" href="css/style.css?v=test383b-floating-big-wave">
     <title>SpotySid — Rico + James SID Player | Oscilloscope View</title>
 
     <link rel="shortcut icon" type="image/png" href="images/icon16.png"/>
@@ -46,7 +46,7 @@
           </g>
         </svg>
       </button>
-      <div class="rico-karaoke-foot">PETSCII · MIDI LYRIC SYNC TEST</div>
+      <div class="rico-karaoke-foot">KARAOKE · PIXEL / PETSCII / HI-RES</div>
     </section>
     <div id="ricoKaraokeConfigOverlay" class="rico-karaoke-config-overlay" hidden>
       <form id="ricoKaraokeConfigForm" class="rico-karaoke-config-dialog"
@@ -59,11 +59,14 @@
           <div class="rico-karaoke-config-note">AUTHORIZED CALIBRATION ONLY</div>
         </div>
         <div id="ricoKaraokeAdjustmentFields" class="rico-karaoke-config-fields" hidden>
-          <label for="ricoKaraokeSpeed">LYRICS TIMELINE SPEED <output id="ricoKaraokeSpeedText">100.0%</output></label>
+          <div class="rico-karaoke-bpm-line"><label>SID BPM (APROX.)</label><output id="ricoKaraokeSidBpm">SIN MEDIR</output></div>
+          <label for="ricoKaraokeBpm">KARAOKE BPM</label>
+          <input id="ricoKaraokeBpm" type="number" min="65" max="150" value="108" step="0.1">
+          <label for="ricoKaraokeSpeed">TEMPO FINO <output id="ricoKaraokeSpeedText">100.0%</output></label>
           <input id="ricoKaraokeSpeed" type="range" min="0.8" max="1.2" value="1" step="0.005">
-          <label for="ricoKaraokeOffset">LYRICS START OFFSET (SECONDS)</label>
+          <label for="ricoKaraokeOffset">INICIO (SEGUNDOS)</label>
           <input id="ricoKaraokeOffset" type="number" min="-30" max="30" value="0" step="0.1">
-          <p class="rico-karaoke-config-note">LOWER SPEED = SLOWER LYRICS. SID AUDIO STAYS UNCHANGED.</p>
+          <p class="rico-karaoke-config-note">SOLO AJUSTA LA LETRA · SID SIN CAMBIOS</p>
           <button id="ricoKaraokeConfigReset" type="button">RESET SYNC</button>
         </div>
         <div id="ricoKaraokeConfigStatus" role="status" aria-live="polite"></div>
@@ -945,7 +948,7 @@
     <!-- TEST381: MIDI source events and internal-only sync correction (no adjustment controls). -->
     <script type="text/javascript" src="js/karaokeMidi.test381.js?v=test381-midi-data"></script>
     <script type="text/javascript" src="js/karaokeSync.test381.js?v=test382-auto-next-normal"></script>
-    <script type="text/javascript" src="js/karaokeSettings.test382.js?v=test383-nonmodal-drag-play"></script>
+    <script type="text/javascript" src="js/karaokeSettings.test382.js?v=test383b-drag-bpm-play"></script>
     <!-- TEST367 — lightweight keyboard cheat sheet. No SID/audio changes. -->
     <script>
     (function(){
