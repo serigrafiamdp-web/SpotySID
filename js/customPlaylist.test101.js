@@ -1425,19 +1425,22 @@
       dialog.setAttribute('aria-modal','true');
       dialog.setAttribute('aria-label','Beta key for saving playlist');
       var heading=document.createElement('strong');
-      heading.textContent=action==='ARCHIVE'?'ARCHIVE NO HVSC':(action==='PUBLISH'?'PUBLISH PLAYLIST':'SAVE CHANGES');
+      heading.textContent=action==='PIN'?'FIX PLAYLIST POSITION':
+        (action==='ARCHIVE'?'ARCHIVE NO HVSC':(action==='PUBLISH'?'PUBLISH PLAYLIST':'SAVE CHANGES'));
       var message=document.createElement('p');
-      message.textContent=action==='ARCHIVE'
+      message.textContent=action==='PIN'
+        ?'Enter your beta key to lock or unlock this Community position. Fixed slots are kept in this browser; public playlist order is saved through D1.'
+        :(action==='ARCHIVE'
         ?'Save these SID files publicly in NO HVSC for preservation and REMIX. Only archive music you have permission to share. Enter your beta key.'
         :(action==='PUBLISH'?'Enter the beta key to publish this playlist for everyone.':
-          'Enter the beta key to publish changes to the original playlist for everyone (added, removed or reordered songs).');
+          'Enter the beta key to publish changes to the original playlist for everyone (added, removed or reordered songs).'));
       var input=document.createElement('input');
       input.type='password';input.placeholder='Beta key';input.autocomplete='off';
       input.setAttribute('aria-label','Beta key');
       input.required=true;
       var actions=document.createElement('div');actions.className='rico-beta-actions';
       var cancel=document.createElement('button');cancel.type='button';cancel.textContent='CANCEL';
-      var save=document.createElement('button');save.type='submit';save.textContent=action==='ARCHIVE'?'ARCHIVE':(action==='PUBLISH'?'PUBLISH':'SAVE');
+      var save=document.createElement('button');save.type='submit';save.textContent=action==='PIN'?'CONFIRM':(action==='ARCHIVE'?'ARCHIVE':(action==='PUBLISH'?'PUBLISH':'SAVE'));
       actions.appendChild(cancel);actions.appendChild(save);
       dialog.appendChild(heading);dialog.appendChild(message);dialog.appendChild(input);dialog.appendChild(actions);
       cover.appendChild(dialog);document.body.appendChild(cover);
@@ -4418,6 +4421,46 @@
     var communityOrderSave=document.getElementById('ricoCommunityOrderSave');
     var communityOrderStatus=document.getElementById('ricoCommunityOrderStatus');
     var COMMUNITY_ORDER_STORAGE_KEY='rico-community-catalog-order-v1';
+    // TEST368: fixed Community positions, keyed by permanent public playlist ID.
+    // D1 handles authenticated order writes; this browser remembers the anchors.
+    var COMMUNITY_PIN_STORAGE_KEY='rico-community-fixed-slots-v1';
+    function readCommunityPins(){
+      try{
+        var input=JSON.parse(localStorage.getItem(COMMUNITY_PIN_STORAGE_KEY)||'{}');
+        if(!input||typeof input!=='object'||Array.isArray(input))return Object.create(null);
+        var pins=Object.create(null);
+        Object.keys(input).forEach(function(key){
+          if((key.indexOf('remote:')===0||key.indexOf('static:')===0)&&
+             key.length<180&&Number.isSafeInteger(input[key])&&
+             input[key]>=0&&input[key]<1000)pins[key]=input[key];
+        });
+        return pins;
+      }catch(error){return Object.create(null);}
+    }
+    var communityPins=readCommunityPins();
+    function isCommunityPinned(key){
+      return Object.prototype.hasOwnProperty.call(communityPins,key);
+    }
+    function pinSlots(items,keyOf){
+      if(!items.length)return items;
+      var placed=new Array(items.length),remaining=[],taken=new Set();
+      items.forEach(function(item){
+        var key=keyOf(item),at=communityPins[key];
+        if(isCommunityPinned(key)&&at<items.length&&!taken.has(at)){
+          placed[at]=item;taken.add(at);
+        }else remaining.push(item);
+      });
+      var next=0;
+      return Array.from({length:items.length},function(_,index){
+        return placed[index]===undefined?remaining[next++]:placed[index];
+      });
+    }
+    function pinPublicKeys(ids){
+      return pinSlots(ids,function(key){return key;});
+    }
+    function saveCommunityPins(){
+      localStorage.setItem(COMMUNITY_PIN_STORAGE_KEY,JSON.stringify(communityPins));
+    }
     var communityDraftOrder=null;
     var communityServerOrder=null;
     var communityServerRevision=null;
@@ -4438,10 +4481,14 @@
         if(!state||state.format!=='ricos-community-catalog-order'||state.version!==1||
            !Array.isArray(state.order)||!Number.isSafeInteger(state.revision))
           throw Error('Invalid shared catalog order');
-        var order=[moving].concat(state.order.filter(function(id){return id!==moving;}));
+        // A published/edited list takes the first free slot, never a pinned one.
+        var order=isCommunityPinned(moving)?state.order.slice():
+          [moving].concat(state.order.filter(function(id){return id!==moving;}));
+        order=pinPublicKeys(order);
         if(order.length>550)throw Error('Shared catalog order exceeds server limit');
         // Already first after a successful edit: no need for a redundant write.
-        if(state.order[0]===moving){
+        if(state.order.length===order.length&&
+           state.order.every(function(id,i){return id===order[i];})){
           communityServerOrder=order;
           communityServerRevision=state.revision;
           communityDraftOrder=null;
@@ -4463,7 +4510,9 @@
           {cache:'no-store'});
         if(!verify.ok)throw Error('Cannot verify shared catalog order');
         var latest=await verify.json();
-        if(!latest||!Array.isArray(latest.order)||latest.order[0]!==moving||
+        if(!latest||!Array.isArray(latest.order)||
+           latest.order.length!==order.length||
+           !order.every(function(id,i){return latest.order[i]===id;})||
            !Number.isSafeInteger(latest.revision))
           throw Error('Another edit changed the shared order during verification');
         communityServerOrder=latest.order;
@@ -4527,16 +4576,17 @@
     function sortCommunityPlaylists(playlists){
       var ids=communityDraftOrder!==null?communityDraftOrder:
         (communityServerOrder&&communityServerOrder.length?communityServerOrder:readSavedCommunityOrder());
-      if(!ids.length)return playlists;
+      if(!ids.length)return pinSlots(playlists,communityItemOrderKey);
       var positions=Object.create(null);
       ids.forEach(function(key,index){if(positions[key]===undefined)positions[key]=index;});
-      return playlists.map(function(item,index){return {item:item,index:index};}).sort(function(a,b){
+      var sorted=playlists.map(function(item,index){return {item:item,index:index};}).sort(function(a,b){
         var aPos=positions[communityItemOrderKey(a.item)],bPos=positions[communityItemOrderKey(b.item)];
         if(aPos!==undefined&&bPos!==undefined)return aPos-bPos;
         if(aPos!==undefined)return -1;
         if(bPos!==undefined)return 1;
         return a.index-b.index;
       }).map(function(entry){return entry.item;});
+      return pinSlots(sorted,communityItemOrderKey);
     }
     function catalogOrderRows(){
       return Array.prototype.slice.call(communityItems.querySelectorAll('.rico-community-catalog-row'));
@@ -4554,12 +4604,107 @@
     }
     function updateCatalogArrows(){
       var rows=allCommunityOrderRows();
-      rows.forEach(function(row,index){
+      var movable=rows.filter(function(row){
+        return !isCommunityPinned(row.dataset.communityOrderKey);
+      });
+      rows.forEach(function(row){
         var up=row.querySelector('.rico-community-up');
         var down=row.querySelector('.rico-community-down');
-        if(up)up.disabled=index===0;
-        if(down)down.disabled=index===rows.length-1;
+        var pinned=isCommunityPinned(row.dataset.communityOrderKey);
+        var index=movable.indexOf(row);
+        if(up)up.disabled=pinned||index<=0;
+        if(down)down.disabled=pinned||index<0||index===movable.length-1;
+        var button=row.querySelector('.rico-community-pin');
+        if(button){
+          button.classList.toggle('rico-pin-on',pinned);
+          button.setAttribute('aria-pressed',pinned?'true':'false');
+          button.setAttribute('aria-label',(pinned?'Unpin ':'Pin ')+
+            (row.dataset.communityTitle||'playlist')+' position');
+          button.title=pinned?'Unpin position':'Pin this playlist position (beta key)';
+        }
       });
+    }
+    // Restore anchors after server promotions or a newly created list.
+    // All non-pinned rows may move; existing pinned DOM slots remain fixed.
+    function restorePinnedCommunityPositions(){
+      var rows=allCommunityOrderRows();
+      if(!rows.length)return;
+      var anchored=pinSlots(rows,function(row){return row.dataset.communityOrderKey;});
+      if(anchored.some(function(row,i){return row!==rows[i]}))
+        anchored.forEach(function(row){communityItems.appendChild(row);});
+      updateCatalogArrows();
+    }
+    async function toggleCommunityPin(row){
+      var keyId=row.dataset.communityOrderKey;
+      if(!isPublicCommunityKey(keyId))return;
+      var oldPin=isCommunityPinned(keyId);
+      var rowPos=allCommunityOrderRows().indexOf(row);
+      if(rowPos<0)return;
+      var key=await askBetaKeyDialog('PIN');
+      if(!key)return;
+      var pinButton=row.querySelector('.rico-community-pin');
+      if(pinButton)pinButton.disabled=true;
+      if(communityOrderStatus)communityOrderStatus.textContent='Checking beta key...';
+      try{
+        // A pin is authorized through the same D1 beta-protected endpoint as
+        // SAVE. Never accept the key locally without an acknowledged write.
+        var read=await fetch(communityWriteApi+'/catalog-order',{cache:'no-store'});
+        if(!read.ok)throw Error('Shared Community order unavailable');
+        var state=await read.json();
+        if(!state||state.format!=='ricos-community-catalog-order'||
+           state.version!==1||!Number.isSafeInteger(state.revision)||
+           !Array.isArray(state.order))throw Error('Invalid shared Community order');
+        var ids=catalogOrderRows().map(function(node){return node.dataset.communityOrderKey;});
+        if(!ids.length)throw Error('No published playlists');
+        var write=await fetch(communityWriteApi+'/catalog-order',{
+          method:'PUT',headers:{'Content-Type':'application/json','X-Beta-Key':key},
+          body:JSON.stringify({order:ids,expectedRevision:state.revision})
+        });
+        var receipt=await write.json().catch(function(){return {};});
+        if(!write.ok||receipt.saved!==true||!Number.isSafeInteger(receipt.revision))
+          throw Error(receipt.error||'Beta key rejected or shared order not saved');
+        var verify=await fetch(communityWriteApi+'/catalog-order?pin='+Date.now(),
+          {cache:'no-store'});
+        if(!verify.ok)throw Error('Could not verify Community order');
+        var current=await verify.json();
+        if(!current||!Array.isArray(current.order)||
+           current.order.length!==ids.length||
+           !ids.every(function(id,i){return current.order[i]===id;}))
+          throw Error('Community order changed during verification');
+        if(oldPin)delete communityPins[keyId];
+        else communityPins[keyId]=rowPos;
+        saveCommunityPins();
+        communityServerOrder=current.order.slice();
+        communityServerRevision=current.revision;
+        communityDraftOrder=null;communityPublicOrderDirty=false;
+        updateCatalogArrows();
+        if(communityOrderStatus)
+          communityOrderStatus.textContent=(oldPin?'Unpinned':'Pinned #'+(rowPos+1))+' · this browser';
+        say((oldPin?'Position released: ':'Position fixed: ')+
+          (row.dataset.communityTitle||'playlist')+
+          '. Beta key verified. Fixed slots are remembered in this browser.');
+      }catch(error){
+        if(communityOrderStatus)communityOrderStatus.textContent='PIN not saved';
+        say('PIN: '+error.message);
+      }finally{if(pinButton)pinButton.disabled=false;}
+    }
+    function appendCommunityPin(row,item){
+      var pin=document.createElement('button');
+      pin.type='button';
+      pin.className='rico-community-pin';
+      var svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+      svg.setAttribute('viewBox','0 0 20 20');
+      svg.setAttribute('aria-hidden','true');
+      svg.setAttribute('focusable','false');
+      var outline=document.createElementNS('http://www.w3.org/2000/svg','path');
+      outline.setAttribute('d','M6 2h8l-1.6 5.2 3 3V12H4.6v-1.8l3-3z M10 12v6');
+      svg.appendChild(outline);pin.appendChild(svg);
+      row.dataset.communityTitle=item.title;
+      pin.addEventListener('click',function(event){
+        event.preventDefault();event.stopPropagation();
+        if(!pin.disabled)void toggleCommunityPin(row);
+      });
+      row.appendChild(pin);
     }
     function addPrivateCommunityArrows(row,key){
       row.dataset.communityOrderKey=key;
@@ -4605,17 +4750,28 @@
     }
     function moveCommunityRow(row,step){
       var rows=allCommunityOrderRows(),from=rows.indexOf(row);
-      if(from<0)return;
-      var to=Math.max(0,Math.min(rows.length-1,from+step));
-      if(to===from)return;
+      if(from<0||isCommunityPinned(row.dataset.communityOrderKey))return;
+      // Skip all pinned slots, moving only through the available positions.
+      var moving=rows.filter(function(entry){
+        return !isCommunityPinned(entry.dataset.communityOrderKey);
+      });
+      var index=moving.indexOf(row);
+      var target=Math.max(0,Math.min(moving.length-1,index+step));
+      if(target===index)return;
+      moving.splice(index,1);
+      moving.splice(target,0,row);
+      var remaining=0;
+      var reordered=rows.map(function(entry){
+        return isCommunityPinned(entry.dataset.communityOrderKey)?
+          entry:moving[remaining++];
+      });
       // Respect the user's deliberate manual order after first creation.
       communityNewestDraftId='';
       var previousPublic=catalogOrderRows().map(function(entry){
         return entry.dataset.communityOrderKey;
       }).join('\n');
       cancelStartupPlaylist();
-      var target=rows[to];
-      communityItems.insertBefore(row,to>from?target.nextSibling:target);
+      reordered.forEach(function(entry){communityItems.appendChild(entry);});
       communityDraftOrder=allCommunityOrderRows().map(function(entry){
         return entry.dataset.communityOrderKey;
       });
@@ -5579,6 +5735,7 @@
           var row=document.createElement('div');
           row.className='rico-community-row rico-community-catalog-row';
           row.dataset.communityOrderKey=communityItemOrderKey(item);
+          row.dataset.communityTitle=item.title;
           row.tabIndex=0;
           row.setAttribute('role','button');
           row.setAttribute('aria-label','Load playlist '+item.title);
@@ -5718,6 +5875,9 @@
             });
             row.appendChild(editCurated);
           }
+          // TEST368: single pin icon immediately to the RIGHT of DELETE
+          // (or rightmost action for a curated/static public playlist).
+          appendCommunityPin(row,item);
           communityItems.appendChild(row);
           if(item.id && item.id===selectedCommunityId) row.classList.add('rico-community-selected');
           async function openPlaylist(isStartup,isShared) {
@@ -5844,6 +6004,7 @@
         });
         updateCatalogArrows();
         await renderLocalImportedCommunityRows();
+        restorePinnedCommunityPositions();
         // Refresh ADD + TO options after the remote catalog arrives. Never
         // change playback or the currently selected editing draft.
         renderRemixes();
