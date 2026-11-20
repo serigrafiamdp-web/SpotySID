@@ -461,6 +461,97 @@ async function communityCatalogOrder(request,env,origin){
 }
 
 
+// TEST385 — Public per-song Karaoke synchronization.
+// GET is open for all SpotySID visitors. PUT requires the existing beta key
+// and saves BPM and signed start offset in Cloudflare D1, never client storage.
+// Optimistic revisions ensure two editors cannot overwrite each other silently.
+// This does NOT alter the underlying SID audio or official MIDI.
+async function publicKaraokeSync(request,env,url,origin){
+  if(!env.DB)return text('Karaoke sync database unavailable',503,origin);
+  if(request.method!=='GET'&&request.method!=='PUT')
+    return text('Method not allowed',405,origin);
+  const songKey=request.method==='GET'
+    ?url.searchParams.get('key'):undefined;
+  const validKey=value=>typeof value==='string'&&
+    /^[a-z0-9](?:[a-z0-9-]{1,98}[a-z0-9])$/.test(value);
+  if(request.method==='GET'&&!validKey(songKey))
+    return text('Invalid karaoke song key',400,origin);
+  if(request.method==='PUT'){
+    if(origin!==ORIGIN)return text('Origin not allowed',403,origin);
+    if(!(await hasValidBetaKey(request,env)))
+      return text('Invalid beta key',403,origin);
+  }
+  try{
+    await env.DB.prepare(
+      'CREATE TABLE IF NOT EXISTS karaoke_sync ('+
+      'song_key TEXT PRIMARY KEY, karaoke_bpm REAL NOT NULL, '+
+      'offset_seconds REAL NOT NULL, revision INTEGER NOT NULL DEFAULT 0, '+
+      'updated_at INTEGER NOT NULL DEFAULT 0)'
+    ).run();
+    const query=key=>env.DB.prepare(
+      'SELECT karaoke_bpm,offset_seconds,revision,updated_at FROM karaoke_sync WHERE song_key=?'
+    ).bind(key).first();
+    if(request.method==='GET'){
+      const row=await query(songKey);
+      return json({
+        format:'spotysid-karaoke-sync',version:1,key:songKey,
+        karaokeBpm:row?Number(row.karaoke_bpm):null,
+        offsetSeconds:row?Number(row.offset_seconds):0,
+        revision:row?Number(row.revision):0,
+        updatedAt:row?Number(row.updated_at):0,
+        published:!!row
+      },200,origin);
+    }
+    const bodyText=await request.text();
+    if(bodyText.length>2048)return text('Karaoke sync payload too large',413,origin);
+    let payload;
+    try{payload=JSON.parse(bodyText);}
+    catch(_){return text('Invalid karaoke sync JSON',400,origin);}
+    const key=payload&&payload.key,bpm=payload&&payload.karaokeBpm,
+      offset=payload&&payload.offsetSeconds,revision=payload&&payload.expectedRevision;
+    // The whitelist currently matches only the Karaoke actually supplied
+    // with the site; extending it requires publishing the song data first.
+    if(!validKey(key)||key!=='uctumi-seguir-viviendo-sin-tu-amor'||
+       typeof bpm!=='number'||!Number.isFinite(bpm)||bpm<65||bpm>150||
+       typeof offset!=='number'||!Number.isFinite(offset)||offset< -30||offset>30||
+       !Number.isSafeInteger(revision)||revision<0)
+      return text('Invalid karaoke BPM, offset, key or revision',400,origin);
+    const old=await query(key);
+    const current=old?Number(old.revision):0;
+    if(revision!==current)
+      return text('Karaoke settings changed elsewhere; reload before publishing',409,origin);
+    const now=Date.now(),newRevision=current+1;
+    let write;
+    if(old){
+      write=await env.DB.prepare(
+        'UPDATE karaoke_sync SET karaoke_bpm=?,offset_seconds=?,revision=?,updated_at=? '+
+        'WHERE song_key=? AND revision=?'
+      ).bind(bpm,offset,newRevision,now,key,current).run();
+    }else{
+      // Another first-time editor racing this INSERT is rejected by the
+      // unique key, not allowed to overwrite a concurrent publication.
+      write=await env.DB.prepare(
+        'INSERT INTO karaoke_sync(song_key,karaoke_bpm,offset_seconds,revision,updated_at) '+
+        'VALUES(?,?,?,?,?)'
+      ).bind(key,bpm,offset,newRevision,now).run();
+    }
+    if(write.meta?.changes!==1)
+      return text('Karaoke sync changed elsewhere; reload before publishing',409,origin);
+    return json({
+      format:'spotysid-karaoke-sync',version:1,key,
+      karaokeBpm:bpm,offsetSeconds:offset,revision:newRevision,
+      updatedAt:now,published:true
+    },200,origin);
+  }catch(error){
+    // SQLite uniqueness conflicts on the first record are revision races.
+    if(/unique constraint/i.test(String(error)))
+      return text('Karaoke sync changed elsewhere; reload before publishing',409,origin);
+    console.error('Karaoke sync read/write failed',error);
+    return text('Karaoke sync database unavailable; nothing published',503,origin);
+  }
+}
+
+
 // TEST228 — Artist profiles / SpotySid-only STIL overrides.
 // The official HVSC STIL remains immutable on GitHub Pages.
 // All public edits require the existing beta key and a revision match.
@@ -652,6 +743,7 @@ export default {
   if(request.method==='POST' && origin!==ORIGIN)return text('Origin not allowed',403,origin);
   if(url.pathname==='/catalog-order' && (request.method==='GET'||request.method==='PUT'))
     return communityCatalogOrder(request,env,origin);
+  if(url.pathname==='/karaoke-sync')return publicKaraokeSync(request,env,url,origin);
   if(url.pathname==='/artist-profiles')return artistProfiles(request,env,url,origin);
   if(url.pathname==='/no-hvsc')return noHvscArchive(request,env,url,origin);
   // Independent non-HVSC binary collection endpoints.
@@ -669,6 +761,7 @@ export default {
       playlistTrackAdditions:true,catalogOrder:true,noHvscArchive:true,
       artistProfiles:!!(env.DB&&env.BETA_EDIT_KEY),
       artistTileworks:!!(env.DB&&env.BETA_EDIT_KEY),
+      karaokePublicSync:!!(env.DB&&env.BETA_EDIT_KEY),
       sidUploadProvider:sidUploadProvider(env)||null,
       sidUploadLimit:sidUploadProvider(env)==='github'?15:40,
       configured:!!env.BETA_EDIT_KEY},200,origin);
