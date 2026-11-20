@@ -690,6 +690,9 @@
         <select id="ricoRemixTarget" aria-label="REMIX or published playlist destination"><option value="">SELECT DESTINATION</option></select>
         <span id="ricoRemixCount">0 SID</span>
         <div id="ricoLiveTimerBar" class="rico-live-timer-bar">
+          <button type="button" id="ricoRandomSid" title="Random next SID (keep playlist order)" aria-label="Random playback OFF. Click to enable random next SID." aria-pressed="false">
+            <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 7h3c5 0 6 10 11 10h4"/><path d="m18 14 3 3-3 3"/><path d="M3 17h3c5 0 6-10 11-10h4"/><path d="m18 4 3 3-3 3"/></svg>
+          </button>
           <label for="ricoLiveTimer">TIMER</label>
           <input id="ricoLiveTimer" type="text" value="03:00" maxlength="5" inputmode="numeric"
             autocomplete="off" aria-label="Maximum time per SID in minutes and seconds"
