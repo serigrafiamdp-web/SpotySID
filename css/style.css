@@ -4281,3 +4281,55 @@ body [contenteditable], body [contenteditable] * {
   -ms-user-select:text !important;
   user-select:text !important;
 }
+
+/* TEST375 — per-track SHARE shortcut. One small S immediately at the right
+   end of the song cell, adjacent to the existing checkbox divider.
+   NO new separator, row-height or checkbox width changes. */
+#ricoLivePlaylistItems .rico-live-edit-row > button.rico-live-song-share {
+  display:inline-flex !important;
+  flex:0 0 22px !important;
+  box-sizing:border-box;
+  align-items:center;
+  justify-content:center;
+  width:22px !important;
+  min-width:22px !important;
+  max-width:22px !important;
+  padding:0 !important;
+  margin:0 !important;
+  border:0 !important;
+  border-radius:0 !important;
+  background:transparent !important;
+  color:var(--rico-theme-fg,#fff) !important;
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:12px !important;
+  font-weight:400 !important;
+  font-synthesis:none;
+  line-height:1;
+  text-align:center;
+  cursor:copy;
+}
+#ricoLivePlaylistItems .rico-live-edit-row > button.rico-live-song-share:is(:hover,:focus-visible) {
+  background:var(--rico-theme-fg,#fff) !important;
+  color:var(--rico-theme-bg,#000) !important;
+}
+#ricoLivePlaylistItems .rico-live-edit-row > .rico-live-row:is(
+  .rico-live-active,.rico-live-selected
+) + .rico-live-song-share {
+  background:var(--rico-theme-fg,#fff) !important;
+  color:var(--rico-theme-bg,#000) !important;
+}
+/* The PLAY / next-track triangle remains inside the playable song button.
+   A reserved 18px at its trailing end moves it slightly LEFT of S, and
+   prevents ellipsized titles from overlapping either control. */
+#ricoLivePlaylistItems .rico-live-edit-row > .rico-live-row .rico-live-current,
+#ricoLivePlaylistItems .rico-live-edit-row > .rico-live-row .rico-live-next {
+  display:inline-flex;
+  box-sizing:border-box;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 18px;
+  min-width:18px;
+  margin-left:auto;
+  margin-right:3px;
+  white-space:nowrap;
+}
