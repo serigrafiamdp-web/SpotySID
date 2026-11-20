@@ -123,7 +123,6 @@
           <div id="ricoHvscIntro" class="rico-hvsc-intro">Original HVSC community ranking from 2000. Ranked SID titles and their original composers.</div>
           <div class="rico-hvsc-head">
             <span id="ricoHvscListTitle">TOP 100 HVSC GAMES (2000) — Playlist by HVSC Community · 100 SID</span>
-            <span class="rico-community-stars" aria-label="Ratings coming soon" title="Ratings coming soon">☆☆☆☆☆</span>
             <button type="button" id="ricoHvscLoad">PLAY</button>
           </div>
           <div id="ricoHvscStatus" role="status"></div>
@@ -236,7 +235,7 @@
 
             <h3>6. KEYBOARD SHORTCUTS</h3>
             <p><strong>M</strong> MOS · <strong>P</strong> PLAYLIST ·
-            <strong>C</strong> COLOR · <strong>I</strong> invert ink/background (★) ·
+            <strong>C</strong> COLOR · <strong>I</strong> invert ink/background (I) ·
             <strong>F</strong> FILL/LINE · <strong>D</strong> TILEWORK ·
             <strong>N</strong> NEXT SID.
             <strong>↑ / ↓</strong> select a visible playlist or song (without reordering);
@@ -250,7 +249,7 @@
 
             <h3>7. OSC DISPLAY &amp; TILEWORK</h3>
             <p>Choose <strong>HI-RES / PETSCII / PIXEL</strong>, <strong>FILL / LINE</strong>,
-            a COLOR palette and <strong>★</strong> inversion. Master volume affects waveform
+            a COLOR palette and <strong>I</strong> inversion. Master volume affects waveform
             height as well as audio. Click the pencil or press <strong>D</strong> to open the
             <strong>256×64</strong> artist TILEWORK editor. Draw, fill, select, undo and use
             wheel zoom under the cursor. <strong>X / ESC</strong> opens <strong>SAVE BEFORE EXIT?</strong>
@@ -309,7 +308,7 @@
 
             <h3>6. ATAJOS DEL TECLADO</h3>
             <p><strong>M</strong> MOS · <strong>P</strong> PLAYLIST ·
-            <strong>C</strong> COLOR · <strong>I</strong> invertir fondo/tinta (★) ·
+            <strong>C</strong> COLOR · <strong>I</strong> invertir fondo/tinta (I) ·
             <strong>F</strong> FILL/LINE · <strong>D</strong> TILEWORK ·
             <strong>N</strong> NEXT SID.
             <strong>↑ / ↓</strong> seleccionan listas o canciones visibles sin reordenar;
@@ -323,7 +322,7 @@
 
             <h3>7. VISUALIZACIÓN OSC Y TILEWORK</h3>
             <p>Elegí <strong>HI-RES / PETSCII / PIXEL</strong>, <strong>FILL / LINE</strong>,
-            las paletas COLOR y la inversión <strong>★</strong>. El volumen maestro también
+            las paletas COLOR y la inversión <strong>I</strong>. El volumen maestro también
             cambia la altura de las ondas. Con el lápiz o la tecla <strong>D</strong> abrís
             el editor TILEWORK de artista, de <strong>256×64</strong> píxeles. Podés dibujar,
             rellenar, seleccionar, deshacer y acercar con la rueda centrada en el cursor.
@@ -608,7 +607,7 @@
                 <strong>HI-RES / PETSCII / PIXEL</strong> modes and
                 <strong>FILL / LINE</strong> waveform visualization.</li>
               <li>Selectable retro color palettes, including phosphor-inspired and
-                Commodore 64-inspired looks; <strong>★</strong> reverses foreground
+                Commodore 64-inspired looks; <strong>I</strong> reverses foreground
                 and background, while master volume also changes waveform height.</li>
               <li>The <strong>MOS</strong> browser supports <strong>↑ / ↓</strong>
                 and <strong>Enter</strong> navigation, matching the mouse's selection
@@ -729,12 +728,8 @@
     <aside id="ricoLivePlaylist" aria-label="Active SID playlist" style="display:flex;">
       <div id="ricoLivePlaylistHeader">
         <span class="rico-live-heading"><span id="ricoLivePlaylistTitle" title="Current playlist">PLAYLIST</span><span id="ricoLiveCount"></span></span>
-        <div id="ricoLivePlaylistCredits" aria-label="Playlist curator and future ratings">
+        <div id="ricoLivePlaylistCredits" aria-label="Playlist curator">
           <span id="ricoLivePlaylistCreator">Select a playlist</span>
-          <span id="ricoLivePlaylistStars" title="Ratings coming soon" aria-label="Ratings coming soon">
-            <span aria-hidden="true">☆☆☆☆☆</span>
-            <span class="rico-rating-note">Ratings coming soon</span>
-          </span>
         </div>
         <span class="rico-live-head-actions"><button type="button" id="ricoLiveShare" title="Copy public link to this playlist" style="display:none;">SHARE</button><button type="button" id="ricoLiveSave" title="Save new public song order or removals (beta key required)" style="display:none;">SAVE</button><button type="button" id="ricoLiveClose" aria-label="Hide playlist">×</button></span>
       </div>
@@ -861,7 +856,7 @@
       <span id="oscilloscopeVisualButtons">
         <button type="button" id="oscilloscopeModeButton" aria-pressed="false" aria-label="Filled waveform displayed. Click to switch to LINE.">LINE</button>
         <button type="button" id="oscilloscopeColorButton" aria-label="Change color palette">COLOR 1</button>
-        <button type="button" id="ricoInvertColorsButton" aria-label="Invert foreground and background colors" aria-pressed="false">★</button>
+        <button type="button" id="ricoInvertColorsButton" aria-label="Invert foreground and background colors" aria-pressed="false">I</button>
         <button type="button" id="ricoPetsciiButton" aria-pressed="false" aria-label="Oscilloscope display mode: HI-RES. Click for PETSCII.">HI-RES</button>
       </span>
 
