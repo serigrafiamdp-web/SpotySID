@@ -4300,7 +4300,7 @@ body [contenteditable], body [contenteditable] * {
   height:26px !important;
   min-height:26px !important;
   padding:0 !important;
-  margin:0 !important;
+  margin:0 4px 0 0 !important; /* TEST377: separate S from checkbox divider */
   border:1px solid var(--rico-theme-fg,#fff) !important;
   border-radius:2px !important;
   background:transparent !important;
