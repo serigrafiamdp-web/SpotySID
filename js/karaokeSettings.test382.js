@@ -1,6 +1,8 @@
-/* TEST385 — Karaoke Settings: edit first, SAVE asks beta key, publish
- * globally to Cloudflare D1. NO browser-only SAVE success claims.
- * Non-modal, draggable, compact, theme-only, per registered Karaoke.
+/* TEST388 — Karaoke Settings: manual tempo and start offset.
+ * SAVE requests beta key and persists immediately to this browser once
+ * authenticated using the already-live Community Worker.
+ * Public publication is best effort, never confused with LOCAL SAVED.
+ * Non-modal, draggable, compact, active palette only.
  */
 (function(){
   'use strict';
@@ -106,21 +108,28 @@
     SAVE.textContent='SAVE';
     SONG.textContent=data.title+' — '+data.originalArtist+' / '+data.sidCoverBy;
     renderPublishedValues();
-    feedback('AJUSTÁ Y PULSÁ SAVE PARA PUBLICAR · NO ES GUARDADO LOCAL');
+    feedback(sync.status().localSaved?
+      'AJUSTES LOCALES RESTAURADOS · SAVE PARA ACTUALIZAR':
+      'KARAOKE BPM MANUAL · SAVE PARA GUARDAR CON CLAVE');
     positionPanel();updatePlay();
     if(bpmPoll!==null)clearInterval(bpmPoll);
     bpmPoll=setInterval(function(){
       if(WRAP.hidden)return;
       updatePlay();
     },1300);
-    // Read public values from the database; never overwrite active typing.
+    // Public defaults may be fetched, but never overwrite local saves
+    // or the numbers currently being typed by the editor.
     sync.readPublic().then(function(){
       if(ticket!==requestId||WRAP.hidden)return;
       if(!editTouched)renderPublishedValues();
-      feedback('VALORES PÚBLICOS CARGADOS · SAVE PARA PUBLICAR CAMBIOS');
+      feedback(sync.status().localSaved?
+        'GUARDADO LOCAL RECUPERADO · AÚN NO PUBLICADO':
+        'VALORES PÚBLICOS CARGADOS · AJUSTÁ Y PULSÁ SAVE');
     }).catch(function(){
       if(ticket===requestId&&!WRAP.hidden)
-        feedback('SERVICIO PÚBLICO NO DISPONIBLE · SAVE REINTENTARÁ');
+        feedback(sync.status().localSaved?
+          'GUARDADO LOCAL RECUPERADO · SERVIDOR PÚBLICO PENDIENTE':
+          'SIN CONEXIÓN PÚBLICA · SAVE PUEDE GUARDAR LOCALMENTE');
     });
   }
   OPEN.addEventListener('click',function(e){
@@ -165,66 +174,101 @@
     return {karaokeBpm:bpm,offsetSeconds:offset};
   }
 
+  // The existing /catalog-order worker is already deployed. A deliberately
+  // invalid order validates the beta key WITHOUT updating any public data.
+  // Do not accept a generic HTTP 400 response: check the exact expected error.
+  async function authorizeBetaKey(secret){
+    var response=await fetch(backend+'/catalog-order',{
+      method:'PUT',cache:'no-store',
+      headers:{'Content-Type':'application/json','X-Beta-Key':secret},
+      body:JSON.stringify({order:[],expectedRevision:-1})
+    });
+    var data=await response.json().catch(function(){return {};});
+    if(response.status===403)
+      throw Error('CLAVE INCORRECTA O CLAVE DEL SERVIDOR NO CONFIGURADA');
+    if(response.status!==400||
+       data.error!=='Invalid community order or revision')
+      throw Error('NO SE PUDO VALIDAR LA CLAVE CON EL SERVIDOR');
+    return true;
+  }
+  async function tryPublicSave(secret,values,ticket){
+    // Publishing is optional until TEST385 Cloudflare deploy is enabled;
+    // local values are already safely stored before attempting this.
+    await sync.readPublic();
+    if(ticket!==requestId||WRAP.hidden)return false;
+    var revision=sync.status().revision;
+    var response=await fetch(backend+'/karaoke-sync',{
+      method:'PUT',cache:'no-store',
+      headers:{'Content-Type':'application/json','X-Beta-Key':secret},
+      body:JSON.stringify({
+        key:data.key,karaokeBpm:values.karaokeBpm,
+        offsetSeconds:values.offsetSeconds,expectedRevision:revision
+      })
+    });
+    var receipt=await response.json().catch(function(){return {};});
+    if(!response.ok||receipt.format!=='spotysid-karaoke-sync'||
+       receipt.published!==true||receipt.revision!==revision+1)
+      return false;
+    // Independently verify the public record: do NOT equate local save
+    // with publication merely because a PUT request returned 200.
+    var verified=await sync.readPublic();
+    if(ticket!==requestId||WRAP.hidden)return false;
+    if(verified.revision!==receipt.revision||
+       verified.karaokeBpm!==values.karaokeBpm||
+       verified.offsetSeconds!==values.offsetSeconds)return false;
+    sync.clearLocal();
+    sync.applyPublic(verified);
+    return true;
+  }
   FORM.addEventListener('submit',async function(e){
     e.preventDefault();e.stopPropagation();
     if(busy||!hasKaraoke())return;
     var values;
     try{values=readFields();}
-    catch(err){feedback(err.message);return;}
+    catch(error){feedback(error.message);return;}
     if(AUTH.hidden){
-      // TEST385: this is the FIRST moment the beta key is requested.
+      // TEST388: the FIRST SAVE click requests the beta key.
       AUTH.hidden=false;KEY.required=true;KEY.value='';
-      SAVE.textContent='PUBLISH';
-      feedback('INGRESÁ CLAVE BETA Y PULSÁ PUBLISH · CAMBIO GLOBAL');
+      SAVE.textContent='SAVE';
+      feedback('INGRESÁ CLAVE BETA PARA GUARDAR LOCALMENTE');
       positionPanel();KEY.focus();
       return;
     }
     var secret=KEY.value;
-    if(!secret){feedback('INGRESÁ LA CLAVE BETA PARA PUBLICAR');KEY.focus();return;}
-    KEY.value=''; // the secret is only held in this request
+    if(!secret){feedback('INGRESÁ LA CLAVE BETA');KEY.focus();return;}
     busy=true;SAVE.disabled=true;
     var ticket=++requestId;
-    feedback('PUBLICANDO SINCRONIZACIÓN…');
+    feedback('VERIFICANDO CLAVE…');
     try{
-      // Fetch latest revision; do not overwrite others' published changes.
-      await sync.readPublic();
+      await authorizeBetaKey(secret);
       if(ticket!==requestId||WRAP.hidden)return;
-      var revision=sync.status().revision;
-      var response=await fetch(backend+'/karaoke-sync',{
-        method:'PUT',cache:'no-store',
-        headers:{'Content-Type':'application/json','X-Beta-Key':secret},
-        body:JSON.stringify({
-          key:data.key,karaokeBpm:values.karaokeBpm,
-          offsetSeconds:values.offsetSeconds,expectedRevision:revision
-        })
-      });
-      var receipt=await response.json().catch(function(){return {};});
-      if(!response.ok)throw Error(
-        response.status===403?'CLAVE BETA INCORRECTA':
-        response.status===409?'OTRO EDITOR CAMBIÓ ESTE KARAOKE · VOLVÉ A ABRIR':
-        response.status===404?'SERVIDOR DE PUBLICACIÓN TODAVÍA NO DESPLEGADO':
-        receipt.error||'PUBLICACIÓN RECHAZADA ('+response.status+')'
-      );
-      if(receipt.format!=='spotysid-karaoke-sync'||receipt.published!==true||
-         receipt.revision!==revision+1)
-        throw Error('EL SERVIDOR NO CONFIRMÓ EL GUARDADO');
-      // No "published" success until an independent GET sees the exact
-      // revision and values from D1. That GET also applies the saved timing.
-      var published=await sync.readPublic();
-      if(ticket!==requestId||WRAP.hidden)return;
-      if(published.revision!==receipt.revision||
-         published.karaokeBpm!==values.karaokeBpm||
-         published.offsetSeconds!==values.offsetSeconds)
-        throw Error('NO SE PUDO VERIFICAR LA PUBLICACIÓN · RECARGÁ');
-      discardKeyPrompt();
-      editTouched=false;
-      renderPublishedValues();
-      feedback('PUBLICADO PARA TODOS · BPM '+values.karaokeBpm+
-        ' · INICIO '+(values.offsetSeconds>0?'+':'')+values.offsetSeconds+' S');
+      // The local commit is guaranteed before attempting global publication.
+      // This also updates the active lyrics immediately without changing SID audio.
+      sync.saveLocal(values);
+      discardKeyPrompt();editTouched=false;renderPublishedValues();
+      feedback('GUARDADO LOCAL · BPM '+values.karaokeBpm+
+        ' · INICIO '+(values.offsetSeconds>0?'+':'')+values.offsetSeconds+
+        ' S · PUBLICACIÓN PENDIENTE');
+      // Never erase local settings if the public route is not deployed.
+      // The same authorized request is used if the public route exists.
+      try{
+        var published=await tryPublicSave(secret,values,ticket);
+        if(ticket===requestId&&!WRAP.hidden){
+          if(published){
+            renderPublishedValues();
+            feedback('PUBLICADO PARA TODOS · BPM '+values.karaokeBpm+
+              ' · INICIO '+(values.offsetSeconds>0?'+':'')+
+              values.offsetSeconds+' S');
+          }else feedback('GUARDADO LOCAL · PUBLICACIÓN PENDIENTE');
+        }
+      }catch(publishError){
+        if(ticket===requestId&&!WRAP.hidden)
+          feedback('GUARDADO LOCAL · PUBLICACIÓN PENDIENTE');
+      }
     }catch(error){
       if(ticket===requestId&&!WRAP.hidden){
-        feedback('NO PUBLICADO / SIN CONFIRMAR · '+error.message);
-        KEY.focus(); // retain unsaved fields and allow another attempt
+        feedback('NO GUARDADO · '+error.message);
+        KEY.focus();
       }
     }finally{
       secret='';
@@ -238,7 +282,7 @@
     OFFSET.value='0';
     editTouched=true;
     discardKeyPrompt();
-    feedback('ORIGINAL PREPARADO · PULSÁ SAVE PARA PUBLICAR');
+    feedback('ORIGINAL PREPARADO · SAVE PARA GUARDAR CON CLAVE');
   });
   document.addEventListener('keydown',function(e){
     if(WRAP.hidden||e.key!=='Escape')return;
