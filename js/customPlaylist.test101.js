@@ -2730,45 +2730,57 @@
   // TEST395: two independent visible playlist windows for silent browsing.
   // The left window preserves the currently playing playlist's display.
   // The original live window remains fully interactive for browsing.
-  var ricoPlayingWindow=null;
+  var ricoPlayingWindow=null, ricoOriginalPlaylistStyle=null;
   function removePlayingWindow(){
     if(ricoPlayingWindow){ricoPlayingWindow.remove();ricoPlayingWindow=null;}
+    var original=document.getElementById('ricoLivePlaylist');
+    if(original&&ricoOriginalPlaylistStyle!==null){
+      original.setAttribute('style',ricoOriginalPlaylistStyle);
+      ricoOriginalPlaylistStyle=null;
+    }
   }
   function showPlayingWindowAlongsideBrowse(){
     if(ricoPlayingWindow)return;
     var original=document.getElementById('ricoLivePlaylist');
     if(!original||original.style.display==='none')return;
     var rect=original.getBoundingClientRect();
-    var gutter=10;
-    var half=Math.floor(Math.max(460,window.innerWidth-3*gutter)/2);
-    var width=Math.min(Math.max(230,rect.width),half);
-    // Shadow DOM keeps the copied original IDs and original stylesheet in
-    // a separate scope. Existing document IDs and handlers are untouched.
+    var gutter=10, width=Math.round(rect.width), height=Math.round(rect.height);
+    var top=Math.max(8,Math.round(rect.top));
+    ricoOriginalPlaylistStyle=original.getAttribute('style')||'';
+    // Copy jQuery's actual event listeners, not only the visual DOM.
+    // Thus the playing list remains selectable while the other list browses.
     var host=document.createElement('div');
     host.id='ricoPlayingPlaylistWindow';
-    host.style.cssText='position:fixed;inset:0;z-index:194;pointer-events:none;';
+    host.style.cssText='position:fixed;inset:0;z-index:196;pointer-events:none;';
     var shadow=host.attachShadow({mode:'open'});
     var link=document.createElement('link');
     link.rel='stylesheet';
-    link.href='css/style.css?v=test395-dual-window';
+    link.href='css/style.css?v=test396-dual-interactive';
     shadow.appendChild(link);
-    var copy=original.cloneNode(true);
-    copy.querySelectorAll('button,input,select,[tabindex]').forEach(function(el){
-      el.setAttribute('tabindex','-1');
-      if(el.matches('button,input,select'))el.disabled=true;
-    });
-    var top=Math.max(8,rect.top);
+    var copy=$(original).clone(true,true)[0];
+    // Only the PLAYING view retains playback-linked listeners;
+    // never initialize a second SID engine.
     copy.style.cssText+=';display:flex;left:'+gutter+'px;right:auto;top:'+top+
-      'px;bottom:auto;width:'+width+'px;height:'+
-      Math.max(110,Math.min(rect.height,window.innerHeight-top-45))+
+      'px;bottom:auto;width:'+width+'px;height:'+height+
       'px;transform:none;pointer-events:auto;';
     shadow.appendChild(copy);
     original.parentElement.appendChild(host);
     ricoPlayingWindow=host;
-    original.style.left=(2*gutter+width)+'px';
+    // Keep precisely the original width/height in BOTH windows.
+    // Start side-by-side; allow off-screen overflow only if the viewport
+    // physically cannot contain two original-size lists.
+    var left=gutter+width+gutter;
+    if(left+width>window.innerWidth-gutter){
+      var combined=2*width+gutter;
+      left=Math.max(gutter,Math.round((window.innerWidth+combined)/2)-width);
+      copy.style.left=(left-width-gutter)+'px';
+    }
+    original.style.left=left+'px';
     original.style.right='auto';
+    original.style.bottom='auto';
     original.style.top=top+'px';
     original.style.width=width+'px';
+    original.style.height=height+'px';
     original.style.transform='none';
   }
 
