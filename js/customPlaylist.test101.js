@@ -3119,8 +3119,8 @@
       if(mount&&mount.onResolved)mount.onResolved(index,entry);
     }
     function pump(){
-      if(loading||!pending.length||preview._disposed||
-         communityBrowsePreview!==preview)return;
+      // TEST402: either window can hydrate its own SID headers.
+      if(loading||!pending.length||!current())return;
       loading=true;
       var entry=pending.shift();
       var task;
