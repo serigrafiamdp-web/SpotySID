@@ -71,14 +71,13 @@
   window.addEventListener('resize',function(){if(!WRAP.hidden)positionPanel();});
 
   function refreshSidBpm(){
-    var estimate=typeof kara.estimateSidBpm==='function'?kara.estimateSidBpm():null;
-    if(Number.isFinite(estimate)&&estimate>0)SIDBPM.textContent='≈ '+estimate;
-    else if(Number.isFinite(data.sidBpmApprox)&&data.sidBpmApprox>0)
-      SIDBPM.textContent='≈ '+data.sidBpmApprox;
-    else {
-      var sec=player.sampleRate?(player.autoElapsedSamples||0)/player.sampleRate:0;
-      SIDBPM.textContent=sec<18?'ANALIZANDO…':'NO DETECTADO';
-    }
+    // Only the precomputed, per-SID value is shown here.
+    // Never measure BPM during live playback; do not invent an estimate.
+    var prior=Number(data.sidBpmApprox);
+    SIDBPM.textContent=Number.isFinite(prior)&&prior>0?'≈ '+prior:'SIN MEDICIÓN PREVIA';
+    SIDBPM.title=Number.isFinite(prior)&&prior>0?
+      'Estimated before publication; not recalculated during playback':
+      'Este SID todavía no tiene un análisis previo de BPM registrado';
   }
   function renderPublishedValues(){
     var x=sync.get();
@@ -112,7 +111,7 @@
     if(bpmPoll!==null)clearInterval(bpmPoll);
     bpmPoll=setInterval(function(){
       if(WRAP.hidden)return;
-      refreshSidBpm();updatePlay();
+      updatePlay();
     },1300);
     // Read public values from the database; never overwrite active typing.
     sync.readPublic().then(function(){
