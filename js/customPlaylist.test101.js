@@ -2723,7 +2723,7 @@
   // TEST406: every visible playlist can ask the same audio player to load a
   // song. The inactive window retains its own source and row indices.
   var ricoCurrentWindowSource=null,ricoInactiveWindowSource=null;
-  var ricoPinnedReturnPromotion=null;
+  var ricoPinnedReturnPromotion=null,ricoPinnedSongSwitchPending=false;
   function ricoBindPinnedSongClicks(shadow,source){
     if(!shadow||!source||typeof source.playFrom!=='function')return;
     var rows=shadow.querySelector('#ricoLivePlaylistItems');
@@ -2732,7 +2732,8 @@
       var target=event.target;
       var row=target&&target.closest&&target.closest('button.rico-live-row');
       if(!row||ricoInactiveWindowSource!==source||
-         ricoPinnedReturnPromotion||ricoSecondaryPromotion)return;
+         ricoPinnedReturnPromotion||ricoSecondaryPromotion||
+         ricoPinnedSongSwitchPending)return;
       var index=Number(row.getAttribute('data-sid-index'));
       if(!Number.isInteger(index)||index<0||
          !source.data||!source.data.tracks||
@@ -2740,7 +2741,12 @@
       // This click is explicit playback intent; no audio or list changes
       // happen just by focusing the inactive playlist.
       event.preventDefault();event.stopPropagation();
-      source.playFrom(index,false,true);
+      ricoPinnedSongSwitchPending=true;
+      Promise.resolve().then(function(){
+        return source.playFrom(index,false,true);
+      }).catch(function(error){
+        console.warn('Pinned playlist switch unavailable',error);
+      }).finally(function(){ricoPinnedSongSwitchPending=false;});
     },true);
   }
   function removePlayingWindow(){
@@ -6871,7 +6877,7 @@
               var windowSource={
                 item:item,data:chosen,
                 playFrom:function(index,karaoke,fromPinned){
-                  void openPlaylist(false,false,{
+                  return openPlaylist(false,false,{
                     startIndex:index,karaoke:!!karaoke,
                     previewData:windowSource.data,
                     fromPinnedFirst:!!fromPinned
