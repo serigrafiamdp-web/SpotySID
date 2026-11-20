@@ -118,6 +118,7 @@
   // synchronous creation of hundreds of row buttons.
   var xpLivePaintSerial=0,xpLivePaintTimer=null,xpLivePaintPending=false;
   var xpLivePaintList=null,xpLivePaintRevision=-1;
+  var xpLivePaintShareId='';
   var xpLocalPaintSerial=0,xpLocalPaintTimer=null;
   function xpLongList(count){
     return count>=80&&!!(window.SpotySidLegacy&&window.SpotySidLegacy.enabled);
@@ -3398,7 +3399,7 @@
     entries.forEach(function(entry,index){entry._browseOriginalIndex=index;});
     var preview={data:data,item:item,playFrom:playFrom,entries:entries,
       selected:new Set(),stream:stream,_disposed:false};
-    var pending=[],enqueued=new Set(),loading=false;
+    var pending=[],enqueued=new Set(),loading=false,retryTimer=null;
     function current(){return !preview._disposed &&
       (mount?mount.isActive():communityBrowsePreview===preview);}
     function browseHolder(){return mount?mount.holder:
@@ -3422,8 +3423,15 @@
       if(mount&&mount.onResolved)mount.onResolved(index,entry);
     }
     function pump(){
-      // TEST402: either window can hydrate its own SID headers.
+      // TEST409: a metadata ZIP inflate must never compete with the
+      // newly started SID or the five-second audio handoff.
       if(loading||!pending.length||!current())return;
+      if(ricoAudioNeedsHeadroom()){
+        if(retryTimer===null)retryTimer=setTimeout(function(){
+          retryTimer=null;pump();
+        },300);
+        return;
+      }
       loading=true;
       var entry=pending.shift();
       var task;
@@ -3443,7 +3451,7 @@
           console.warn('Browse metadata unavailable for '+entry.file,error);
         }).finally(function(){
           loading=false;
-          if(!preview._disposed)setTimeout(pump,90);
+          if(!preview._disposed)setTimeout(pump,player.isPlaying?250:90);
         });
     }
     preview.hydrateVisible=function(){
@@ -3462,6 +3470,7 @@
     };
     preview.dispose=function(){
       preview._disposed=true;
+      if(retryTimer!==null){clearTimeout(retryTimer);retryTimer=null;}
       if(stream)stream.cancel();
       var holder=browseHolder();
       if(holder&&preview._onScroll)
@@ -3529,6 +3538,16 @@
   }
   function renderLivePlaylist() {
     var preview=communityBrowsePreview;
+    // TEST409: loadCustomIndex(), showLivePlaylist() and the completed
+    // playlist handoff can all ask for a redraw of the SAME list at the
+    // first audio buffer. Never restart an in-progress chunk painter when
+    // it already reflects the same source and SHARE state.
+    if(!preview&&ricoDualWindowsVisible()&&xpLivePaintPending&&
+       xpLivePaintList===player.sidList&&
+       xpLivePaintRevision===largePlaylistStructureRevision&&
+       xpLivePaintShareId===activeSharePlaylistId){
+      return;
+    }
     var showCustomControls=!!preview||customActive;
     var isRanked=!preview&&loadedRankedPlaylist;
     if(preview){
@@ -3546,6 +3565,7 @@
     // TEST244: update SHARE even when a large playlist uses virtual painting
     // and returns early before the ordinary row renderer.
     var displayedShareId=preview?(preview.item.remoteId||preview.item.id||''):activeSharePlaylistId;
+    xpLivePaintShareId=displayedShareId;
     $('#ricoLiveShare').css('display',displayedShareId?'inline-block':'none');
     // Ordinary short lists retain the original complete render behavior.
     // Update only the count on playback changes in a large SID collection.
@@ -3676,7 +3696,10 @@
     // TEST247: compute once for long lists; scanning 1,376 SID checkboxes
     // for every ↑/↓ button would block Web Audio on the main thread.
     var hasCheckedBatch=preview?browseSelectedIndices().length>0:checkedSidIndices().length>0;
-    var xpChunked=xpLongList(list.length);
+    // Two playlist windows share ScriptProcessor's main thread.
+    // Render those lists progressively even on non-XP browsers.
+    var xpChunked=xpLongList(list.length)||
+      (!!ricoDualWindowsVisible()&&list.length>=30);
     if(xpChunked){
       xpLivePaintPending=true;
       xpLivePaintList=list;
@@ -3943,11 +3966,14 @@
     var xpVisualCursor=0;
     function paintNextXPChunk(){
       if(xpPaintToken!==xpLivePaintSerial)return;
-      var limit=xpChunked?Math.min(xpVisualCursor+16,visualRows.length):visualRows.length;
+      var chunkSize=ricoDualWindowsVisible()?8:16;
+      var limit=xpChunked?Math.min(xpVisualCursor+chunkSize,visualRows.length):
+        visualRows.length;
       for(;xpVisualCursor<limit;xpVisualCursor++)
         appendVisualRow(visualRows[xpVisualCursor]);
       if(xpVisualCursor<visualRows.length){
-        xpLivePaintTimer=setTimeout(paintNextXPChunk,40);
+        xpLivePaintTimer=setTimeout(paintNextXPChunk,
+          ricoDualWindowsVisible()?(ricoAudioNeedsHeadroom()?140:85):40);
         return;
       }
       xpLivePaintTimer=null;
