@@ -4282,29 +4282,34 @@ body [contenteditable], body [contenteditable] * {
   user-select:text !important;
 }
 
-/* TEST375 — per-track SHARE shortcut. One small S immediately at the right
+/* TEST376 — per-track SHARE is now a 26px outlined button with a 14px S,
+   matching header SHARE while preserving the adjacent checkbox and ▶.
+   TEST375 — per-track SHARE shortcut. One small S immediately at the right
    end of the song cell, adjacent to the existing checkbox divider.
    NO new separator, row-height or checkbox width changes. */
 #ricoLivePlaylistItems .rico-live-edit-row > button.rico-live-song-share {
   display:inline-flex !important;
-  flex:0 0 22px !important;
+  flex:0 0 26px !important;
   box-sizing:border-box;
+  align-self:center;
   align-items:center;
   justify-content:center;
-  width:22px !important;
-  min-width:22px !important;
-  max-width:22px !important;
+  width:26px !important;
+  min-width:26px !important;
+  max-width:26px !important;
+  height:26px !important;
+  min-height:26px !important;
   padding:0 !important;
   margin:0 !important;
-  border:0 !important;
-  border-radius:0 !important;
+  border:1px solid var(--rico-theme-fg,#fff) !important;
+  border-radius:2px !important;
   background:transparent !important;
   color:var(--rico-theme-fg,#fff) !important;
   font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
-  font-size:12px !important;
+  font-size:14px !important; /* same letter size as header SHARE */
   font-weight:400 !important;
   font-synthesis:none;
-  line-height:1;
+  line-height:24px !important;
   text-align:center;
   cursor:copy;
 }
