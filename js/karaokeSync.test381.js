@@ -182,10 +182,17 @@
     // TEST380 may rewrite the header as playback switches. The song credit
     // always wins without touching its original playlist metadata.
     if(title.textContent!==nextTitle)title.textContent=nextTitle;
+    // TEST382: when AUTO/NEXT starts a SID without Karaoke metadata,
+    // leave Karaoke at once and restore the normal oscilloscope. The audio
+    // handoff remains wholly owned by the existing playlist player.
     if(!isThisCover(item)){
-      if(lastMode!=='missing'){
-        setContents('missing');
-        lastMode='missing';lastLine=-99;
+      if(!state.waiting){
+        karaoke.close();
+        return;
+      }
+      if(lastMode!=='waiting'){
+        setContents('waiting');
+        lastMode='waiting';lastLine=-99;
       }
       return;
     }
@@ -230,6 +237,12 @@
     requestedIndex=typeof index==='number'?index:null;
     requestedItem=item||null;
     invalidate();
+    // TEST382: explicitly entering a supported Karaoke makes the normal
+    // AUTO next-song behavior available, even if AUTO was switched off.
+    if(isThisCover(item)&&!player.autoAdvance){
+      player.autoAdvance=true;
+      if(typeof player.updateAutoButton==='function')player.updateAutoButton();
+    }
     var result=originalOpen.apply(karaoke,arguments);
     update();
     return result;
