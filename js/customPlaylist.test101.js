@@ -6970,9 +6970,12 @@
                   function(index,karaoke){
                     var browsing=communityBrowsePreview;
                     if(!browsing)return;
+                    // TEST408: A is the original window. With B open,
+                    // clicking a song in A must not destroy B's preview.
                     void openPlaylist(false,false,{
                       startIndex:index,karaoke:karaoke,
-                      previewData:browsing.data
+                      previewData:browsing.data,
+                      fromPrimaryWithSecondary:!!ricoSecondaryHost
                     });
                   });
                 selectedCommunityId=item.id||item.file;
@@ -6990,8 +6993,13 @@
                 ricoPinnedFirstHost&&ricoInactiveWindowSource);
               var promoted=fromSecond&&beginSecondaryPlaylistPromotion();
               var returned=fromPinned&&!promoted&&beginPinnedPlaylistPromotion();
+              // TEST408: keeping B open while playback starts in A is
+              // not an A-to-B handoff. B has its own DOM and metadata reader.
+              // Dispose only A's silent preview, never B's separate window.
+              var keepSecondary=!!(options&&options.fromPrimaryWithSecondary&&
+                ricoSecondaryHost&&!promoted&&!returned);
               clearCommunityBrowse();
-              if(!promoted&&!returned){
+              if(!promoted&&!returned&&!keepSecondary){
                 removePlayingWindow();
                 ricoPrimaryBrowseKey='';
               }
