@@ -97,6 +97,44 @@
         ctx.fillRect(x+col*cell,y+row*cell,cell,cell);
     }
   }
+  // TEST383: provisional SID BPM from autocorrelation of real measured
+  // amplitude transients. The SID header itself has no standard BPM metadata.
+  // Estimate only after 12s of captured signal; reject weak/unsteady beats.
+  var bpmCache=null,bpmCacheAt=-1;
+  function estimateSidBpm(){
+    var now=player.sampleRate?(player.autoElapsedSamples||0)/player.sampleRate:0;
+    if(now<12||history.length<125)return null;
+    if(bpmCacheAt>=0&&now-bpmCacheAt<4)return bpmCache;
+    bpmCacheAt=now;
+    var novelty=[],power=0;
+    for(var i=1;i<history.length;i++){
+      var diff=Math.max(0,history[i].peak-history[i-1].peak);
+      novelty.push(diff);
+      power+=diff*diff;
+    }
+    if(power<.03){bpmCache=null;return null;}
+    var interval=(history[history.length-1].t-history[0].t)/
+      Math.max(1,history.length-1);
+    if(interval<=0||interval>.25){bpmCache=null;return null;}
+    var best=0,runner=0,candidate=null;
+    for(var bpm=70;bpm<=140;bpm++){
+      var lag=Math.round(60/bpm/interval);
+      if(lag<2||lag>=novelty.length/2)continue;
+      var score=0,left=0,right=0;
+      for(var k=lag;k<novelty.length;k++){
+        score+=novelty[k]*novelty[k-lag];
+        left+=novelty[k]*novelty[k];
+        right+=novelty[k-lag]*novelty[k-lag];
+      }
+      score/=Math.max(.00001,Math.sqrt(left*right));
+      if(score>best){
+        runner=best;best=score;candidate=bpm;
+      }else if(score>runner)runner=score;
+    }
+    // Low autocorrelation is not evidence of the song's tempo.
+    bpmCache=best>=.20?candidate:null;
+    return bpmCache;
+  }
   function drawMixedScope(){
     var ctx=player.context,canvas=player.canvas,c=palette();
     if(!ctx||!canvas)return;
@@ -213,6 +251,7 @@
   window.SpotySidKaraoke={
     open:function(item,index){setActive(true,item,index);},
     close:close,
-    isActive:function(){return active;}
+    isActive:function(){return active;},
+    estimateSidBpm:estimateSidBpm
   };
 })();
