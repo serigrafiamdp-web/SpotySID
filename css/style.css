@@ -4173,3 +4173,60 @@ button.rico-community-pin.rico-pin-on {
   outline:1px solid var(--rico-theme-fg,#fff);
   outline-offset:2px;
 }
+
+/* TEST371 — floating playlist header: SHARE / SAVE / REPUBLISH are identical
+   in font size, line box, visible height, border and padding. Both labels
+   remain fully readable. Keep the existing JS-owned display:none behavior. */
+#ricoLivePlaylistHeader .rico-live-head-actions > :is(#ricoLiveShare,#ricoLiveSave) {
+  box-sizing:border-box !important;
+  height:26px !important;
+  min-height:26px !important;
+  padding:0 7px !important;
+  margin:0 !important;
+  border:1px solid var(--rico-theme-fg,#fff) !important;
+  border-radius:2px;
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:14px !important; /* +4px from original 10px */
+  font-weight:400 !important;
+  line-height:24px !important;
+  letter-spacing:0 !important;
+  font-synthesis:none;
+  text-align:center;
+  vertical-align:middle;
+  white-space:nowrap;
+  color:var(--rico-theme-fg,#fff) !important;
+  background:transparent !important;
+}
+#ricoLivePlaylistHeader #ricoLiveSave:disabled {
+  opacity:.7 !important; /* inactive is still visibly legible */
+  cursor:default;
+}
+/* TEST371 — the secondary header and remix/timer labels still contained
+   TEST102's Tahoma shorthand. Apply the approved A1200 font consistently.
+   Keep the secondary controls compact so the 560px playlist stays intact. */
+#ricoLivePlaylistHeader #ricoLivePlaylistCredits,
+#ricoLivePlaylistHeader #ricoLivePlaylistCreator,
+#ricoLivePlaylistHeader #ricoLiveCount,
+#ricoLivePlaylist #ricoRemixBar,
+#ricoLivePlaylist #ricoRemixBar label,
+#ricoLivePlaylist #ricoRemixBar select,
+#ricoLivePlaylist #ricoRemixBar button,
+#ricoLivePlaylist #ricoRemixBar input,
+#ricoLivePlaylist #ricoRemixCount,
+#ricoLivePlaylist #ricoLiveTimerBar label {
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-synthesis:none;
+}
+#ricoLivePlaylistHeader #ricoLivePlaylistCreator,
+#ricoLivePlaylistHeader #ricoLivePlaylistCredits,
+#ricoLivePlaylistHeader #ricoLiveCount {
+  font-size:12px !important;
+}
+#ricoLivePlaylist #ricoRemixBar label,
+#ricoLivePlaylist #ricoRemixBar select,
+#ricoLivePlaylist #ricoRemixBar button:not(#ricoRandomSid),
+#ricoLivePlaylist #ricoRemixCount,
+#ricoLivePlaylist #ricoLiveTimerBar label {
+  font-size:11px !important;
+}
+/* Keep five rating-star symbols in their compatible symbol face. */
