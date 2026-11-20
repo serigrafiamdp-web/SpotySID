@@ -30,7 +30,7 @@
       var stored=JSON.parse(localStorage.getItem(storageKey)||'null');
       if(stored&&typeof stored==='object'){
         calibration.offsetSeconds=clamp(safeNumber(stored.offsetSeconds,0),-30,30);
-        calibration.speed=clamp(safeNumber(stored.speed,1),0.8,1.2);
+        calibration.speed=clamp(safeNumber(stored.speed,1),0.6,1.4);
       }
     }catch(e){/* storage blocked or absent: retain safe defaults */}
   }
@@ -49,7 +49,7 @@
       if(Object.prototype.hasOwnProperty.call(values,'offsetSeconds'))
         calibration.offsetSeconds=clamp(safeNumber(values.offsetSeconds,0),-30,30);
       if(Object.prototype.hasOwnProperty.call(values,'speed'))
-        calibration.speed=clamp(safeNumber(values.speed,1),0.8,1.2);
+        calibration.speed=clamp(safeNumber(values.speed,1),0.6,1.4);
       save();invalidate();return this.get();
     },
     reset:function(){
