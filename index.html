@@ -59,9 +59,9 @@
           <div class="rico-karaoke-config-note">LA CLAVE SE PIDE SOLAMENTE AL GUARDAR</div>
         </div>
         <div id="ricoKaraokeAdjustmentFields" class="rico-karaoke-config-fields">
-          <div class="rico-karaoke-bpm-line"><label>SID BPM (APROX.)</label><output id="ricoKaraokeSidBpm">SIN MEDIR</output></div>
+          <div class="rico-karaoke-bpm-line"><label>SID BPM (APROX.)</label><output id="ricoKaraokeSidBpm">≈ 94</output></div>
           <label for="ricoKaraokeBpm">KARAOKE BPM</label>
-          <input id="ricoKaraokeBpm" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="6" value="108" aria-label="Karaoke BPM manual">
+          <input id="ricoKaraokeBpm" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="6" value="94" aria-label="Karaoke BPM manual">
           <label for="ricoKaraokeOffset">INICIO (SEGUNDOS) · - ADELANTA / + ATRASA</label>
           <input id="ricoKaraokeOffset" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" maxlength="7" value="0" aria-label="Inicio de la letra, negativo adelanta, positivo atrasa">
           <p class="rico-karaoke-config-note">-2 = LETRA 2 SEG ANTES · +2 = 2 SEG DESPUÉS</p>
@@ -932,7 +932,7 @@
     <script type="text/javascript" src="js/sidPlayer.js?v=test364-top-artist-14"></script>
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script type="text/javascript" src="js/sidImport.test221.js?v=test221import"></script>
-    <script type="text/javascript" src="js/customPlaylist.test101.js?v=test386-original-playlist-layout"></script>
+    <script type="text/javascript" src="js/customPlaylist.test101.js?v=test389-silent-browse-fix"></script>
     <script type="text/javascript" src="js/stil.test223.js?v=test275-publish-artwork-verified"></script>
     <script type="text/javascript" src="js/tileArtwork.test264.js?v=test331-esc-save-before-exit"></script>
     <script type="text/javascript" src="lft-test/lft-mode.experimental.js?v=test239fingerprint"></script>
@@ -943,11 +943,11 @@
     <script type="text/javascript" src="js/petsciiMode.test282.js?v=test363-scope-off"></script>
     <script type="text/javascript" src="js/scopeZoom.test342.js?v=test342-canvas-only-wheel-zoom"></script>
     <!-- TEST380: isolated karaoke OSC/lyric interface, after standard scope modes. -->
-    <script type="text/javascript" src="js/karaoke.test380.js?v=test383-wave-bpm-audio"></script>
+    <script type="text/javascript" src="js/karaoke.test380.js?v=test389-no-live-bpm"></script>
     <!-- TEST381: MIDI source events and internal-only sync correction (no adjustment controls). -->
-    <script type="text/javascript" src="js/karaokeMidi.test381.js?v=test383-bpm-reference"></script>
-    <script type="text/javascript" src="js/karaokeSync.test381.js?v=test385-public-settings"></script>
-    <script type="text/javascript" src="js/karaokeSettings.test382.js?v=test385-key-on-save-public"></script>
+    <script type="text/javascript" src="js/karaokeMidi.test381.js?v=test389-sid-94-offline"></script>
+    <script type="text/javascript" src="js/karaokeSync.test381.js?v=test389-initial-94-local"></script>
+    <script type="text/javascript" src="js/karaokeSettings.test382.js?v=test389-manual-local-94"></script>
     <!-- TEST367 — lightweight keyboard cheat sheet. No SID/audio changes. -->
     <script>
     (function(){
