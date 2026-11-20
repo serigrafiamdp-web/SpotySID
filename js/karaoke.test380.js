@@ -200,6 +200,8 @@
   exit.addEventListener('click',close);
   document.addEventListener('keydown',function(event){
     if(!active||(event.key!=='Escape'&&event.key!=='Esc'))return;
+    var settings=document.getElementById('ricoKaraokeConfigOverlay');
+    if(settings&&!settings.hidden)return; // Settings owns ESC while open.
     if(document.getElementById('ricoLivePlaylist') &&
       getComputedStyle(document.getElementById('ricoLivePlaylist')).display!=='none')return;
     if(player.dialogManager&&player.dialogManager.dialogShown)return;
