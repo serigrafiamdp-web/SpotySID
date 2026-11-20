@@ -4129,3 +4129,47 @@ button.rico-community-pin.rico-pin-on {
   outline:1px solid currentColor !important;
   outline-offset:1px;
 }
+
+/* TEST369 — RANDOM beside the floating playlist timer.
+   Retro single-ink cross arrows; pressed button inverts the active palette.
+   Only the new button takes space: existing TIMER, window and controls remain. */
+#ricoRemixBar #ricoLiveTimerBar #ricoRandomSid {
+  display:inline-flex !important;
+  flex:0 0 24px;
+  align-items:center;
+  justify-content:center;
+  box-sizing:border-box;
+  width:24px !important;
+  min-width:24px !important;
+  max-width:24px !important;
+  height:24px !important;
+  min-height:24px !important;
+  padding:0 !important;
+  margin:0 !important;
+  border:1px solid var(--rico-theme-fg,#fff) !important;
+  border-radius:2px;
+  color:var(--rico-theme-fg,#fff) !important;
+  background:transparent !important;
+  cursor:pointer;
+  box-shadow:none !important;
+}
+#ricoRemixBar #ricoLiveTimerBar #ricoRandomSid svg {
+  display:block;
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.7;
+  stroke-linecap:square;
+  stroke-linejoin:miter;
+  pointer-events:none;
+}
+#ricoRemixBar #ricoLiveTimerBar #ricoRandomSid[aria-pressed="true"],
+#ricoRemixBar #ricoLiveTimerBar #ricoRandomSid[aria-pressed="true"]:is(:hover,:focus-visible) {
+  background:var(--rico-theme-fg,#fff) !important;
+  color:var(--rico-theme-bg,#000) !important;
+}
+#ricoRemixBar #ricoLiveTimerBar #ricoRandomSid:focus-visible {
+  outline:1px solid var(--rico-theme-fg,#fff);
+  outline-offset:2px;
+}
