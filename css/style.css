@@ -4858,3 +4858,28 @@ html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-edit-row:is(
   color:var(--rico-theme-fg,#fff);
   font:13px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
 }
+
+
+/* TEST385 — Signed start offset is a manually typed field, matching BPM.
+   No spinner, no grayscale tint, no translucent text, only active theme. */
+#ricoKaraokeConfigForm #ricoKaraokeOffset{
+  box-sizing:border-box;
+  width:100%;min-height:26px;
+  padding:3px 6px;
+  border:1px solid var(--rico-theme-fg,#fff);
+  border-radius:0;
+  background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font:13px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+  opacity:1;
+}
+#ricoKaraokeConfigForm #ricoKaraokeBetaKey{
+  min-height:26px;
+  background:var(--rico-theme-bg,#000) !important;
+  color:var(--rico-theme-fg,#fff) !important;
+  border-color:var(--rico-theme-fg,#fff) !important;
+}
+#ricoKaraokeConfigForm #ricoKaraokeConfigSave:disabled{
+  opacity:1;
+  cursor:wait;
+}
