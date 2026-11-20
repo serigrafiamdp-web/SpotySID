@@ -4313,15 +4313,26 @@ body [contenteditable], body [contenteditable] * {
   text-align:center;
   cursor:copy;
 }
-#ricoLivePlaylistItems .rico-live-edit-row > button.rico-live-song-share:is(:hover,:focus-visible) {
+/* TEST378 — S is normally an outlined control even when its song is
+   playing, queued, selected, hovered or keyboard-focused. Illuminate ONLY
+   the brief success state set after clipboard.writeText resolves. */
+#ricoLivePlaylistItems .rico-live-edit-row > button.rico-live-song-share:not(.rico-share-copied):is(
+  :hover,:focus,:focus-visible,:active
+) {
+  background:transparent !important;
+  color:var(--rico-theme-fg,#fff) !important;
+}
+#ricoLivePlaylistItems .rico-live-edit-row > button.rico-live-song-share.rico-share-copied,
+#ricoLivePlaylistItems .rico-live-edit-row > button.rico-live-song-share.rico-share-copied:is(
+  :hover,:focus,:focus-visible,:active
+) {
   background:var(--rico-theme-fg,#fff) !important;
   color:var(--rico-theme-bg,#000) !important;
 }
-#ricoLivePlaylistItems .rico-live-edit-row > .rico-live-row:is(
-  .rico-live-active,.rico-live-selected
-) + .rico-live-song-share {
-  background:var(--rico-theme-fg,#fff) !important;
-  color:var(--rico-theme-bg,#000) !important;
+/* Keep keyboard focus visible without filling the button. */
+#ricoLivePlaylistItems .rico-live-edit-row > button.rico-live-song-share:focus-visible {
+  outline:1px solid var(--rico-theme-fg,#fff);
+  outline-offset:1px;
 }
 /* The PLAY / next-track triangle remains inside the playable song button.
    A reserved 18px at its trailing end moves it slightly LEFT of S, and
