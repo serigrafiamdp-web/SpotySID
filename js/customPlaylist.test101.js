@@ -2760,7 +2760,12 @@
     shadow.appendChild(css);
     // The clone is only a visual shell; it has no live playback handlers.
     // Original IDs are safely scoped to the shadow tree.
-    var secondary=primary.cloneNode(true);
+    // Copy only the shell. Cloning thousands of SID rows synchronously
+    // would pause audio on older Windows XP browsers.
+    var secondary=primary.cloneNode(false);
+    Array.prototype.forEach.call(primary.children,function(child){
+      secondary.appendChild(child.cloneNode(child.id!=='ricoLivePlaylistItems'));
+    });
     var items=secondary.querySelector('#ricoLivePlaylistItems');
     var title=secondary.querySelector('#ricoLivePlaylistTitle');
     var count=secondary.querySelector('#ricoLiveCount');
