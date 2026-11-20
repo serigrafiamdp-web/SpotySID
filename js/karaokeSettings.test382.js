@@ -80,7 +80,10 @@
       SIDBPM.textContent='≈ '+estimate;
     else if(Number.isFinite(data.sidBpmApprox)&&data.sidBpmApprox>0)
       SIDBPM.textContent='≈ '+data.sidBpmApprox;
-    else SIDBPM.textContent='SIN MEDIR';
+    else {
+      var sec=player.sampleRate?(player.autoElapsedSamples||0)/player.sampleRate:0;
+      SIDBPM.textContent=sec<18?'ANALIZANDO…':'NO DETECTADO';
+    }
   }
   function renderValues(){
     var setting=sync.get();
@@ -155,7 +158,11 @@
   }
   function saveValues(){
     if(!authorized||!hasKaraoke())return false;
-    var bpm=Number(BPM.value),offset=Number(OFFSET.value);
+    // TEST384: user TYPES Karaoke BPM; no spinner, wheel changes or
+    // background auto-updates. Decimals may use dot or comma.
+    var bpmText=String(BPM.value||'').trim().replace(',','.');
+    var bpm=/^[0-9]{2,3}(?:\.[0-9]{1,2})?$/.test(bpmText)?Number(bpmText):NaN;
+    var offset=Number(OFFSET.value);
     if(!Number.isFinite(bpm)||bpm<65||bpm>150||
       !Number.isFinite(offset)||offset< -30||offset>30){
       feedback('KARAOKE BPM 65–150 · INICIO ±30 S');
