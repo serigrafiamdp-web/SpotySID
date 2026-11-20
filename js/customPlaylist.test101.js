@@ -904,13 +904,24 @@
       url.searchParams.set('track',String(trackIndex+1));
     return url.href;
   }
-  async function copyPlaylistShareLink(id,trackIndex){
+  async function copyPlaylistShareLink(id,trackIndex,confirmationButton){
     var url=playlistShareUrl(id,trackIndex);
     if(!url)return;
     try{
       if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function')
         throw Error('Clipboard unavailable');
       await navigator.clipboard.writeText(url);
+      // TEST378: illuminate S only AFTER successful clipboard confirmation.
+      // A brief 650ms pulse, never a persistent selected/hover state.
+      if(confirmationButton&&confirmationButton.isConnected){
+        if(confirmationButton._ricoShareFlashTimer)
+          clearTimeout(confirmationButton._ricoShareFlashTimer);
+        confirmationButton.classList.add('rico-share-copied');
+        confirmationButton._ricoShareFlashTimer=setTimeout(function(){
+          confirmationButton.classList.remove('rico-share-copied');
+          confirmationButton._ricoShareFlashTimer=null;
+        },650);
+      }
       $('#ricoLiveStatus').text(Number.isSafeInteger(trackIndex)?
         'Playlist link copied · starts at SID '+(trackIndex+1)+'.':
         'Playlist link copied.');
@@ -2889,7 +2900,7 @@
             .on('click',function(event){
               event.preventDefault();event.stopPropagation();
               hideReorderHint();
-              void copyPlaylistShareLink(activeSharePlaylistId,index);
+              void copyPlaylistShareLink(activeSharePlaylistId,index,this);
             })
             .appendTo(wrap);
         }
