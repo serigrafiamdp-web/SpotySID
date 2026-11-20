@@ -73,6 +73,42 @@
   // Current playing SID is never replaced while the volume is fading.
   var selectedLiveIndex=null;
   var queuedLiveIndex=null;
+  // TEST369 — RANDOM changes only the next chosen index, NEVER list order.
+  // Preselect one destination near the TIMER end; reuse the existing 5s fade.
+  var randomSidOn=false,randomSidPlan=null;
+  function chooseRandomSidIndex(){
+    var list=player.sidList||[],size=list.length;
+    if(!size)return -1;
+    var current=transitionBusy&&queuedLiveIndex!==null?
+      queuedLiveIndex:player.sidListIndex;
+    if(current===false||typeof current!=='number'||current<0||current>=size)
+      return 0;
+    if(size===1)return 0;
+    if(randomSidPlan&&randomSidPlan.list===list&&
+       randomSidPlan.fromEntry===list[current]){
+      var plannedIndex=list.indexOf(randomSidPlan.toEntry);
+      if(plannedIndex>=0&&plannedIndex!==current)return plannedIndex;
+    }
+    // Choose uniformly among all other tracks (avoid immediate repeats).
+    var pick=Math.floor(Math.random()*(size-1));
+    if(pick>=current)pick++;
+    randomSidPlan={list:list,fromEntry:list[current],toEntry:list[pick]};
+    return pick;
+  }
+  function prepareRandomSidAhead(remaining){
+    if(!randomSidOn||!player.autoAdvance||!player.isPlaying||
+       player.isPaused||transitionBusy||player.autoLoading||
+       remaining>10||remaining<=5||player.sidListIndex===false)return;
+    var index=chooseRandomSidIndex(),entry=(player.sidList||[])[index];
+    if(!entry||!entry._hvscRef||entry.localBytes||!activeReferenceStream)return;
+    // Warm a single HVSC SID ahead of AUTO; keep the current SID audible.
+    // Network/ZIP work is async, not a synchronous large-list rebuild.
+    var stream=activeReferenceStream;
+    stream.loadSlot(entry).catch(function(error){
+      if(stream===activeReferenceStream)
+        console.warn('RANDOM SID preload deferred until fade:',error);
+    });
+  }
   var followPlayingRowOnce=false;
   // TEST122: avoid rebuilding 1,376 track buttons on each song selection
   // while ScriptProcessor audio needs the main thread for steady playback.
@@ -554,6 +590,7 @@
     fadeGainNode.gain.setValueAtTime(1,now);
   }
   function resetSoftTransition(resetSelection){
+    randomSidPlan=null;
     // STOP, cancel, failed load and playlist replacements must never leave
     // NEXT highlighted after the requested transition is abandoned.
     setNextSidPending(false);
@@ -584,6 +621,7 @@
   }
   var originalPlaySong=player.playSong;
   player.playSong=function(){
+    randomSidPlan=null;
     // TEST206: a new subtune/track starts its own full countdown at 00:00.
     countdownElapsedSamples=0;
     countdownShownSeconds=null;
@@ -700,6 +738,7 @@
     var list=player.sidList||[];
     if(index<0||index>=list.length)return;
     var entry=list[index];
+    if(source==='manual')randomSidPlan=null;
     // TEST359: NEXT highlights for a manual playlist row selection too,
     // whether that row is clicked by mouse or activated with Enter.
     // Reject same-song/no-op and handoff-busy requests before highlighting.
@@ -3128,6 +3167,29 @@
   });
 
 
+  // TEST369: one tiny palette-inverted SHUFFLE button, never reorders DOM/data.
+  var randomSidButton=document.getElementById('ricoRandomSid');
+  function syncRandomSidButton(){
+    if(!randomSidButton)return;
+    randomSidButton.setAttribute('aria-pressed',randomSidOn?'true':'false');
+    randomSidButton.setAttribute('aria-label',randomSidOn?
+      'Random playback ON. Click to restore sequential next SID.':
+      'Random playback OFF. Click to randomize next SID.');
+    randomSidButton.title=randomSidOn?'RANDOM ON · shuffle next SID':'RANDOM OFF · sequential';
+  }
+  if(randomSidButton)randomSidButton.addEventListener('click',function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    randomSidOn=!randomSidOn;
+    randomSidPlan=null;
+    syncRandomSidButton();
+    // If enabled within 10 seconds of AUTO, select the upcoming song now.
+    if(randomSidOn&&player.sampleRate)
+      prepareRandomSidAhead(Math.max(0,player.autoFallbackSeconds-
+        countdownElapsedSamples/player.sampleRate));
+  });
+  syncRandomSidButton();
+
   // TEST21: user-facing MM:SS; engine keeps its seconds-based fallback timer.
   function formatAutoTime(seconds) {
     var total = Math.max(5, Math.min(3600, Math.round(seconds)));
@@ -3153,6 +3215,9 @@
     if(!force&&seconds===countdownShownSeconds)return;
     countdownShownSeconds=seconds;
     $('#ricoLiveTimer').val(formatRemainingTime(seconds));
+    // Select next RANDOM entry ~10 seconds before song end; AUTO starts the
+    // existing five-second fade at the normal timer boundary.
+    prepareRandomSidAhead(remaining);
   }
   function parseAutoTime(value) {
     var match = /^\s*(\d{1,2}):(\d{1,2})\s*$/.exec(String(value));
@@ -3305,7 +3370,8 @@
     // Reuse the proven immediate/silent handoff: no fade, no renderer change,
     // no global silence detector and no replay before the following SID.
     this.autoElapsedSamples=0;
-    requestSidSwitch((this.sidListIndex+1)%this.sidList.length,'silence');
+    requestSidSwitch(randomSidOn?chooseRandomSidIndex():
+      (this.sidListIndex+1)%this.sidList.length,'silence');
   };
   window.RICO_TEST249_HAT_TUNE1={version:249,seconds:HAT_TUNE1_END_SECONDS,
     file:'Fegolhuzz/Hat_tune_1.sid',noFade:true,
@@ -3461,7 +3527,8 @@
     var list=player.sidList||[];
     if(!list.length)return;
     var current=transitionBusy&&queuedLiveIndex!==null?queuedLiveIndex:player.sidListIndex;
-    var next=current===false?0:(current+1)%list.length;
+    var next=randomSidOn?chooseRandomSidIndex():
+      (current===false?0:(current+1)%list.length);
     requestSidSwitch(next,'next');
   };
   player.popPath = function () {
