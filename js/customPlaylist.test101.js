@@ -893,21 +893,27 @@
   // TEST244: only published/static catalog playlists get portable public URLs.
   // Local files and unPUBLISHED remix drafts cannot be shared by URL.
   var activeSharePlaylistId='';
-  function playlistShareUrl(id){
+  // TEST375: SHARE still links to the entire published playlist. Optional
+  // 1-based 'track' is the starting song, never a reordered/truncated list.
+  function playlistShareUrl(id,trackIndex){
     if(typeof id!=='string'||!/^[a-z0-9-]{1,80}$/i.test(id))return '';
     var url=new URL('index.html',window.location.href);
     url.hash='';url.search='';
     url.searchParams.set('playlist',id);
+    if(Number.isSafeInteger(trackIndex)&&trackIndex>=0&&trackIndex<2000)
+      url.searchParams.set('track',String(trackIndex+1));
     return url.href;
   }
-  async function copyPlaylistShareLink(id){
-    var url=playlistShareUrl(id);
+  async function copyPlaylistShareLink(id,trackIndex){
+    var url=playlistShareUrl(id,trackIndex);
     if(!url)return;
     try{
       if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function')
         throw Error('Clipboard unavailable');
       await navigator.clipboard.writeText(url);
-      $('#ricoLiveStatus').text('Playlist link copied.');
+      $('#ricoLiveStatus').text(Number.isSafeInteger(trackIndex)?
+        'Playlist link copied · starts at SID '+(trackIndex+1)+'.':
+        'Playlist link copied.');
     }catch(clipboardError){
       // Explicit, selectable URL fallback in browsers without clipboard permission.
       window.prompt('Copy this public playlist link:',url);
@@ -2865,6 +2871,21 @@
         var wrap=$('<div>').addClass('rico-live-edit-row');
         if(artistGroups){wrap.attr('data-sid-index',index);groupedRowsByIndex[index]=wrap[0];}
         row.appendTo(wrap);
+        // TEST375: one tiny S at the far RIGHT of the song cell, immediately
+        // BEFORE the checkbox border. A sibling button (not nested in PLAY)
+        // keeps ▶ / queued markers visible and doesn't start playback.
+        if(activeSharePlaylistId){
+          bindThemedPlaylistHint($('<button type="button">')
+            .addClass('rico-live-song-share').text('S')
+            .attr('aria-label','Share playlist starting at '+songTitle),
+            'Copy link to the whole playlist starting at SID '+(index+1))
+            .on('click',function(event){
+              event.preventDefault();event.stopPropagation();
+              hideReorderHint();
+              void copyPlaylistShareLink(activeSharePlaylistId,index);
+            })
+            .appendTo(wrap);
+        }
         // TEST247: same compact control size, immediately LEFT of +.
         // Do not bubble to the underlying song PLAY/selection handler.
         var checkLabel=$('<label>').addClass('rico-live-batch-toggle')
@@ -4159,27 +4180,29 @@
         cancel:function(){cancelled=true;controller.abort();archives.clear();}};
       return stream;
     }
-    async function loadProgressiveReferencePlaylist(data,localImport,serial){
+    async function loadProgressiveReferencePlaylist(data,localImport,serial,startIndex){
+      var initialIndex=Number.isInteger(startIndex)&&startIndex>=0&&
+        startIndex<data.tracks.length?startIndex:0;
       var stream=createProgressiveReferenceStream(data.tracks,data.name==='UNKNOWN CSDB');
       // TEST348 XP: load/verify FIRST SID before any new playback. A long
       // playlist must not trigger dozens of background ZIP decodes while
       // the first song is starting on a slow ScriptProcessor machine.
       var xpFirstOnly=xpLongList(data.tracks.length);
       if(xpFirstOnly)
-        $('#ricoLiveStatus').text('XP · LOADING FIRST SID...');
+        $('#ricoLiveStatus').text('XP · LOADING SELECTED SID...');
       // TOP 100 DEMOS: song metadata is already in the source manifest.
       // Load song bytes on demand without decoding the entire list at launch.
       stream.onDemandOnly=xpFirstOnly||data.name==='TOP 100 DEMOS'||
         /^TOP 100 CSDb (?:ONEFILE )?DEMOS/.test(data.name);
       try{
-        await stream.loadSlot(stream.slots[0]);
+        await stream.loadSlot(stream.slots[initialIndex]);
       }catch(error){
         stream.cancel();
         throw error;
       }
       if(serial!==playlistChangeSerial){stream.cancel();return false;}
       if(xpFirstOnly)
-        $('#ricoLiveStatus').text('XP · FIRST SID READY · PREPARING PLAYLIST...');
+        $('#ricoLiveStatus').text('XP · SELECTED SID READY · PREPARING PLAYLIST...');
       var applied=await switchToPreparedPlaylist(serial,function(){
       resetCsdbRankDisplay();
       resetSoftTransition(true);
@@ -4204,25 +4227,29 @@
       loadedPlaylistTitle=data.name.trim().slice(0,100);
       loadedPlaylistCreator=(data.createdBy||'You').slice(0,100);
       if(!customActive)activate('custom');else player.initFileSelection();
-      loadCustomIndex(0);showLivePlaylist(true);
+      loadCustomIndex(initialIndex);showLivePlaylist(true);
       $('#ricoLiveStatus').text(xpFirstOnly?
-        'XP · FIRST SID READY · OTHERS LOAD WHEN SELECTED':
-        'First SID ready; the rest of HVSC loads progressively.');
+        'XP · SELECTED SID READY · OTHERS LOAD WHEN SELECTED':
+        'Selected SID ready; the rest of HVSC loads progressively.');
       if(!xpFirstOnly)
         setTimeout(function(){if(activeReferenceStream===stream)stream.prefetch();},0);
-      },stream.slots[0]);
+      },stream.slots[initialIndex]);
       if(!applied)stream.cancel();
       return applied;
     }
     // TEST61: reference-only playlists resolve SID files from one immutable HVSC base.
     // Existing v1 playlists with embedded SID remain fully supported.
-    async function loadStoredPlaylist(data,localImport,sourceRemoteId) {
-      // TEST177: do not activate an engine by list name, owner or publication.
-      // The selected track's verified HVSC reference decides its engine.
+    async function loadStoredPlaylist(data,localImport,sourceRemoteId,startIndex) {
+      // TEST375: keep SHARE's original whole-playlist loader and change
+      // only which SID starts first, with a safe fallback for edited lists.
+      var initialIndex=Number.isInteger(startIndex)&&startIndex>=0&&
+        data&&Array.isArray(data.tracks)&&startIndex<data.tracks.length?
+        startIndex:0;
+      // TEST177: the selected track's verified HVSC reference decides its engine.
       var serial=requestPlaylistChange();
       if (!data || data.format!=='ricos-sid-playlist') throw Error('Unsupported playlist.');
       if (data.version===1) {
-        var legacyApplied=await loadPlaylist(data,undefined,!!localImport);
+        var legacyApplied=await loadPlaylist(data,initialIndex,!!localImport);
         if(legacyApplied)activeLocalSavedId=localImport&&typeof data.id==='string'?data.id:null;
         return legacyApplied;
       }
@@ -4242,7 +4269,7 @@
           var ref=data.tracks[k];
           if(!validRemixRef(ref))throw Error('Invalid catalog SID reference.');
         }
-        return loadProgressiveReferencePlaylist(data,localImport,serial);
+        return loadProgressiveReferencePlaylist(data,localImport,serial,initialIndex);
       }
       var packages=new Map(), output=[], bytesTotal=0;
       for(var i=0;i<data.tracks.length;i++){
@@ -4301,8 +4328,8 @@
       loadedPlaylistTitle=data.name.trim().slice(0,100);
       loadedPlaylistCreator=(data.createdBy||'You').slice(0,100);
       if(!customActive)activate('custom');else player.initFileSelection();
-      loadCustomIndex(0);showLivePlaylist(true);
-      },output[0]);
+      loadCustomIndex(initialIndex);showLivePlaylist(true);
+      },output[initialIndex]);
     }
     window.ricoPlayRemixDraft=async function(data){
       return loadStoredPlaylist(data);
@@ -4950,6 +4977,17 @@
         var value=new URLSearchParams(window.location.search).get('playlist')||'';
         return /^[a-z0-9-]{1,80}$/i.test(value)?value:'';
       }catch(error){return '';}
+    })();
+    // 1-based track number in deep links, validated and bounded to 2000.
+    // Normal SHARE links (no track parameter) still start at SID #1.
+    var sharedStartIndex=(function(){
+      if(!sharedRequestId)return 0;
+      try{
+        var value=new URLSearchParams(window.location.search).get('track')||'';
+        if(!/^[1-9][0-9]{0,3}$/.test(value))return 0;
+        var number=Number(value);
+        return number<=2000?number-1:0;
+      }catch(error){return 0;}
     })();
     var sharedRequestAttempted=false;
     var sharedAudioGesturePending=false;
@@ -5971,7 +6009,8 @@
               // Ignore a late auto-load if the visitor picked a different source.
               if(isStartup && !startupPlaylistPending) return;
               if(isStartup) cancelStartupPlaylist();
-              var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null); // Only published LFT may use TEST173.
+              var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
+                isShared?sharedStartIndex:0); // Only published LFT may use TEST173.
               if(applied===false)return; // Superseded while loading: keep browser and newer selection.
               activeCuratedCatalogId=!item.remoteId&&item.id==='old-sid-collection-rico'
                 ? item.id:null;
