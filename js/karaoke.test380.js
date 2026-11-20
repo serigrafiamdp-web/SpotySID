@@ -42,46 +42,11 @@
         titleNode.textContent=songLabel(player.sidList[next]);
     }
   }
-  // TEST382: compact moving SOUND TIMELINE in the Karaoke viewer.
-  // Retain only recent audio-derived amplitude samples; scroll left under a
-  // fixed playhead. This is recorded live, not a speculative full-file wave.
-  var history=[],lastSampleTime=-1,lastTrackObject=null;
-  var historyWindow=18,historyStep=.075;
-  function clearHistory(){
-    history=[];lastSampleTime=-1;lastTrackObject=null;
-  }
+  // TEST392: Karaoke waveforms are sampled/rendered OFFLINE per supported
+  // SID. No real-time SID sampling or guessed future audio in this view.
   function fmt(t){
     t=Math.max(0,Math.floor(t));
     return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
-  }
-  function sampleRecentAudio(now){
-    var entry=(typeof player.sidListIndex==='number'&&player.sidList)?
-      player.sidList[player.sidListIndex]:null;
-    if(entry!==lastTrackObject || (lastSampleTime>=0 && now<lastSampleTime-1)){
-      clearHistory();lastTrackObject=entry;
-    }
-    if(!player.isPlaying || player.isPaused || player.autoLoading ||
-       (lastSampleTime>=0 && now-lastSampleTime<historyStep))return;
-    if(!window.SID || typeof SID.getChannelBuffer!=='function')return;
-    var buffers=[SID.getChannelBuffer(1),SID.getChannelBuffer(2),SID.getChannelBuffer(3)];
-    // An RMS envelope of the combined SID voices, sampled from the real
-    // engine buffers and normalized for display only; audio remains untouched.
-    var sum=0,count=0;
-    for(var i=0;i<64;i++){
-      var sample=0,voices=0,at=200+i*12;
-      for(var v=0;v<3;v++){
-        var check=document.getElementById('voice'+(v+1));
-        if(check&&!check.checked)continue;
-        sample+=SID.readFloatSample(buffers[v],at);
-        voices++;
-      }
-      if(voices)sample/=voices;
-      if(Number.isFinite(sample)){sum+=sample*sample;count++;}
-    }
-    var rms=Math.sqrt(sum/Math.max(1,count));
-    history.push({t:now,peak:Math.max(0,Math.min(1,rms*34*(player.scopeVisualGain||1)))});
-    lastSampleTime=now;
-    while(history.length && history[0].t<now-historyWindow-2)history.shift();
   }
   function drawPetsciiBlock(ctx,x,y,ink,size){
     // Genuine C64 ROM glyph #81, a solid round dot; integer nearest-neighbor.
@@ -116,7 +81,7 @@
   function offlinePeak(wave,t){
     if(t<0)return null;
     var pos=t/wave.stepSeconds;
-    if(pos>=wave.samples.length)return null;
+    if(pos>=wave.samples.length||t>=wave.durationSeconds)return null;
     var a=Math.floor(pos),frac=pos-a;
     var low=wave.samples[a],high=wave.samples[a+1];
     if(!Number.isFinite(low))return null;
@@ -132,13 +97,11 @@
     var now=player.sampleRate?Math.max(0,(player.autoElapsedSamples||0)/player.sampleRate):0;
     var mode=player.scopeDisplayMode||'hires';
     ctx.clearRect(0,0,width,height);
-    sampleRecentAudio(now);
-    var waveformRecords=history;
+    var waveformRecords=[];
     var offline=offlineWaveformForSong();
     if(offline){
-      // Real pre-rendered audio also exists to the RIGHT of the current
-      // time; live history alone cannot provide future samples.
-      waveformRecords=[];
+      // Only real, pre-rendered SID PCM is drawn, at fixed audio timestamps
+      // on both sides of the center playhead.
       for(var xx=0;xx<=width;xx+=4){
         var when=now+(xx-cursor)/secondsPx;
         var peak=offlinePeak(offline,when);
@@ -166,8 +129,7 @@
         var step=8;
         for(var px=0;px<width;px+=step){
           var second=now+(px-cursor)/secondsPx;
-          if(second<0||second>now)continue;
-          var pick=Math.floor((second-(now-historyWindow-2))/historyStep);
+          if(second<0)continue;
           var nearest=null,dist=.16;
           for(var j=waveformRecords.length-1;j>=0;j--){
             var delta=Math.abs(waveformRecords[j].t-second);
@@ -205,8 +167,7 @@
     }
     ctx.strokeStyle=c.line;ctx.lineWidth=2;
     ctx.beginPath();ctx.moveTo(cursor,44);ctx.lineTo(cursor,band-45);ctx.stroke();
-    ctx.fillStyle=c.line;ctx.font='13px RicoAmigaTopaz,monospace';
-    ctx.fillText('SOUND TIMELINE · '+(mode==='off'?'OFF':mode.toUpperCase()),14,20);
+    // No extra top caption: the existing Karaoke title is the only heading.
     ctx.restore();
   }
   player.render=function(){
