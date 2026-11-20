@@ -6145,7 +6145,12 @@
           appendCommunityPin(row,item);
           communityItems.appendChild(row);
           if(item.id && item.id===selectedCommunityId) row.classList.add('rico-community-selected');
-          async function openPlaylist(isStartup,isShared) {
+          async function openPlaylist(isStartup,isShared,options) {
+            // TEST384: name = browse, PLAY = start from #1, selected PLAY/MIC =
+            // fade to that specific SID. Do not touch the current audio on browse.
+            var browseOnly=!!(options&&options.browseOnly);
+            var requestedIndex=options&&Number.isInteger(options.startIndex)?options.startIndex:0;
+            var wantsKaraoke=!!(options&&options.karaoke);
             if(!isStartup) cancelStartupPlaylist();
             button.disabled=true;
             row.setAttribute('aria-busy','true');
@@ -6166,11 +6171,30 @@
                 name:pending.name,createdBy:pending.creator,
                 tracks:pending.tracks.map(remixCanonicalRef)
               }:data;
+              // Browsing the name does not call loadStoredPlaylist, loadSIDData,
+              // playSong, or any fade/audio method. Keep playing music intact.
+              if(browseOnly){
+                if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
+                  throw Error('Playlist has no songs to browse.');
+                communityBrowsePreview={
+                  data:chosen,item:item,
+                  playFrom:function(index,karaoke){
+                    void openPlaylist(false,false,{startIndex:index,karaoke:karaoke});
+                  }
+                };
+                selectedCommunityId=item.id||item.file;
+                showLivePlaylist(true);
+                closeChooseAfterPlaylistPlay(true);
+                return;
+              }
               // Ignore a late auto-load if the visitor picked a different source.
               if(isStartup && !startupPlaylistPending) return;
               if(isStartup) cancelStartupPlaylist();
+              communityBrowsePreview=null;
+              ++communityBrowsePaintToken;
+              var startAt=isShared?sharedStartIndex:requestedIndex;
               var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
-                isShared?sharedStartIndex:0); // Only published LFT may use TEST173.
+                startAt); // An explicit PLAY button defaults to first song (#1).
               if(applied===false)return; // Superseded while loading: keep browser and newer selection.
               activeCuratedCatalogId=!item.remoteId&&item.id==='old-sid-collection-rico'
                 ? item.id:null;
@@ -6183,6 +6207,15 @@
               activeSharePlaylistId=pending?'':(item.remoteId||item.id||'');
               renderLivePlaylist();
               selectedCommunityId=item.id||item.file;
+              if(wantsKaraoke&&window.SpotySidKaraoke){
+                // Karaoke begins only after the standard playlist fade and
+                // the selected SID's first audio buffer have completed.
+                var chosenSid=player.sidList&&player.sidList[startAt];
+                if(karaokeAvailableFor(chosenSid)){
+                  window.SpotySidKaraoke.open(chosenSid,startAt);
+                  showLivePlaylist(false);
+                }
+              }
               if(isStartup){
                 // Save only successful automatic selections, so a failed load
                 // never consumes a rotation slot.
@@ -6248,12 +6281,15 @@
               row.removeAttribute('aria-busy');
             }
           }
-          row.addEventListener('click',function(){openPlaylist(false);});
+          row.addEventListener('click',function(event){
+            if(event.target&&event.target.closest&&event.target.closest('button'))return;
+            void openPlaylist(false,false,{browseOnly:true});
+          });
           row.addEventListener('keydown',function(event){
             if(event.target!==row)return; // TEST116: keyboard actions on arrow buttons must not start playback.
             if(event.key==='Enter'||event.key===' ') {
               event.preventDefault();
-              openPlaylist(false);
+              void openPlaylist(false,false,{browseOnly:true});
             }
           });
           button.addEventListener('click',function(event){
