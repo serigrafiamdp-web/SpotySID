@@ -2720,6 +2720,9 @@
   // TEST386: the Community NAME and PLAY use the same ORIGINAL playlist row
   // renderer. Silent browsing only substitutes metadata for painting; it
   // never changes the playing SID, its engine, its timers, or the loaded list.
+  // TEST387: reuse the proven loader functions from the inner persistence
+  // module; browser only opens the same playlist presentation without audio.
+  var browseReferenceStreamFactory=null,browseSidDecode=null;
   var communityBrowsePreview=null,communityBrowsePaintToken=0;
   function createCommunityBrowse(data,item,playFrom){
     // Use the SAME SID header reader as regular PLAY so author/title metadata
@@ -2727,8 +2730,8 @@
     // Decode only visible tracks and never run mass prefetch on slow Windows XP.
     var stream=null;
     if(data.version===2&&typeof JSZip!=='undefined'&&
-       data.tracks.every(validRemixRef)){
-      stream=createProgressiveReferenceStream(data.tracks,false);
+       data.tracks.every(validRemixRef)&&typeof browseReferenceStreamFactory==='function'){
+      stream=browseReferenceStreamFactory(data.tracks,false);
     }
     var entries=stream?stream.slots:data.tracks.map(function(track,index){
       var ref=track&&track.pack&&track.file?remixCanonicalRef(track):null;
@@ -2773,7 +2776,8 @@
         var ref=data.tracks[preview.entries.indexOf(entry)];
         task=Promise.resolve().then(function(){
           if(!ref||typeof ref.sidBase64!=='string')return;
-          var bytes=decode(ref.sidBase64);
+          if(typeof browseSidDecode!=='function')return;
+          var bytes=browseSidDecode(ref.sidBase64);
           var parsed=parseSID(bytes,{name:ref.file,size:bytes.length});
           if(parsed)Object.assign(entry,parsed);
         });
@@ -4201,6 +4205,8 @@
       for (var i=0; i<binary.length; i++) out[i]=binary.charCodeAt(i);
       return out;
     }
+    // TEST387: connect silent browsing to the same SID data decoder used by PLAY.
+    browseSidDecode=decode;
     // TEST106: persist active playlist order, not the import draft used by SAVE LIST.
     window.ricoSaveCurrentPlaylistLocal=async function(){
       if(!customActive||loadedRankedPlaylist||!custom.length)
@@ -4461,6 +4467,9 @@
         cancel:function(){cancelled=true;controller.abort();archives.clear();}};
       return stream;
     }
+    // TEST387: the silent catalogue view reuses this existing metadata
+    // reader; it NEVER calls the regular audio playlist commit path.
+    browseReferenceStreamFactory=createProgressiveReferenceStream;
     async function loadProgressiveReferencePlaylist(data,localImport,serial,startIndex){
       var initialIndex=Number.isInteger(startIndex)&&startIndex>=0&&
         startIndex<data.tracks.length?startIndex:0;
