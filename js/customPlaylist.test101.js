@@ -3635,14 +3635,15 @@
       (hatNumber===2?HAT_TUNE2_END_SECONDS:
       (hatNumber===3?HAT_TUNE3_END_SECONDS:
       (hatNumber===4?HAT_TUNE4_END_SECONDS:null)));
-    // TEST392: the only registered Karaoke SID already has a verified HVSC
-    // duration of 03:06. Apply it immediately; do not display the generic
-    // 03:00 while its asynchronous Songlengths shard loads. Manual TIMER
-    // overrides still win, and every other SID follows its original path.
+    // TEST393: when this particular SID is recognized as Karaoke,
+    // always apply its registered HVSC duration immediately (03:06).
+    // The normal exact-HVSC reference and the same approved cover loaded
+    // through a shared or imported playlist must use one duration rule.
+    // This does NOT affect unrelated SID files or manual TIMER overrides.
+    var timerSong=typeof player.sidListIndex==='number'&&player.sidList?
+      player.sidList[player.sidListIndex]:null;
     var karaokeDuration=source&&source.sub===0&&
-      source.shard==='library/songlengths/musicians-U.json'&&
-      source.relative==='Uctumi/Seguir_Viviendo_Sin_Tu_Amor.sid'&&
-      window.SpotySidKaraokeMidi?
+      karaokeAvailableFor(timerSong)&&window.SpotySidKaraokeMidi?
       Number(window.SpotySidKaraokeMidi.sidDurationSeconds):null;
     if(!Number.isInteger(karaokeDuration)||karaokeDuration<5||
        karaokeDuration>3600)karaokeDuration=null;
