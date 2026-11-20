@@ -49,6 +49,7 @@
   var historyWindow=18,historyStep=.075;
   function clearHistory(){
     history=[];lastSampleTime=-1;lastTrackObject=null;
+    bpmCache=null;bpmCacheAt=-1; // Do not inherit BPM from another SID.
   }
   function fmt(t){
     t=Math.max(0,Math.floor(t));
