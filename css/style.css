@@ -4230,3 +4230,34 @@ button.rico-community-pin.rico-pin-on {
   font-size:11px !important;
 }
 /* Keep five rating-star symbols in their compatible symbol face. */
+
+/* TEST372 — all mouse/focus HINT balloons, including native titles converted
+   by themeHints.test372.js and the existing reorder arrow tooltip.
+   Use the selected palette's paper/ink, never the white OS tooltip.
+   Keep compact retro dimensions and original wording; no toolbar changes. */
+#ricoThemedHint,
+#ricoReorderHint {
+  position:fixed;
+  z-index:2147483641;
+  pointer-events:none;
+  box-sizing:border-box;
+  max-width:min(300px,calc(100vw - 16px));
+  padding:6px 9px;
+  border:1px solid var(--rico-theme-border,var(--rico-theme-fg,#fff)) !important;
+  border-radius:3px;
+  background:var(--rico-theme-panel,var(--rico-theme-bg,#000)) !important;
+  background-color:var(--rico-theme-panel,var(--rico-theme-bg,#000)) !important;
+  background-image:none !important;
+  color:var(--rico-theme-fg,#fff) !important;
+  box-shadow:2px 2px 0 var(--rico-theme-border,var(--rico-theme-fg,#fff));
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif !important;
+  font-size:12px !important;
+  font-weight:400 !important;
+  font-synthesis:none;
+  line-height:1.4;
+  letter-spacing:0;
+  text-align:left;
+  white-space:normal;
+  overflow-wrap:break-word;
+}
+#ricoThemedHint[hidden] {display:none !important;}
