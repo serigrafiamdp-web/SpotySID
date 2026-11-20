@@ -42,53 +42,133 @@
         titleNode.textContent=songLabel(player.sidList[next]);
     }
   }
+  // TEST382: compact moving SOUND TIMELINE in the Karaoke viewer.
+  // Retain only recent audio-derived amplitude samples; scroll left under a
+  // fixed playhead. This is recorded live, not a speculative full-file wave.
+  var history=[],lastSampleTime=-1,lastTrackObject=null;
+  var historyWindow=18,historyStep=.075;
+  function clearHistory(){
+    history=[];lastSampleTime=-1;lastTrackObject=null;
+  }
+  function fmt(t){
+    t=Math.max(0,Math.floor(t));
+    return String(Math.floor(t/60)).padStart(2,'0')+':'+String(t%60).padStart(2,'0');
+  }
+  function sampleRecentAudio(now){
+    var entry=(typeof player.sidListIndex==='number'&&player.sidList)?
+      player.sidList[player.sidListIndex]:null;
+    if(entry!==lastTrackObject || (lastSampleTime>=0 && now<lastSampleTime-1)){
+      clearHistory();lastTrackObject=entry;
+    }
+    if(!player.isPlaying || player.isPaused || player.autoLoading ||
+       (lastSampleTime>=0 && now-lastSampleTime<historyStep))return;
+    if(!window.SID || typeof SID.getChannelBuffer!=='function')return;
+    var buffers=[SID.getChannelBuffer(1),SID.getChannelBuffer(2),SID.getChannelBuffer(3)];
+    // An RMS envelope of the combined SID voices, sampled from the real
+    // engine buffers and normalized for display only; audio remains untouched.
+    var sum=0,count=0;
+    for(var i=0;i<64;i++){
+      var sample=0,voices=0,at=200+i*12;
+      for(var v=0;v<3;v++){
+        var check=document.getElementById('voice'+(v+1));
+        if(check&&!check.checked)continue;
+        sample+=SID.readFloatSample(buffers[v],at);
+        voices++;
+      }
+      if(voices)sample/=voices;
+      if(Number.isFinite(sample)){sum+=sample*sample;count++;}
+    }
+    var rms=Math.sqrt(sum/Math.max(1,count));
+    history.push({t:now,peak:Math.max(0,Math.min(1,rms*34*(player.scopeVisualGain||1)))});
+    lastSampleTime=now;
+    while(history.length && history[0].t<now-historyWindow-2)history.shift();
+  }
+  function drawPetsciiBlock(ctx,x,y,ink,size){
+    // Genuine C64 ROM glyph #81, a solid round dot; integer nearest-neighbor.
+    var rom=window.C64CharROM,start=81*8;
+    if(!rom||rom.length<start+8){
+      ctx.fillRect(x,y,size,size);return;
+    }
+    var cell=Math.max(1,Math.round(size/8));
+    ctx.fillStyle=ink;
+    for(var row=0;row<8;row++){
+      var bits=rom[start+row];
+      for(var col=0;col<8;col++)if(bits&(128>>col))
+        ctx.fillRect(x+col*cell,y+row*cell,cell,cell);
+    }
+  }
   function drawMixedScope(){
     var ctx=player.context,canvas=player.canvas,c=palette();
     if(!ctx||!canvas)return;
-    var width=canvas.width,height=canvas.height;
-    var workspaceHeight=Math.min(height*0.28,220);
-    var centerY=workspaceHeight*.53,amp=Math.max(16,(workspaceHeight-28)*.45);
+    var width=canvas.width,height=canvas.height,band=Math.max(70,Math.min(height*.28,220));
+    var center=band*.49,amplitude=Math.max(15,band*.33);
+    var cursor=width*.63,secondsPx=width/13;
+    var now=player.sampleRate?Math.max(0,(player.autoElapsedSamples||0)/player.sampleRate):0;
+    var mode=player.scopeDisplayMode||'hires';
     ctx.clearRect(0,0,width,height);
-    if(!window.SID||typeof SID.getChannelBuffer!=='function')return;
-    var buffers=[SID.getChannelBuffer(1),SID.getChannelBuffer(2),SID.getChannelBuffer(3)];
-    var count=Math.min(650,Math.max(1,width));
-    var maxSamples=1764,offset=200;
-    var activeVoices=[];
-    for(var v=0;v<3;v++){
-      var box=document.getElementById('voice'+(v+1));
-      if(!box||box.checked)activeVoices.push(buffers[v]);
-    }
-    // Combine the same sample positions for each voice; average rather than
-    // stacking 3 separate waveform rows. No change to channel mixing or audio.
-    var points=[];
-    for(var i=0;i<count;i++){
-      var samplePos=Math.min(maxSamples-1,offset+i);
-      var sum=0;
-      for(var b=0;b<activeVoices.length;b++)
-        sum+=SID.readFloatSample(activeVoices[b],samplePos);
-      var mixed=activeVoices.length?sum/activeVoices.length:0;
-      if(!player.isPlaying&&!player.isPaused)mixed=0;
-      var normalized=Math.max(-1,Math.min(1,mixed*24*(player.scopeVisualGain||1)));
-      points.push([width*i/Math.max(1,count-1),centerY+normalized*amp]);
-    }
-    if(!points.length)return;
+    sampleRecentAudio(now);
     ctx.save();
-    ctx.beginPath();
-    ctx.rect(0,0,width,Math.max(1,workspaceHeight));
-    ctx.clip();
-    if(player.oscilloscopeMode==='filled'){
-      ctx.beginPath();
-      ctx.moveTo(points[0][0],centerY);
-      for(var p=0;p<points.length;p++)ctx.lineTo(points[p][0],points[p][1]);
-      ctx.lineTo(points[points.length-1][0],centerY);
-      ctx.closePath();ctx.fillStyle=c.fill;ctx.fill();
-    }
-    ctx.beginPath();
-    ctx.moveTo(points[0][0],points[0][1]);
-    for(var j=1;j<points.length;j++)ctx.lineTo(points[j][0],points[j][1]);
+    ctx.beginPath();ctx.rect(0,0,width,band);ctx.clip();
+    // Moving time marks (one mark every 5 seconds) and permanent playhead.
+    ctx.fillStyle=c.line;
     ctx.strokeStyle=c.line;
-    ctx.lineWidth=player.scopeDisplayMode==='pixel'?3:2;
-    ctx.stroke();
+    ctx.font='12px RicoAmigaTopaz,monospace';
+    ctx.globalAlpha=.45;
+    var visibleStart=Math.max(0,now-cursor/secondsPx);
+    var visibleEnd=now+(width-cursor)/secondsPx;
+    for(var t=Math.ceil(visibleStart/5)*5;t<=visibleEnd;t+=5){
+      var x=cursor+(t-now)*secondsPx;
+      ctx.beginPath();ctx.moveTo(x,band-23);ctx.lineTo(x,band-12);ctx.stroke();
+      ctx.fillText(fmt(t),x+3,band-28);
+    }
+    ctx.globalAlpha=1;
+    if(mode!=='off'&&history.length>0){
+      if(mode==='petscii'){
+        var step=8;
+        for(var px=0;px<width;px+=step){
+          var second=now+(px-cursor)/secondsPx;
+          if(second<0||second>now)continue;
+          var pick=Math.floor((second-(now-historyWindow-2))/historyStep);
+          var nearest=null,dist=.16;
+          for(var j=history.length-1;j>=0;j--){
+            var delta=Math.abs(history[j].t-second);
+            if(delta<dist){dist=delta;nearest=history[j];}
+            if(history[j].t<second-.16)break;
+          }
+          if(!nearest)continue;
+          var dots=Math.floor(nearest.peak*amplitude/8);
+          for(var dy=0;dy<=dots;dy++){
+            drawPetsciiBlock(ctx,px,Math.round(center-dy*8),c.line,8);
+            if(dy)drawPetsciiBlock(ctx,px,Math.round(center+dy*8),c.line,8);
+          }
+        }
+      }else if(mode==='pixel'){
+        for(var h=0;h<history.length;h++){
+          var rec=history[h],x=Math.round((cursor+(rec.t-now)*secondsPx)/4)*4;
+          if(x<-4||x>width)continue;
+          var a=Math.max(2,Math.round(rec.peak*amplitude/4)*4);
+          ctx.fillRect(x,Math.round((center-a)/4)*4,4,2*a);
+        }
+      }else{
+        // HI-RES continuous waveform envelope, grounded in captured SID audio.
+        ctx.beginPath();
+        for(var h=0;h<history.length;h++){
+          var rec=history[h],x=cursor+(rec.t-now)*secondsPx,y=center-rec.peak*amplitude;
+          if(h===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);
+        }
+        for(var h=history.length-1;h>=0;h--){
+          var rec=history[h];ctx.lineTo(cursor+(rec.t-now)*secondsPx,center+rec.peak*amplitude);
+        }
+        ctx.closePath();
+        if(player.oscilloscopeMode==='filled'){ctx.globalAlpha=.63;ctx.fillStyle=c.fill;ctx.fill();ctx.globalAlpha=1;}
+        ctx.strokeStyle=c.line;ctx.lineWidth=2;ctx.stroke();
+      }
+    }
+    ctx.strokeStyle=c.line;ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(cursor,27);ctx.lineTo(cursor,band-10);ctx.stroke();
+    ctx.fillStyle=c.line;ctx.font='13px RicoAmigaTopaz,monospace';
+    ctx.fillText('SOUND TIMELINE · '+(mode==='off'?'OFF':mode.toUpperCase()),14,20);
+    ctx.fillText(fmt(now),Math.max(12,Math.min(width-65,cursor+6)),20);
     ctx.restore();
   }
   player.render=function(){
