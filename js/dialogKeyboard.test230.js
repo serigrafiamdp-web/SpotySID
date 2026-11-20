@@ -142,14 +142,14 @@
     mos.click();
   },true);
 
-  // TEST349 — N advances to NEXT SID through the existing toolbar button.
-  // Preserve D/I/F/M/P/C. Never intercept typing or foreground editors.
+  // TEST373 — W cycles HI-RES / PETSCII / PIXEL / OFF through the existing
+  // display button. Preserve N/D/I/F/M/P/C, editing and foreground guards.
   // Reuse the already validated XP-safe manual/AUTO SID handoff pipeline.
   document.addEventListener('keydown',function(event){
     if(event.defaultPrevented||event.repeat||event.isComposing||
        event.ctrlKey||event.metaKey||event.altKey)return;
     var key=String(event.key||'').toLowerCase();
-    if(key!=='p'&&key!=='c'&&key!=='m'&&key!=='i'&&key!=='f'&&key!=='d'&&key!=='n')return;
+    if(key!=='p'&&key!=='c'&&key!=='m'&&key!=='i'&&key!=='f'&&key!=='d'&&key!=='n'&&key!=='w')return;
     var focused=document.activeElement;
     var source=event.target;
     function editable(node){
@@ -166,7 +166,8 @@
     var shortcutButtons={
       p:'ricoPlaylistToggle',c:'oscilloscopeColorButton',m:'chooseSid',
       i:'ricoInvertColorsButton',f:'oscilloscopeModeButton',
-      d:'ricoToolbarTileArtworkButton',n:'nextSid'
+      d:'ricoToolbarTileArtworkButton',n:'nextSid',
+      w:'ricoPetsciiButton'
     };
     var target=document.getElementById(shortcutButtons[key]);
     if(!target||target.disabled)return;
