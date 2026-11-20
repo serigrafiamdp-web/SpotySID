@@ -54,6 +54,7 @@
     MODE.hidden=true;
     authorized=false;busy=false;
     KEY.value='';
+    KEY.required=true;
     KEYGROUP.hidden=false;FIELDS.hidden=true;
     showStatus('');
   }
@@ -62,7 +63,7 @@
     MODE.hidden=false;
     authorized=false;busy=false;
     KEYGROUP.hidden=false;FIELDS.hidden=true;
-    KEY.value='';
+    KEY.value='';KEY.required=true;
     SONG.textContent=data.title+' — '+data.originalArtist+' / COVER SID BY '+data.sidCoverBy;
     showStatus(supported()?'BETA KEY REQUIRED':'No synchronized karaoke data for this song.');
     refreshControls();
@@ -108,6 +109,7 @@
           return;
         }
         authorized=true;
+        KEY.required=false; // Hidden password cannot block SAVE validity.
         KEYGROUP.hidden=true;FIELDS.hidden=false;
         showStatus('AUTHORIZED · LOCAL SETTINGS FOR THIS SONG');
         refreshControls();
