@@ -2670,6 +2670,7 @@
   }
 
   function renderPlaybackStatus(){
+    if(communityBrowsePreview)return; // Music continues under independent browsing.
     // TEST348: the initial XP long-list painter is already drawing rows
     // incrementally. Let it finish rather than throw away its work and
     // synchronously rebuilding the whole playlist after playSong().
@@ -2716,7 +2717,86 @@
       return a.label.localeCompare(b.label,undefined,{sensitivity:'base'});
     });
   }
+  // TEST384: BROWSE is separate from the active audio playlist.
+  // Clicking a Community NAME opens these tracks without loading a SID,
+  // altering player.sidList or stopping the song currently playing.
+  var communityBrowsePreview=null,communityBrowsePaintToken=0;
+  function renderCommunityBrowse(){
+    var preview=communityBrowsePreview;
+    if(!preview)return false;
+    var holder=document.getElementById('ricoLivePlaylistItems');
+    if(!holder)return true;
+    // A timer/playing marker update must never replace this browse preview.
+    if(holder._ricoBrowsePreview===preview)return true;
+    holder._ricoBrowsePreview=preview;
+    var token=++communityBrowsePaintToken;
+    holder.textContent='';
+    holder.scrollTop=0;
+    $('#ricoLiveShare,#ricoLiveSave').hide();
+    $('#ricoRemixBar').css('display','none');
+    $('#ricoLivePlaylistTitle').text(preview.data.name||preview.item.title||'PLAYLIST');
+    $('#ricoLiveCount').text(' ('+preview.data.tracks.length+')');
+    $('#ricoLivePlaylistCreator').text('Playlist by '+
+      (preview.data.createdBy||preview.item.createdBy||'Unknown'));
+    $('#ricoLiveStatus').text('BROWSE ONLY · PLAY starts a SID · NAME never starts audio');
+    var tracks=preview.data.tracks;
+    function appendChunk(from){
+      if(token!==communityBrowsePaintToken||communityBrowsePreview!==preview)return;
+      var frag=document.createDocumentFragment();
+      var end=Math.min(tracks.length,from+60);
+      for(var i=from;i<end;i++){
+        (function(index){
+          var track=tracks[index];
+          if(!track)return;
+          var wrap=document.createElement('div');
+          wrap.className='rico-live-browse-row';
+          var number=document.createElement('span');
+          number.className='rico-live-number';
+          number.textContent=String(index+1);
+          wrap.appendChild(number);
+          var label=document.createElement('span');
+          label.className='rico-live-browse-name';
+          var title=track.title||track.name||track.file||('SID '+(index+1));
+          label.textContent=String(title).replace(/\.sid$/i,'').replace(/_/g,' ')+
+            (track.author||track.artist?' — '+formatArtistCredit(track.author||track.artist):'');
+          wrap.appendChild(label);
+          var play=document.createElement('button');
+          play.type='button';play.className='rico-live-browse-play';
+          play.textContent='PLAY';
+          play.title='Play '+title+' with the normal fade transition';
+          play.addEventListener('click',function(event){
+            event.stopPropagation();
+            preview.playFrom(index,false);
+          });
+          wrap.appendChild(play);
+          if(karaokeAvailableFor(track)){
+            var mic=document.createElement('button');
+            mic.type='button';mic.className='rico-live-browse-mic';
+            mic.setAttribute('aria-label','Karaoke '+title);
+            mic.title='Karaoke · fade to '+title+' from 00:00';
+            mic.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true">'+
+              '<path d="M15.2 3.7a4.2 4.2 0 0 1 5.1 6.6l-2.5 2.5-6.1-6.1z"></path>'+
+              '<path d="m11.7 6.7-2 2 5.8 5.8 2.3-1.7M10.2 8.9 4.5 18.2l1.7 1.7 9.2-5.7M3.5 20.6l2.1-2.1"></path>'+
+              '</svg>';
+            mic.addEventListener('click',function(event){
+              event.stopPropagation();
+              preview.playFrom(index,true);
+            });
+            wrap.appendChild(mic);
+          }
+          frag.appendChild(wrap);
+        })(i);
+      }
+      holder.appendChild(frag);
+      if(end<tracks.length)setTimeout(function(){appendChunk(end);},15);
+    }
+    appendChunk(0);
+    return true;
+  }
   function renderLivePlaylist() {
+    if(communityBrowsePreview){renderCommunityBrowse();return;}
+    var browseHolder=document.getElementById('ricoLivePlaylistItems');
+    if(browseHolder)browseHolder._ricoBrowsePreview=null;
     // TEST348: one painter at a time; structural list changes supersede
     // any unfinished chunks rather than appending stale rows.
     // TEST244: update SHARE even when a large playlist uses virtual painting
@@ -3153,6 +3233,9 @@
   }
   function showLivePlaylist(visible) {
     liveVisible = !!visible;
+    if(!liveVisible && communityBrowsePreview){
+      communityBrowsePreview=null; ++communityBrowsePaintToken;
+    }
     // TEST314: hiding PLAYLIST always returns directly to the oscilloscope.
     // Never leave CHOOSE A SID visible underneath the floating playlist.
     if(!liveVisible&&player.dialogManager&&
