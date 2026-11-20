@@ -4407,3 +4407,119 @@ html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-edit-row:is(
 ):not(.rico-live-edit-active) > .rico-live-song-share-slot {
   background:var(--rico-theme-fg,#fff) !important;
 }
+
+
+/* TEST380 — MIC is a separate 26px themed button immediately LEFT of S.
+   Selected/playing ink wraps both buttons without filling their centers.
+   The extra 30px naturally shifts the PLAY marker LEFT inside the song row. */
+#ricoLivePlaylistItems .rico-live-edit-row > .rico-live-karaoke-slot {
+  box-sizing:border-box;
+  display:inline-flex;
+  align-self:stretch;
+  align-items:center;
+  flex:0 0 30px;
+  width:30px;min-width:30px;max-width:30px;
+  padding:0 4px 0 0;margin:0;border:0;background:transparent;
+}
+#ricoLivePlaylistItems .rico-live-edit-row > .rico-live-karaoke-slot > button.rico-live-karaoke {
+  display:inline-flex !important;align-items:center;justify-content:center;
+  box-sizing:border-box;flex:0 0 26px !important;
+  width:26px !important;min-width:26px !important;max-width:26px !important;
+  height:26px !important;min-height:26px !important;max-height:26px !important;
+  padding:0 !important;margin:0 !important;
+  border:1px solid var(--rico-theme-fg,#fff) !important;
+  border-radius:2px !important;background:var(--rico-theme-bg,#000) !important;
+  color:var(--rico-theme-fg,#fff) !important;
+  cursor:pointer;
+}
+#ricoLivePlaylistItems .rico-live-karaoke svg {
+  display:block;width:16px;height:16px;
+  fill:none;stroke:currentColor;stroke-width:1.7;
+  stroke-linecap:square;stroke-linejoin:miter;pointer-events:none;
+}
+#ricoLivePlaylistItems .rico-live-edit-row > .rico-live-karaoke-slot > button.rico-live-karaoke:is(:hover,:focus,:focus-visible,:active) {
+  background:var(--rico-theme-bg,#000) !important;
+  color:var(--rico-theme-fg,#fff) !important;
+}
+#ricoLivePlaylistItems .rico-live-edit-row > .rico-live-karaoke-slot > button.rico-live-karaoke:focus-visible {
+  outline:1px solid var(--rico-theme-fg,#fff);outline-offset:1px;
+}
+#ricoLivePlaylistItems .rico-live-edit-row:has(
+  > .rico-live-row:is(:hover,.rico-live-selected,.rico-live-queued,.rico-keyboard-current):not(.rico-live-active)
+) > .rico-live-karaoke-slot,
+#ricoLivePlaylistItems .rico-live-edit-row:is(
+  .rico-live-edit-selected,.rico-live-edit-queued
+) > .rico-live-karaoke-slot {
+  background:var(--rico-theme-hover,#555) !important;
+}
+#ricoLivePlaylistItems .rico-live-edit-row:has(
+  > .rico-live-row.rico-live-active
+) > .rico-live-karaoke-slot,
+#ricoLivePlaylistItems .rico-live-edit-row.rico-live-edit-active > .rico-live-karaoke-slot,
+html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-edit-row:is(
+  .rico-live-edit-selected,.rico-live-edit-queued
+) > .rico-live-karaoke-slot {
+  background:var(--rico-theme-fg,#fff) !important;
+}
+
+/* TEST380 — independent karaoke lyric stage; OSC itself remains the one
+   native sidDisplay canvas and its original renderer resumes on EXIT. */
+#ricoKaraokeStage[hidden]{display:none !important;}
+#ricoKaraokeStage {
+  box-sizing:border-box;
+  position:fixed;z-index:90;
+  top:min(28vh,220px);bottom:42px;left:0;right:0;
+  display:flex;flex-direction:column;
+  overflow:hidden;background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+  font-synthesis:none;
+}
+#ricoKaraokeStage .rico-karaoke-header {
+  display:flex;align-items:center;gap:10px;flex:0 0 auto;
+  box-sizing:border-box;min-height:44px;padding:8px 20px;
+  border-top:1px solid var(--rico-theme-fg,#fff);
+  border-bottom:1px solid var(--rico-theme-fg,#fff);
+}
+#ricoKaraokeStage .rico-karaoke-brand {
+  font-size:16px;white-space:nowrap;letter-spacing:1px;
+}
+#ricoKaraokeStage #ricoKaraokeTitle {
+  min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;
+  white-space:nowrap;font-size:15px;text-align:center;
+}
+#ricoKaraokeStage #ricoKaraokeClose {
+  flex:0 0 auto;box-sizing:border-box;min-height:26px;
+  border:1px solid var(--rico-theme-fg,#fff);
+  border-radius:2px;background:var(--rico-theme-bg,#000);
+  color:var(--rico-theme-fg,#fff);
+  font:14px/23px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+  padding:0 8px;cursor:pointer;
+}
+#ricoKaraokeStage #ricoKaraokeClose:is(:hover,:focus-visible) {
+  background:var(--rico-theme-fg,#fff);
+  color:var(--rico-theme-bg,#000);
+}
+#ricoKaraokeStage .rico-karaoke-lyrics {
+  flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
+  justify-content:center;align-items:center;gap:18px;
+  box-sizing:border-box;padding:20px;
+}
+#ricoKaraokeStage #ricoKaraokeBall {
+  display:block;width:32px;height:32px;image-rendering:pixelated;
+}
+#ricoKaraokeStage .rico-karaoke-placeholder {
+  text-align:center;line-height:1.6;font-size:clamp(18px,3vw,32px);
+  letter-spacing:1px;opacity:.70;
+}
+#ricoKaraokeStage .rico-karaoke-foot {
+  flex:0 0 auto;border-top:1px solid var(--rico-theme-fg,#fff);
+  text-align:center;font-size:12px;line-height:30px;
+}
+@media(max-width:600px){
+  #ricoKaraokeStage {top:min(28vh,180px);bottom:66px;}
+  #ricoKaraokeStage .rico-karaoke-header {padding:8px;gap:6px;}
+  #ricoKaraokeStage .rico-karaoke-brand {font-size:13px;}
+  #ricoKaraokeStage #ricoKaraokeTitle {font-size:12px;}
+  #ricoKaraokeStage .rico-karaoke-foot {font-size:10px;}
+}
