@@ -898,17 +898,20 @@
   var activeSharePlaylistId='';
   // TEST375: SHARE still links to the entire published playlist. Optional
   // 1-based 'track' is the starting song, never a reordered/truncated list.
-  function playlistShareUrl(id,trackIndex){
+  function playlistShareUrl(id,trackIndex,karaokeTrack){
     if(typeof id!=='string'||!/^[a-z0-9-]{1,80}$/i.test(id))return '';
     var url=new URL('index.html',window.location.href);
     url.hash='';url.search='';
     url.searchParams.set('playlist',id);
-    if(Number.isSafeInteger(trackIndex)&&trackIndex>=0&&trackIndex<2000)
+    if(Number.isSafeInteger(trackIndex)&&trackIndex>=0&&trackIndex<2000){
       url.searchParams.set('track',String(trackIndex+1));
+      // TEST390: mark only song SHARE links of registered Karaoke SIDs.
+      if(karaokeTrack===true)url.searchParams.set('karaoke','1');
+    }
     return url.href;
   }
-  async function copyPlaylistShareLink(id,trackIndex,confirmationButton){
-    var url=playlistShareUrl(id,trackIndex);
+  async function copyPlaylistShareLink(id,trackIndex,confirmationButton,karaokeTrack){
+    var url=playlistShareUrl(id,trackIndex,karaokeTrack);
     if(!url)return;
     try{
       if(!navigator.clipboard||typeof navigator.clipboard.writeText!=='function')
@@ -3140,7 +3143,8 @@
               event.preventDefault();event.stopPropagation();
               hideReorderHint();
               void copyPlaylistShareLink(displayedShareId,
-                preview?item._browseOriginalIndex:index,this);
+                preview?item._browseOriginalIndex:index,this,
+                karaokeAvailableFor(item));
             })
             .appendTo(shareSlot);
           shareSlot.appendTo(wrap);
@@ -5279,6 +5283,17 @@
         return number<=2000?number-1:0;
       }catch(error){return 0;}
     })();
+    // TEST390: only explicitly shared Karaoke songs start in Karaoke view.
+    // Ordinary playlist/track shares without karaoke=1 are unchanged.
+    var sharedKaraokeRequested=(function(){
+      if(!sharedRequestId)return false;
+      try{
+        var query=new URLSearchParams(window.location.search);
+        var n=query.get('track')||'';
+        return query.get('karaoke')==='1'&&
+          /^[1-9][0-9]{0,3}$/.test(n)&&Number(n)<=2000;
+      }catch(error){return false;}
+    })();
     var sharedRequestAttempted=false;
     var sharedAudioGesturePending=false;
     // Some browsers suspend Web Audio until the visitor clicks PLAY. Resume
@@ -6343,8 +6358,9 @@
               renderLivePlaylist();
               selectedCommunityId=item.id||item.file;
               if(wantsKaraoke&&window.SpotySidKaraoke){
-                // Karaoke begins only after the standard playlist fade and
-                // the selected SID's first audio buffer have completed.
+                // TEST390: Shared song links reuse the MIC's view switch.
+                // Verify the actual loaded SID; a URL flag alone is never
+                // sufficient to enter Karaoke. Audio continues normally.
                 var chosenSid=player.sidList&&player.sidList[startAt];
                 if(karaokeAvailableFor(chosenSid)){
                   window.SpotySidKaraoke.open(chosenSid,startAt);
@@ -6433,7 +6449,9 @@
           });
           if(sharedRequestId&&!sharedRequestAttempted&&
              (item.remoteId===sharedRequestId||(!item.remoteId&&item.id===sharedRequestId)))
-            sharedOpen=function(){return openPlaylist(false,true);};
+            sharedOpen=function(){
+              return openPlaylist(false,true,{karaoke:sharedKaraokeRequested});
+            };
           // Only published COMMUNITY playlists with playable SID tracks participate.
           // Nothing is shuffled or moved in the visible playlist or its track list.
           if(Number(item.tracks)>0)
