@@ -2732,16 +2732,102 @@
   var ricoPrimaryBrowseKey='';
   var ricoSecondaryHost=null,ricoSecondaryPreview=null;
   var ricoPrimaryOriginalStyle=null,ricoSecondaryPaintId=0;
+  // TEST403: the original playlist remains visible after playback is
+  // deliberately transferred to a song in the SECOND window.
+  var ricoPinnedFirstHost=null,ricoSecondaryPromotion=null;
   function removePlayingWindow(){
     ++ricoSecondaryPaintId;
     if(ricoSecondaryPreview&&ricoSecondaryPreview.dispose)
       ricoSecondaryPreview.dispose();
     ricoSecondaryPreview=null;
     if(ricoSecondaryHost){ricoSecondaryHost.remove();ricoSecondaryHost=null;}
+    if(ricoPinnedFirstHost){ricoPinnedFirstHost.remove();ricoPinnedFirstHost=null;}
+    ricoSecondaryPromotion=null;
     var primary=document.getElementById('ricoLivePlaylist');
     if(primary&&ricoPrimaryOriginalStyle!==null)
       primary.setAttribute('style',ricoPrimaryOriginalStyle);
     ricoPrimaryOriginalStyle=null;
+  }
+  // TEST403: switch audio authority from window 1 to window 2 without
+  // closing window 1. Its DOM is retained as a visible, inactive view.
+  // The original live DOM and all audio-bound controls move to window 2.
+  function beginSecondaryPlaylistPromotion(){
+    if(!ricoSecondaryHost||ricoSecondaryPromotion)return false;
+    var primary=document.getElementById('ricoLivePlaylist');
+    var secondary=ricoSecondaryHost.shadowRoot&&
+      ricoSecondaryHost.shadowRoot.querySelector('#ricoLivePlaylist');
+    if(!primary||!secondary)return false;
+    var left=primary.getBoundingClientRect();
+    var right=secondary.getBoundingClientRect();
+    if(!left.width||!right.width)return false;
+    var oldStyle=primary.getAttribute('style')||'';
+    var pinned=document.createElement('div');
+    pinned.id='ricoPinnedFirstPlaylistWindow';
+    pinned.style.cssText='position:fixed;inset:0;z-index:196;pointer-events:none;';
+    var shadow=pinned.attachShadow({mode:'open'});
+    var css=document.createElement('link');
+    css.rel='stylesheet';
+    css.href='css/style.css?v=test403-retain-inactive-first';
+    shadow.appendChild(css);
+    // Copy the first playlist BEFORE playback changes its contents. Do not
+    // duplicate event handlers: only the RIGHT window controls the player.
+    var first=primary.cloneNode(true);
+    first.style.cssText+=';position:fixed;display:flex;left:'+left.left+
+      'px;right:auto;top:'+left.top+'px;bottom:auto;width:'+left.width+
+      'px;height:'+left.height+'px;transform:none;pointer-events:auto;';
+    first.querySelectorAll('.rico-live-current,.rico-live-next').forEach(
+      function(marker){marker.remove();}
+    );
+    first.querySelectorAll('.rico-live-active,.rico-live-edit-active').forEach(
+      function(row){row.classList.remove('rico-live-active','rico-live-edit-active');}
+    );
+    var close=first.querySelector('#ricoLiveClose');
+    if(close)close.addEventListener('click',function(event){
+      event.preventDefault();event.stopPropagation();
+      pinned.remove();
+      if(ricoPinnedFirstHost===pinned)ricoPinnedFirstHost=null;
+    });
+    shadow.appendChild(first);
+    document.body.appendChild(pinned);
+    if(ricoPinnedFirstHost&&ricoPinnedFirstHost!==pinned)
+      ricoPinnedFirstHost.remove();
+    ricoPinnedFirstHost=pinned;
+    ricoSecondaryPromotion={primary:primary,pinned:pinned,oldStyle:oldStyle};
+    // Move the real player UI behind the still-visible right-hand preview.
+    // This avoids either window disappearing during the existing audio fade.
+    primary.style.display='flex';
+    primary.style.left=right.left+'px';
+    primary.style.right='auto';
+    primary.style.top=right.top+'px';
+    primary.style.bottom='auto';
+    primary.style.width=right.width+'px';
+    primary.style.height=right.height+'px';
+    primary.style.transform='none';
+    primary.style.visibility='hidden';
+    return true;
+  }
+  function finishSecondaryPlaylistPromotion(success){
+    var transfer=ricoSecondaryPromotion;
+    if(!transfer)return;
+    ricoSecondaryPromotion=null;
+    var primary=transfer.primary;
+    if(success){
+      // The newly playing list is already rendered in the ORIGINAL DOM.
+      // Remove only the preview overlay; keep window 1 pinned on the left.
+      ++ricoSecondaryPaintId;
+      if(ricoSecondaryPreview&&ricoSecondaryPreview.dispose)
+        ricoSecondaryPreview.dispose();
+      ricoSecondaryPreview=null;
+      if(ricoSecondaryHost){ricoSecondaryHost.remove();ricoSecondaryHost=null;}
+      primary.style.visibility='visible';
+      ricoPrimaryBrowseKey='playing:'+loadedPlaylistTitle;
+    }else{
+      // A failed or superseded load must not strand an invisible window.
+      primary.setAttribute('style',transfer.oldStyle);
+      if(transfer.pinned===ricoPinnedFirstHost){
+        ricoPinnedFirstHost.remove();ricoPinnedFirstHost=null;
+      }
+    }
   }
   // TEST402: fully rendered *second* playlist uses the SAME SID decoder and
   // row/control classes as the first. Its own preview, selection, and scroll
@@ -6698,7 +6784,8 @@
                 if(ricoPrimaryBrowseKey&&ricoPrimaryBrowseKey!==nextBrowseKey){
                   if(showSecondaryBrowseWindow(chosen,item,function(index,karaoke){
                     void openPlaylist(false,false,{
-                      startIndex:index,karaoke:karaoke,previewData:chosen
+                      startIndex:index,karaoke:karaoke,previewData:chosen,
+                      fromSecondary:true
                     });
                   })){
                     selectedCommunityId=item.id||item.file;
@@ -6725,13 +6812,29 @@
               // Ignore a late auto-load if the visitor picked a different source.
               if(isStartup && !startupPlaylistPending) return;
               if(isStartup) cancelStartupPlaylist();
+              // TEST403: a PLAY from window 2 transfers the active controls
+              // to window 2 but preserves window 1 on screen.
+              var fromSecond=!!(options&&options.fromSecondary&&ricoSecondaryHost);
+              var promoted=fromSecond&&beginSecondaryPlaylistPromotion();
               clearCommunityBrowse();
-              removePlayingWindow();
-              ricoPrimaryBrowseKey='';
+              if(!promoted){
+                removePlayingWindow();
+                ricoPrimaryBrowseKey='';
+              }
               var startAt=isShared?sharedStartIndex:requestedIndex;
-              var applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
-                startAt); // An explicit PLAY button defaults to first song (#1).
-              if(applied===false)return; // Superseded while loading: keep browser and newer selection.
+              var applied;
+              try{
+                applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
+                  startAt); // Keep the existing audio transition unchanged.
+              }catch(loadError){
+                if(promoted)finishSecondaryPlaylistPromotion(false);
+                throw loadError;
+              }
+              if(applied===false){
+                if(promoted)finishSecondaryPlaylistPromotion(false);
+                return;
+              }
+              if(promoted)finishSecondaryPlaylistPromotion(true);
               activeCuratedCatalogId=!item.remoteId&&item.id==='old-sid-collection-rico'
                 ? item.id:null;
               activeRemixDraftId=pending?pending.id:null;
