@@ -2893,6 +2893,10 @@
         // BEFORE the checkbox border. A sibling button (not nested in PLAY)
         // keeps ▶ / queued markers visible and doesn't start playback.
         if(activeSharePlaylistId){
+          // TEST379: shared highlight surface surrounds the outlined S,
+          // including its 6px clearance before the checkbox. The clickable
+          // S stays independent from the PLAY button and ▶ marker.
+          var shareSlot=$('<span>').addClass('rico-live-song-share-slot');
           bindThemedPlaylistHint($('<button type="button">')
             .addClass('rico-live-song-share').text('S')
             .attr('aria-label','Share playlist starting at '+songTitle),
@@ -2902,7 +2906,8 @@
               hideReorderHint();
               void copyPlaylistShareLink(activeSharePlaylistId,index,this);
             })
-            .appendTo(wrap);
+            .appendTo(shareSlot);
+          shareSlot.appendTo(wrap);
         }
         // TEST247: same compact control size, immediately LEFT of +.
         // Do not bubble to the underlying song PLAY/selection handler.
