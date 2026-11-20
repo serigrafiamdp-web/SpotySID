@@ -4079,3 +4079,53 @@ html #songInfo #showSIDInfoLink {
   #ricoKeysPanel {width:260px;}
   #ricoKeysPanel .rico-key-row {flex-basis:100%;}
 }
+
+/* TEST368 — single 1-color noticeboard pin at the RIGHT of DELETE.
+   Preserve row height and the original PLAY/SHARE/EDIT/DELETE dimensions.
+   Only the last inline action is added, following current theme ink/paper. */
+#ricoCommunityItems .rico-community-row > button.rico-community-pin {
+  box-sizing:border-box;
+  flex:0 0 24px !important;
+  width:24px !important;
+  min-width:24px !important;
+  max-width:24px !important;
+  height:28px !important;
+  min-height:28px !important;
+  padding:0 !important;
+  margin:0 !important;
+  display:inline-flex !important;
+  align-items:center;
+  justify-content:center;
+  border:1px solid currentColor !important;
+  border-radius:3px;
+  background:transparent !important;
+  color:inherit !important;
+  cursor:pointer;
+}
+#ricoCommunityItems .rico-community-row > button.rico-community-pin svg {
+  display:block;
+  width:17px;
+  height:17px;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:1.75;
+  stroke-linecap:square;
+  stroke-linejoin:round;
+  pointer-events:none;
+}
+#ricoCommunityItems .rico-community-row > button.rico-community-pin.rico-pin-on {
+  background:var(--rico-theme-fg,#fff) !important;
+  color:var(--rico-theme-bg,#000) !important;
+  border-color:var(--rico-theme-fg,#fff) !important;
+}
+#ricoCommunityItems .rico-community-row:is(:hover,.rico-keyboard-current,.rico-community-selected) >
+button.rico-community-pin.rico-pin-on {
+  background:var(--rico-theme-bg,#000) !important;
+  color:var(--rico-theme-fg,#fff) !important;
+  border-color:var(--rico-theme-bg,#000) !important;
+}
+#ricoCommunityItems .rico-community-row > button.rico-community-pin:disabled {opacity:.5;cursor:wait;}
+#ricoCommunityItems .rico-community-row > button.rico-community-pin:focus-visible {
+  outline:1px solid currentColor !important;
+  outline-offset:1px;
+}
