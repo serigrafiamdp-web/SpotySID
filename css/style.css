@@ -4523,3 +4523,50 @@ html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-edit-row:is(
   #ricoKaraokeStage #ricoKaraokeTitle {font-size:12px;}
   #ricoKaraokeStage .rico-karaoke-foot {font-size:10px;}
 }
+
+
+/* TEST381 — MIDI-driven syllables and bouncing authentic PETSCII ball.
+   Synchronization calibration has NO visible controls. */
+#ricoKaraokeLyricArea {position:relative;}
+#ricoKaraokeStage #ricoKaraokeBall {
+  position:absolute;z-index:2;flex:none;
+  transition:left 100ms linear,top 100ms linear;
+  animation:ricoKaraokeBounce 555ms ease-in-out infinite;
+}
+#ricoKaraokeStage #ricoKaraokeBall[hidden] {display:none !important;}
+#ricoKaraokeStage .rico-karaoke-placeholder {
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  width:100%;gap:24px;max-width:100%;opacity:1;
+}
+#ricoKaraokeStage .rico-karaoke-line {
+  display:block;max-width:100%;
+  color:var(--rico-theme-fg,#fff);
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+  font-size:clamp(18px,3.1vw,38px);line-height:1.75;
+  text-align:center;white-space:pre-wrap;overflow-wrap:break-word;
+}
+#ricoKaraokeStage .rico-karaoke-piece {
+  white-space:pre-wrap;
+}
+#ricoKaraokeStage .rico-karaoke-piece-current {
+  color:var(--rico-theme-bg,#000);
+  background:var(--rico-theme-fg,#fff);
+}
+#ricoKaraokeStage .rico-karaoke-following {
+  max-width:100%;text-align:center;
+  font-family:"RicoAmigaTopaz",Tahoma,Arial,sans-serif;
+  color:var(--rico-theme-fg,#fff);opacity:.56;
+  font-size:clamp(14px,2.4vw,25px);line-height:1.55;
+  white-space:pre-wrap;overflow-wrap:break-word;
+}
+#ricoKaraokeStage .rico-karaoke-instrumental {
+  color:var(--rico-theme-fg,#fff);opacity:.55;
+  font-size:clamp(17px,2.6vw,28px);
+}
+@keyframes ricoKaraokeBounce {
+  0%,100% {transform:translateY(-1px);}
+  50% {transform:translateY(-7px);}
+}
+@media(prefers-reduced-motion:reduce){
+  #ricoKaraokeStage #ricoKaraokeBall {animation:none;transition:none;}
+}
