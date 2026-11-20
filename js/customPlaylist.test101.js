@@ -2773,6 +2773,9 @@
       if(ricoPinnedFirstHost===pinned)ricoPinnedFirstHost=null;
     });
     shadow.appendChild(first);
+    // TEST405: cloned control titles must not render native white tooltips.
+    if(window.ricoPrepareShadowHints)window.ricoPrepareShadowHints(shadow);
+    if(window.ricoDismissTransientHints)window.ricoDismissTransientHints();
     document.body.appendChild(pinned);
     if(ricoPinnedFirstHost&&ricoPinnedFirstHost!==pinned)
       ricoPinnedFirstHost.remove();
@@ -2920,6 +2923,8 @@
       'px;bottom:auto;width:'+width+'px;height:'+height+
       'px;transform:none;pointer-events:auto;';
     shadow.appendChild(secondary);
+    if(window.ricoPrepareShadowHints)window.ricoPrepareShadowHints(shadow);
+    if(window.ricoDismissTransientHints)window.ricoDismissTransientHints();
     document.body.appendChild(host);
     ricoSecondaryHost=host;
     primary.style.display='flex';
@@ -3779,8 +3784,17 @@
   function closeChooseAfterPlaylistPlay(applied){
     if(applied===false)return false;
     var manager=player.dialogManager;
-    if(manager&&manager.dialogShown==='chooseSidDialog')
+    if(manager&&manager.dialogShown==='chooseSidDialog'){
+      // TEST405: discard hover/focus hints for controls in MOS before
+      // the new playlist takes that screen position.
+      if(window.ricoDismissTransientHints)window.ricoDismissTransientHints();
+      var dialog=document.getElementById('chooseSidDialog');
+      if(dialog&&document.activeElement&&
+         dialog.contains(document.activeElement)&&
+         typeof document.activeElement.blur==='function')
+        document.activeElement.blur();
       manager.hideDialog('chooseSidDialog');
+    }
     return true;
   }
   function showLivePlaylist(visible) {
