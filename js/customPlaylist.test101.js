@@ -2616,6 +2616,13 @@
       row.classList.toggle('rico-live-active',nowActive);
       row.classList.toggle('rico-live-selected',nowSelected);
       row.classList.toggle('rico-live-queued',nowQueued);
+      // TEST379: keep highlight slot in sync even on older browsers whose
+      // CSS does not support :has(). This is only a cheap class change.
+      if(wrapper&&wrapper!==row){
+        wrapper.classList.toggle('rico-live-edit-active',nowActive);
+        wrapper.classList.toggle('rico-live-edit-selected',nowSelected);
+        wrapper.classList.toggle('rico-live-edit-queued',nowQueued);
+      }
       if(nowActive)row.setAttribute('aria-current','true');
       else row.removeAttribute('aria-current');
       var currentMark=row.querySelector('.rico-live-current');
@@ -2886,7 +2893,10 @@
         requestSidSwitch(index,'manual');
       });
       if(!landingPlaylists){
-        var wrap=$('<div>').addClass('rico-live-edit-row');
+        var wrap=$('<div>').addClass('rico-live-edit-row')
+          .toggleClass('rico-live-edit-active',active)
+          .toggleClass('rico-live-edit-selected',index===selectedLiveIndex)
+          .toggleClass('rico-live-edit-queued',index===queuedLiveIndex);
         if(artistGroups){wrap.attr('data-sid-index',index);groupedRowsByIndex[index]=wrap[0];}
         row.appendTo(wrap);
         // TEST375: one tiny S at the far RIGHT of the song cell, immediately
