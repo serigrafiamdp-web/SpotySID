@@ -37,9 +37,19 @@
     while(node&&node.nodeType===1){
       transfer(node);
       if(!first&&node.getAttribute('data-rico-themed-hint'))first=node;
-      node=node.parentElement;
+      // TEST405: walk through Shadow DOM, used by the second and pinned
+      // playlist windows. The old event.target stops at the window host.
+      if(node.parentElement)node=node.parentElement;
+      else{
+        var root=node.getRootNode&&node.getRootNode();
+        node=root&&root.host||null;
+      }
     }
     return first;
+  }
+  function eventOrigin(event){
+    var path=event.composedPath&&event.composedPath();
+    return path&&path.length?path[0]:event.target;
   }
   function hide(){
     if(pending!==null){clearTimeout(pending);pending=null;}
@@ -75,6 +85,21 @@
       position();
     },230);
   }
+  // TEST405: native white browser tooltips cannot be styled, especially
+  // inside a ShadowRoot. Convert copied playlist titles to themed hints.
+  window.ricoPrepareShadowHints=function(shadow){
+    if(!shadow||!shadow.querySelectorAll)return;
+    var elements=shadow.querySelectorAll('[title]');
+    for(var j=0;j<elements.length;j++)transfer(elements[j]);
+  };
+  // Closing MOS and opening a second playlist can strand two old hint
+  // balloons over the oscilloscope. Always dismiss them on the handoff.
+  window.ricoDismissTransientHints=function(){
+    ignoreMouseUntil=Date.now()+650;
+    hide();
+    var reorder=document.getElementById('ricoReorderHint');
+    if(reorder)reorder.style.display='none';
+  };
   // One initial pass removes native title popups from the controls already
   // rendered. Newly inserted rows are handled on first mouseover/focus.
   var initial=document.querySelectorAll('[title]');
@@ -83,12 +108,12 @@
   document.addEventListener('mouseover',function(event){
     if(Date.now()<ignoreMouseUntil)return;
     mouseX=event.clientX;mouseY=event.clientY;
-    start(find(event.target),false);
+    start(find(eventOrigin(event)),false);
   },true);
   document.addEventListener('mousemove',function(event){
     if(Date.now()<ignoreMouseUntil)return;
     mouseX=event.clientX;mouseY=event.clientY;
-    var node=find(event.target);
+    var node=find(eventOrigin(event));
     if(node!==current)start(node,false);
     else if(!tooltip.hidden&&!focusMode)position();
   },true);
@@ -97,11 +122,11 @@
     if(to!==current)hide();
   },true);
   document.addEventListener('focusin',function(event){
-    var node=find(event.target);
+    var node=find(eventOrigin(event));
     if(node)start(node,true);
   },true);
   document.addEventListener('focusout',function(event){
-    if(focusMode&&current&&event.target===current)hide();
+    if(focusMode&&current&&eventOrigin(event)===current)hide();
   },true);
   document.addEventListener('mousedown',hide,true);
   document.addEventListener('touchstart',function(){
