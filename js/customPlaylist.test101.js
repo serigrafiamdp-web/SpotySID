@@ -5534,7 +5534,7 @@
       // Newly saved local imports are shown above published catalogs.
       communityItems.insertBefore(fragment,communityItems.firstChild);
       restorePrivateCommunityPositions();
-      updateCatalogArrows();
+      restorePinnedCommunityPositions();
     }
 
     // TEST89: consistent EDIT controls. Static GitHub catalogs must never be
@@ -5654,7 +5654,7 @@
           function(row){return row.dataset.communityOrderKey==='remix:'+communityNewestDraftId;});
         if(newestRow)communityItems.insertBefore(newestRow,communityItems.firstChild);
       }
-      updateCatalogArrows();
+      restorePinnedCommunityPositions();
     }
     window.ricoRenderRemixCommunityRows=renderRemixCommunityRows;
     async function loadCommunityCatalog() {
