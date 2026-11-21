@@ -1,6 +1,8 @@
 name = "ricos-sid-community"
 main = "worker.js"
 compatibility_date = "2026-11-01"
+# TEST414: preserve dashboard-managed variables while deploying existing Worker.
+keep_vars = true
 
 [[d1_databases]]
 binding = "DB"
