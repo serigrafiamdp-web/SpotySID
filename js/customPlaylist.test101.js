@@ -2761,6 +2761,31 @@
       ricoBrowseShelfMetadata.delete(ricoBrowseShelfMetadata.keys().next().value);
     return promise;
   }
+  // NO HVSC references have no HVSC shelf. Read their PSID/RSID header
+  // once before displaying the playlist; do not play or decode SID audio.
+  var ricoBrowseAssetHeaders=new Map();
+  function ricoAssetHeaderMetadata(ref){
+    if(!ref||!ref.sidId||!/^[a-f0-9]{64}$/.test(ref.sidId))
+      return Promise.resolve(null);
+    var cached=ricoBrowseAssetHeaders.get(ref.sidId);
+    if(cached)return cached;
+    var job=fetch(communityWriteApi+'/sid-assets/'+ref.sidId).then(
+      async function(response){
+        if(!response.ok)throw Error('NO HVSC metadata unavailable');
+        var buffer=await response.arrayBuffer();
+        var head=new Uint8Array(buffer,0,Math.min(128,buffer.byteLength));
+        var parsed=parseSID(head,{name:ref.file||'SID',size:buffer.byteLength});
+        return parsed?{title:parsed.name,artist:parsed.author}:null;
+      }).catch(function(error){
+        ricoBrowseAssetHeaders.delete(ref.sidId);
+        console.warn('NO HVSC header lookup deferred:',error);
+        return null;
+      });
+    ricoBrowseAssetHeaders.set(ref.sidId,job);
+    if(ricoBrowseAssetHeaders.size>192)
+      ricoBrowseAssetHeaders.delete(ricoBrowseAssetHeaders.keys().next().value);
+    return job;
+  }
   async function ricoCompletePlaylistLabels(data){
     if(!data||data.version!==2||!Array.isArray(data.tracks))return;
     var groups=new Map();
@@ -2794,6 +2819,25 @@
       }
     }
     await Promise.all([worker(),worker()]);
+    // SID assets not present in the HVSC shelves are only read for their
+    // tiny PSID/RSID headers. At most two in flight, before rows are shown.
+    var assets=data.tracks.filter(function(ref){
+      return ref&&ref.sidId&&!(ref.title&&(ref.artist||ref.author));
+    });
+    var assetPos=0;
+    async function assetWorker(){
+      while(assetPos<assets.length){
+        var ref=assets[assetPos++],meta=await ricoAssetHeaderMetadata(ref);
+        if(!meta)continue;
+        if(!ref.title&&meta.title)ref.title=meta.title;
+        if(!ref.artist&&!ref.author&&meta.artist)ref.artist=meta.artist;
+        if(ref.title&&(ref.artist||ref.author))ref._ricoCatalogMetadata=true;
+        if(assetPos<assets.length)await new Promise(function(done){
+          setTimeout(done,0);
+        });
+      }
+    }
+    if(assets.length)await Promise.all([assetWorker(),assetWorker()]);
   }
   // TEST386: the Community NAME and PLAY use the same ORIGINAL playlist row
   // renderer. Silent browsing only substitutes metadata for painting; it
