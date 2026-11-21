@@ -2448,8 +2448,13 @@
           body:JSON.stringify({format:'ricos-sid-playlist',version:2,name:draft.name,
             createdBy:draft.creator,tracks:expectedDraftRefs})
         });
-        var result=await response.json();
-        if(!response.ok)throw Error(result.error||'Remix publication failed.');
+        // TEST413: the Worker can return a non-JSON error (for example a
+        // resource limit). Always show the actual HTTP status to the user.
+        var rawPublishResponse=await response.text(),result;
+        try{result=JSON.parse(rawPublishResponse);}
+        catch(parseError){result={error:'Unexpected server response'};}
+        if(!response.ok)throw Error((result.error||'Remix publication failed.')+
+          ' (HTTP '+response.status+')');
         if(!result.id)throw Error('Server accepted publication but did not return its ID.');
         remoteId=result.id;
         // Keep the ID in the draft until GET confirms the stored order.
@@ -2503,9 +2508,13 @@
         catch(refreshError){console.warn('Published successfully, catalog refresh failed',refreshError);}
       }
     }catch(error){
-      remixNotice(draft.pendingPublishedId
+      var publishError=draft.pendingPublishedId
         ? 'Playlist created, but order NOT VERIFIED: '+error.message+' Retry PUBLISH to verify/update the SAME playlist.'
-        : 'Remix not published: '+error.message);
+        : 'Remix not published: '+error.message;
+      remixNotice(publishError);
+      // The remix status element is hidden when COMMUNITY PLAYLISTS is open.
+      // Do not silently leave the PUBLISH button on screen after failure.
+      window.alert(publishError);
     }
     finally{remixBusy=false;renderRemixes();}
   }
