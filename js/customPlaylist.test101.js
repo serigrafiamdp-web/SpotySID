@@ -1671,7 +1671,7 @@
   // TEST107: a 2xx response is not proof that the ordering was persisted.
   // Re-read the canonical Cloudflare record and compare every immutable SID ref.
   async function verifyRemoteOrder(url,expected,kind){
-    var response=await fetch(url+'?verify='+Date.now(),{cache:'no-store'});
+    var response=await communityReadWithTimeout(url+'?verify='+Date.now(),20000);
     if(!response.ok)throw Error('Cannot verify saved order on server (HTTP '+response.status+').');
     var data=await response.json();
     if(!data||!Array.isArray(data.tracks)||data.tracks.length!==expected.length)
@@ -2062,9 +2062,37 @@
     remixOpen=false;
     renderRemixes();
   }
+  // TEST421: the normal notices are hidden while COMMUNITY is open.
+  // Keep PUBLISH progress/errors visible outside all playlist windows.
+  var ricoPublishNoticeNode=null;
+  function visiblePublishNotice(message,finished){
+    if(!ricoPublishNoticeNode){
+      ricoPublishNoticeNode=document.createElement('div');
+      ricoPublishNoticeNode.id='ricoPublishGlobalNotice';
+      ricoPublishNoticeNode.setAttribute('role','status');
+      ricoPublishNoticeNode.setAttribute('aria-live','polite');
+      ricoPublishNoticeNode.style.cssText='position:fixed;top:12px;left:50%;transform:translateX(-50%);z-index:2147483646;max-width:min(90vw,750px);background:#1a174d;color:#fff;border:2px solid #a3a7ff;padding:12px 18px;font:14px monospace;box-shadow:0 4px 24px #0009;white-space:pre-wrap;pointer-events:none';
+      document.body.appendChild(ricoPublishNoticeNode);
+    }
+    ricoPublishNoticeNode.textContent=message;
+    ricoPublishNoticeNode.style.display='block';
+    if(finished){
+      ricoPublishNoticeNode.style.pointerEvents='auto';
+      if(!ricoPublishNoticeNode.querySelector('button')){
+        var close=document.createElement('button');
+        close.type='button';close.textContent=' × ';
+        close.setAttribute('aria-label','Close PUBLISH notice');
+        close.style.cssText='margin-left:12px;font:inherit;color:inherit;background:transparent;border:1px solid currentColor;cursor:pointer';
+        close.addEventListener('click',function(){ricoPublishNoticeNode.style.display='none';});
+        ricoPublishNoticeNode.appendChild(close);
+      }
+    }else ricoPublishNoticeNode.style.pointerEvents='none';
+  }
   function remixNotice(message){
     $('#ricoRemixStatus').text(message);
     $('#ricoLiveStatus').text(message);
+    if(/^PUBLISHING|^SAVED IN D1|^FOUND ALREADY PUBLISHED|^PUBLISHED AND VERIFIED|^Remix not published|^Playlist created, but order NOT VERIFIED/.test(message))
+      visiblePublishNotice(message,/^PUBLISHED AND VERIFIED|^Remix not published|^Playlist created, but order NOT VERIFIED/.test(message));
   }
   function renderRemixes(){
     var target=document.getElementById('ricoRemixTarget');
