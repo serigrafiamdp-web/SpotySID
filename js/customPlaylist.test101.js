@@ -2452,7 +2452,7 @@
         // resource limit). Always show the actual HTTP status to the user.
         var rawPublishResponse=await response.text(),result;
         try{result=JSON.parse(rawPublishResponse);}
-        catch(parseError){result={error:'Unexpected server response'};}
+        catch(parseError){result={error:rawPublishResponse.slice(0,240)||'Empty server response'};}
         if(!response.ok)throw Error((result.error||'Remix publication failed.')+
           ' (HTTP '+response.status+')');
         if(!result.id)throw Error('Server accepted publication but did not return its ID.');
