@@ -2413,6 +2413,41 @@
       }
     }finally{remixBusy=false;renderRemixes();}
   }
+  // TEST419: read-only recovery for a POST whose response was lost.
+  // Never manufacture a new playlist if identical content already exists in D1.
+  async function findExistingPublishedRemix(draft,refs){
+    var catalogResponse=await fetch(communityWriteApi+'/playlists',{cache:'no-store'});
+    if(!catalogResponse.ok)throw Error('Cannot check existing public playlists (HTTP '+catalogResponse.status+'). No new list was created.');
+    var catalog=await catalogResponse.json();
+    var candidates=(catalog.playlists||[]).filter(function(row){
+      return row&&row.title===draft.name&&row.createdBy===draft.creator&&
+        Number(row.tracks)===refs.length&&typeof row.id==='string'&&
+        /^[a-z0-9-]{12,48}$/.test(row.id);
+    });
+    for(var i=0;i<candidates.length;i++){
+      var check=await fetch(communityWriteApi+'/playlists/'+encodeURIComponent(candidates[i].id),{cache:'no-store'});
+      if(!check.ok)continue;
+      var data=await check.json();
+      if(Array.isArray(data.tracks)&&data.tracks.length===refs.length&&
+         data.tracks.every(function(t,index){return remixRefKey(t)===remixRefKey(refs[index]);}))
+        return candidates[i].id;
+    }
+    return '';
+  }
+  // No new key or storage system: verify the already archived NO HVSC IDs.
+  async function checkRemixSidReferences(refs){
+    var ids=refs.filter(function(r){return !!r.sidId;});
+    if(!ids.length)return;
+    var response=await fetch(communityWriteApi+'/no-hvsc',{cache:'no-store'});
+    if(!response.ok)throw Error('Cannot verify NO HVSC archive (HTTP '+response.status+').');
+    var catalog=await response.json();
+    if(!catalog||!Array.isArray(catalog.tracks))
+      throw Error('NO HVSC archive returned an invalid response.');
+    var known=new Set(catalog.tracks.map(function(r){return r.sidId;}));
+    var missing=ids.filter(function(r){return !known.has(r.sidId);});
+    if(missing.length)throw Error(missing.length+' SID not archived in NO HVSC. First missing: '+
+      missing[0].file+'. Draft preserved; no publication attempted.');
+  }
   async function publishRemix(id){
     var draft=id ? remixDrafts.find(function(d){return d.id===id;}) : selectedRemix();
     if(remixBusy||!draft)return;
@@ -2441,8 +2476,23 @@
     try{
       await ensureBetaServerReady();
       var expectedDraftRefs=draft.tracks.map(remixCanonicalRef);
+      if(!expectedDraftRefs.every(validRemixRef))
+        throw Error('Invalid SID reference in this draft. No changes made.');
+      if(new Set(expectedDraftRefs.map(remixRefKey)).size!==expectedDraftRefs.length)
+        throw Error('Duplicate SID references in this draft. No changes made.');
+      remixNotice('PUBLISHING '+draft.name+' · checking NO HVSC archive…');
+      await checkRemixSidReferences(expectedDraftRefs);
       var remoteId=draft.pendingPublishedId||'';
       var remoteUrl='';
+      if(!remoteId){
+        remixNotice('PUBLISHING '+draft.name+' · checking existing playlists to avoid duplicates…');
+        remoteId=await findExistingPublishedRemix(draft,expectedDraftRefs);
+        if(remoteId){
+          draft.pendingPublishedId=remoteId;
+          preserveRemixes();
+          remixNotice('FOUND ALREADY PUBLISHED · verifying existing playlist…');
+        }
+      }
       if(!remoteId){
         // TEST418: do not leave a 100+ SID playlist spinning indefinitely.
         // A timed-out POST may have reached D1: preserve the draft and do NOT retry automatically.
@@ -2467,8 +2517,11 @@
         var rawPublishResponse=await response.text(),result;
         try{result=JSON.parse(rawPublishResponse);}
         catch(parseError){result={error:rawPublishResponse.slice(0,240)||'Empty server response'};}
-        if(!response.ok)throw Error((result.error||'Remix publication failed.')+
-          ' (HTTP '+response.status+')');
+        if(!response.ok){
+          var detail=result.error||'Remix publication failed.';
+          if(response.status===403)detail+=' Check that PUBLISH uses the original beta key (BETA_EDIT_KEY); the GitHub deploy token is not the publishing key.';
+          throw Error(detail+' (HTTP '+response.status+')');
+        }
         if(!result.id)throw Error('Server accepted publication but did not return its ID.');
         remoteId=result.id;
         remixNotice('SAVED IN D1 · verifying '+expectedDraftRefs.length+' SID…');
