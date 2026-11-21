@@ -2719,6 +2719,82 @@
       return a.label.localeCompare(b.label,undefined,{sensitivity:'base'});
     });
   }
+  // TEST410: resolve song titles and composers from lightweight HVSC
+  // catalog JSON before opening a second playlist. No ZIP decompression.
+  var ricoBrowseShelfMetadata=new Map(),ricoBrowseRequestTicket=0;
+  function ricoMetadataShelfUrl(ref){
+    if(!ref||typeof ref.pack!=='string')return '';
+    var m=/^library\/packs\/musicians\/([A-Za-z0-9_-]+)\/[^/]+\.zip$/.exec(ref.pack);
+    if(m)return 'library/data/musicians-'+m[1]+'.json';
+    m=/^library\/packs\/demos\/([A-Za-z0-9_-]+)\.zip$/.exec(ref.pack);
+    if(m)return 'library/data/demos-'+m[1]+'.json';
+    return '';
+  }
+  function ricoMetadataKey(ref){
+    return String(ref.pack||'')+'\n'+String(ref.file||'');
+  }
+  function ricoShelfMetadata(url){
+    var cached=ricoBrowseShelfMetadata.get(url);
+    if(cached)return cached;
+    var promise=fetch(url).then(function(response){
+      if(!response.ok)throw Error('HVSC metadata unavailable');
+      return response.json();
+    }).then(function(data){
+      var matches=new Map();
+      if(!data||!Array.isArray(data.sections))return matches;
+      data.sections.forEach(function(section){
+        if(!section||!Array.isArray(section.tracks))return;
+        section.tracks.forEach(function(t){
+          if(!t||!t.file)return;
+          var pack=t.pack||section.pack;
+          if(pack)matches.set(pack+'\n'+t.file,t);
+        });
+      });
+      return matches;
+    }).catch(function(error){
+      ricoBrowseShelfMetadata.delete(url);
+      console.warn('HVSC metadata lookup deferred:',url,error);
+      return null;
+    });
+    ricoBrowseShelfMetadata.set(url,promise);
+    if(ricoBrowseShelfMetadata.size>18)
+      ricoBrowseShelfMetadata.delete(ricoBrowseShelfMetadata.keys().next().value);
+    return promise;
+  }
+  async function ricoCompletePlaylistLabels(data){
+    if(!data||data.version!==2||!Array.isArray(data.tracks))return;
+    var groups=new Map();
+    data.tracks.forEach(function(ref){
+      if(!ref||typeof ref!=='object')return;
+      if(ref.title&&(ref.artist||ref.author)){
+        ref._ricoCatalogMetadata=true;
+        return;
+      }
+      var url=ricoMetadataShelfUrl(ref);
+      if(!url)return;
+      if(!groups.has(url))groups.set(url,[]);
+      groups.get(url).push(ref);
+    });
+    var pending=Array.from(groups.entries()),position=0;
+    async function worker(){
+      while(position<pending.length){
+        var task=pending[position++],matches=await ricoShelfMetadata(task[0]);
+        if(!matches)continue;
+        task[1].forEach(function(ref){
+          var found=matches.get(ricoMetadataKey(ref));
+          if(!found)return;
+          if(!ref.title&&found.title)ref.title=found.title;
+          if(!ref.artist&&!ref.author&&found.author)ref.artist=found.author;
+          if(ref.title&&(ref.artist||ref.author))ref._ricoCatalogMetadata=true;
+        });
+        // Yield between shelves, leaving ScriptProcessor some headroom.
+        if(position<pending.length)await new Promise(function(done){
+          setTimeout(done,0);
+        });
+      }
+    }
+    await Promise.all([worker(),worker()]);
+  }
   // TEST386: the Community NAME and PLAY use the same ORIGINAL playlist row
   // renderer. Silent browsing only substitutes metadata for painting; it
   // never changes the playing SID, its engine, its timers, or the loaded list.
@@ -3463,6 +3539,8 @@
       var count=Math.min(26,Math.ceil((holder.clientHeight||480)/rowHeight)+12);
       for(var index=from;index<Math.min(preview.entries.length,from+count);index++){
         var entry=preview.entries[index];
+        // No need to unzip audio for metadata already read from the index.
+        if(entry&&entry._ricoCatalogMetadata)continue;
         if(enqueued.has(entry))continue;
         enqueued.add(entry);pending.push(entry);
       }
@@ -5062,7 +5140,8 @@
           name:ref.title||ref.file.split('/').pop().replace(/\.sid$/i,'').replace(/_/g,' '),
           author:ref.author||ref.artist||(unknownAuthors?'<?>':'HVSC'),released:'',file:ref.file,size:0,
           numSubtunes:1,startSubtune:1,sidFormat:'PSID',localBytes:null,
-          _hvscRef:remixCanonicalRef(ref),_hvscPromise:null},ref);
+          _hvscRef:remixCanonicalRef(ref),_hvscPromise:null,
+          _ricoCatalogMetadata:!!ref._ricoCatalogMetadata},ref);
       });
       function archiveFor(pack){
         if(!archives.has(pack)){
@@ -5096,7 +5175,12 @@
           var parsed=parseSID(bytes,{name:slot._hvscRef.file,size:bytes.length});
           if(!parsed)throw Error('Invalid PSID/RSID: '+slot._hvscRef.file);
           // Preserve slot identity: arrows may move entries while fetching.
+          // A playback decoder must never rename catalog-complete rows.
+          var catalogName=slot._ricoCatalogMetadata?slot.name:null;
+          var catalogAuthor=slot._ricoCatalogMetadata?slot.author:null;
           Object.assign(slot,parsed,{id:slot.id});
+          if(catalogName)slot.name=catalogName;
+          if(catalogAuthor)slot.author=catalogAuthor;
           normalizeUctumiListDisplay(slot,slot._hvscRef);
           // TEST366: long-list rows are already painted. Patch only the
           // newly resolved title/artist instead of rebuilding hundreds of
@@ -7038,6 +7122,10 @@
               if(browseOnly){
                 if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
                   throw Error('Playlist has no songs to browse.');
+                // Complete metadata before painting any songs in A or B.
+                var metadataTicket=++ricoBrowseRequestTicket;
+                await ricoCompletePlaylistLabels(chosen);
+                if(metadataTicket!==ricoBrowseRequestTicket)return;
                 // TEST401: another NAME opens a SECOND window, never
                 // replacing the original panel or starting any audio.
                 var nextBrowseKey=String(item.remoteId||item.id||item.file||'');
