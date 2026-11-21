@@ -854,9 +854,18 @@ export default {
   // An immutable asset must exist before it can be published as a reference.
   // This check applies only to contributed SID, not to existing HVSC files.
   const assetIds=[...new Set(tracks.filter(t=>t.sidId).map(t=>t.sidId))];
-  for(const id of assetIds){
-    const saved=await env.DB.prepare('SELECT id FROM sid_assets WHERE id=?').bind(id).first();
-    if(!saved)return text('NO HVSC SID not archived: '+id.slice(0,12),400,origin);
+  // TEST413: verify uploaded NO HVSC assets in small parameterized batches.
+  // A single query per SID exceeded Cloudflare D1 Free's 50 queries/invocation
+  // for valid playlists with 100+ SID. Leave enough D1 calls for backups and writes.
+  for(let start=0;start<assetIds.length;start+=80){
+    const batch=assetIds.slice(start,start+80);
+    const placeholders=batch.map(()=>'?').join(',');
+    const rows=await env.DB.prepare(
+      'SELECT id FROM sid_assets WHERE id IN ('+placeholders+')'
+    ).bind(...batch).all();
+    const found=new Set((rows.results||[]).map(row=>row.id));
+    const missing=batch.find(id=>!found.has(id));
+    if(missing)return text('NO HVSC SID not archived: '+missing.slice(0,12),400,origin);
   }
   const now=Date.now();
   if(isUpdate){
