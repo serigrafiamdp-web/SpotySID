@@ -2901,6 +2901,52 @@
     if(cursor<originals.length)setTimeout(remaining,120);
     return clone;
   }
+  // TEST412b: fit the *actual* playlist/group/artist name first.
+  // Hide curator credit, then title-bar SID count only when that name
+  // would otherwise be clipped. Each floating window fits independently.
+  function ricoFitPlaylistHeader(panel){
+    if(!panel||!panel.isConnected)return;
+    var title=panel.querySelector('#ricoLivePlaylistTitle');
+    if(!title)return;
+    panel.removeAttribute('data-rico-name-priority');
+    if(title.clientWidth<=0)return;
+    if(title.scrollWidth>title.clientWidth+1){
+      panel.setAttribute('data-rico-name-priority','hide-creator');
+      if(title.scrollWidth>title.clientWidth+1)
+        panel.setAttribute('data-rico-name-priority','title-only');
+    }
+  }
+  function ricoScheduleHeaderFit(panel){
+    if(!panel||panel._ricoHeaderFitPending)return;
+    panel._ricoHeaderFitPending=true;
+    requestAnimationFrame(function(){
+      panel._ricoHeaderFitPending=false;
+      ricoFitPlaylistHeader(panel);
+    });
+  }
+  function ricoInitMainHeaderFit(){
+    var main=document.getElementById('ricoLivePlaylist');
+    if(!main||main._ricoHeaderFitReady)return;
+    main._ricoHeaderFitReady=true;
+    if(typeof ResizeObserver==='function'){
+      new ResizeObserver(function(){ricoScheduleHeaderFit(main);}).observe(main);
+    }else window.addEventListener('resize',function(){
+      ricoScheduleHeaderFit(main);
+    });
+    if(typeof MutationObserver==='function'){
+      var observer=new MutationObserver(function(){ricoScheduleHeaderFit(main);});
+      ['ricoLivePlaylistTitle','ricoLiveCount','ricoLivePlaylistCreator'].forEach(
+        function(id){
+          var node=main.querySelector('#'+id);
+          if(node)observer.observe(node,{
+            childList:true,characterData:true,subtree:true
+          });
+        }
+      );
+    }
+    ricoScheduleHeaderFit(main);
+  }
+  ricoInitMainHeaderFit();
   // TEST407: cloned (inactive) playlist panels retain their own drag and
   // resize gestures. A cloned DOM does not inherit JS event listeners.
   function ricoEnablePinnedWindowMovement(shadow){
@@ -2931,6 +2977,7 @@
         panel.style.right='auto';
         panel.style.bottom='auto';
         panel.style.transform='none';
+        if(mode==='width')ricoScheduleHeaderFit(panel);
         event.preventDefault();
         event.stopPropagation();
       }
@@ -3035,6 +3082,7 @@
       if(ricoPinnedFirstHost===pinned)ricoPinnedFirstHost=null;
     });
     shadow.appendChild(first);
+    ricoScheduleHeaderFit(first);
     ricoEnablePinnedWindowMovement(shadow);
     // TEST405: cloned control titles must not render native white tooltips.
     if(window.ricoPrepareShadowHints)window.ricoPrepareShadowHints(shadow);
@@ -3126,6 +3174,7 @@
       if(ricoPinnedFirstHost===null)ricoInactiveWindowSource=null;
     });
     shadow.appendChild(copy);
+    ricoScheduleHeaderFit(copy);
     ricoEnablePinnedWindowMovement(shadow);
     if(window.ricoPrepareShadowHints)window.ricoPrepareShadowHints(shadow);
     if(window.ricoDismissTransientHints)window.ricoDismissTransientHints();
@@ -3273,6 +3322,7 @@
     if(window.ricoPrepareShadowHints)window.ricoPrepareShadowHints(shadow);
     if(window.ricoDismissTransientHints)window.ricoDismissTransientHints();
     document.body.appendChild(host);
+    ricoScheduleHeaderFit(secondary);
     ricoSecondaryHost=host;
     primary.style.display='flex';
     primary.style.left=left+'px';primary.style.right='auto';
@@ -3483,8 +3533,10 @@
         if(axis==='move'){
           secondary.style.left=Math.max(0,movement.left+dx)+'px';
           secondary.style.top=Math.max(0,movement.top+dy)+'px';
-        }else if(axis==='width')secondary.style.width=Math.max(230,movement.width+dx)+'px';
-        else secondary.style.height=Math.max(110,movement.height+dy)+'px';
+        }else if(axis==='width'){
+          secondary.style.width=Math.max(230,movement.width+dx)+'px';
+          ricoScheduleHeaderFit(secondary);
+        }else secondary.style.height=Math.max(110,movement.height+dy)+'px';
         event.stopPropagation();
       });
       ['pointerup','pointercancel'].forEach(function(name){
