@@ -4922,11 +4922,15 @@ html.rico-karaoke-active #songInfo {
   white-space:nowrap;
   text-overflow:ellipsis;
 }
+/* TEST424 — let "Playlist by" recover its full width as the window grows.
+   TEST412 accidentally imposed a permanent 145px ceiling, so even a wide
+   playlist displayed "..." after the creator. Preserve title-first
+   shrinking and the independent action-button widths. */
 #ricoLivePlaylistHeader #ricoLivePlaylistCredits {
-  flex:0 24 145px;
-  width:auto;
+  flex:0 1 max-content;
+  width:max-content;
   min-width:0;
-  max-width:145px;
+  max-width:none;
   overflow:hidden;
 }
 #ricoLivePlaylistHeader #ricoLivePlaylistCreator {
