@@ -2498,6 +2498,7 @@
     draft.name=draft.name.trim();draft.creator=draft.creator.trim();
     if(!draft.name||!draft.creator){remixNotice('Enter remix name and creator first.');return;}
     if(!draft.tracks.length){remixNotice('Add some SID using + before publishing.');return;}
+    if(!draft.remoteEditId&&draft.tracks.length>500){remixNotice('Maximum 500 SID for a NEW Community playlist. Existing public playlists are unaffected.');return;}
     try{
       // Crucial: publish the order visible in the floating playlist,
       // even if the visitor did not press its local SAVE first.
@@ -7091,8 +7092,8 @@
       if(!name||!creator||name.length>100||creator.length>60){
         visiblePublishNotice('PUBLISH FAILED: check name and creator.',true);return;
       }
-      if(!Array.isArray(draft.tracks)||!draft.tracks.length||draft.tracks.length>2000){
-        visiblePublishNotice('PUBLISH FAILED: invalid number of SID.',true);return;
+      if(!Array.isArray(draft.tracks)||!draft.tracks.length||draft.tracks.length>500){
+        visiblePublishNotice('PUBLISH FAILED: maximum 500 SID for a NEW Community playlist. Draft unchanged.',true);return;
       }
       var refs=draft.tracks.map(remixCanonicalRef);
       if(!refs.every(validRemixRef)||new Set(refs.map(remixRefKey)).size!==refs.length){
