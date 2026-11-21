@@ -34,9 +34,51 @@ jobs:
             echo "::error::Worker NOT deployed. Configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as GitHub Actions secrets. Public Karaoke SAVE requires successful deployment."
             exit 1
           fi
-      - name: Deploy existing ricos-sid-community Worker (preserve D1)
+      # TEST414: refuse to deploy if the live Worker has resource bindings
+      # missing from source configuration. Existing D1 / R2 assets are never reset.
+      - name: Safeguard current Cloudflare bindings
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/ricos-sid-community/settings" \
+            --output "${RUNNER_TEMP}/spotysid-worker-settings.json"
+          python3 - <<'PY'
+          import json, os, tomllib, sys
+          with open(os.environ["RUNNER_TEMP"] + "/spotysid-worker-settings.json",encoding="utf-8") as f:
+              live=json.load(f)
+          if live.get("success") is False or not isinstance(live.get("result"),dict):
+              sys.exit("ERROR: cannot inspect live Worker bindings. Deploy cancelled.")
+          with open("community/api/wrangler.toml","rb") as f:
+              cfg=tomllib.load(f)
+          defs=set()
+          for key in ("d1_databases","r2_buckets","kv_namespaces","services","queues"):
+              for row in cfg.get(key,[]):
+                  if "binding" in row: defs.add(row["binding"])
+          for row in cfg.get("durable_objects",{}).get("bindings",[]):
+              if "name" in row: defs.add(row["name"])
+          safe_types={"secret_text","plain_text","json","version_metadata"}
+          live_bindings=live["result"].get("bindings")
+          if not isinstance(live_bindings,list):
+              sys.exit("ERROR: Cloudflare did not return the binding list. Deploy cancelled.")
+          missing=[(row.get("name"),row.get("type")) for row in live_bindings
+                   if row.get("type") not in safe_types and row.get("name") not in defs]
+          if missing:
+              sys.exit("ERROR: active Worker bindings missing from wrangler.toml: "+
+                       ", ".join(name+" ("+str(kind)+")" for name,kind in missing)+
+                       ". Deploy blocked to protect existing storage.")
+          print("TEST414: Existing Worker resource bindings match configuration.")
+          PY
+      - name: Deploy existing ricos-sid-community Worker (preserve D1 and secrets)
         working-directory: community/api
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx --yes wrangler@4 deploy --config wrangler.toml
+      - name: Verify Worker capabilities after deploy
+        run: |
+          node -e "(async()=>{const r=await fetch('https://ricos-sid-community.serigrafiamdp.workers.dev/capabilities');const j=await r.json();if(!r.ok||!j.configured||!j.noHvscArchive)process.exit(1);console.log('Worker capabilities: OK, NO HVSC archive retained');})().catch(e=>{console.error(e);process.exit(1)})"
