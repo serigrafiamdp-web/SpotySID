@@ -4936,3 +4936,19 @@ html.rico-karaoke-active #songInfo {
   white-space:nowrap;
   text-overflow:ellipsis;
 }
+
+/* TEST412b — priority in each independently resized playlist:
+   1) real playlist/artist/group name, 2) creator, 3) SID count.
+   Both secondary and inactive windows inherit this via their shadow CSS.
+   JS measures whether the title is actually clipped; the secondary fields
+   disappear only as needed and reappear when the pane is widened. */
+#ricoLivePlaylist[data-rico-name-priority="hide-creator"]
+  #ricoLivePlaylistHeader #ricoLivePlaylistCredits,
+#ricoLivePlaylist[data-rico-name-priority="title-only"]
+  #ricoLivePlaylistHeader #ricoLivePlaylistCredits {
+  display:none !important;
+}
+#ricoLivePlaylist[data-rico-name-priority="title-only"]
+  #ricoLivePlaylistHeader #ricoLiveCount {
+  display:none !important;
+}
