@@ -4970,3 +4970,13 @@ html.rico-karaoke-active #songInfo {
   white-space:nowrap;
 }
 
+/* TEST426 — Keep playlist title, SID count and curator together at the LEFT.
+   Only the remaining empty space separates those texts from the action buttons.
+   Shrink that spacer first on resize, then TEST425's measured widths shorten
+   the creator before clipping the playlist name from its trailing end. */
+#ricoLivePlaylist #ricoLivePlaylistHeader {
+  justify-content:flex-start;
+}
+#ricoLivePlaylistHeader .rico-live-head-actions {
+  margin-left:auto;
+}
