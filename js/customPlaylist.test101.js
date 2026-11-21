@@ -6962,7 +6962,7 @@
       );
       var fragment=document.createDocumentFragment();
       rows.filter(function(d){return d&&d.format==='ricos-sid-playlist'&&
-        (d.version===1||d.version===2)&&Array.isArray(d.tracks);}).sort(function(a,b){
+        (d.version===1||d.version===2)&&Array.isArray(d.tracks)&&!d.confirmedPublicId;}).sort(function(a,b){
           return String(b.updatedAt||b.createdAt||'').localeCompare(String(a.updatedAt||a.createdAt||''));
         }).forEach(function(item){
         var row=document.createElement('div');
