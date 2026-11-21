@@ -3019,20 +3019,72 @@
     if(cursor<originals.length)setTimeout(remaining,120);
     return clone;
   }
-  // TEST412b: fit the *actual* playlist/group/artist name first.
-  // Hide curator credit, then title-bar SID count only when that name
-  // would otherwise be clipped. Each floating window fits independently.
+  // TEST425: allocate header pixels from the full, intrinsic text widths.
+  // Priority: actual playlist name -> full creator -> optional SID count.
+  // Previous flex grow claimed spare space for the title, while the creator
+  // still showed ellipses after the window was widened. The width is now
+  // recalculated for EACH window whenever its size or text changes.
   function ricoFitPlaylistHeader(panel){
     if(!panel||!panel.isConnected)return;
+    var header=panel.querySelector('#ricoLivePlaylistHeader');
+    var heading=panel.querySelector('.rico-live-heading');
     var title=panel.querySelector('#ricoLivePlaylistTitle');
-    if(!title)return;
+    var count=panel.querySelector('#ricoLiveCount');
+    var credits=panel.querySelector('#ricoLivePlaylistCredits');
+    var creator=panel.querySelector('#ricoLivePlaylistCreator');
+    var actions=panel.querySelector('.rico-live-head-actions');
+    if(!header||!heading||!title||!count||!credits||!creator||!actions)return;
+    // Clear old state first, including a previously hidden SID count.
     panel.removeAttribute('data-rico-name-priority');
-    if(title.clientWidth<=0)return;
-    if(title.scrollWidth>title.clientWidth+1){
-      panel.setAttribute('data-rico-name-priority','hide-creator');
-      if(title.scrollWidth>title.clientWidth+1)
-        panel.setAttribute('data-rico-name-priority','title-only');
+    if(!header.clientWidth)return;
+    function numberPx(value){return parseFloat(value)||0;}
+    function fullTextWidth(node){
+      if(!node.textContent)return 0;
+      var range=node.ownerDocument.createRange();
+      range.selectNodeContents(node);
+      return Math.ceil(range.getBoundingClientRect().width)+2;
     }
+    var style=getComputedStyle(header);
+    var padding=numberPx(style.paddingLeft)+numberPx(style.paddingRight);
+    var gap=numberPx(style.columnGap||style.gap);
+    var headingStyle=getComputedStyle(heading);
+    var innerGap=numberPx(headingStyle.columnGap||headingStyle.gap);
+    var titleWidth=fullTextWidth(title);
+    var countWidth=fullTextWidth(count);
+    var creatorWidth=fullTextWidth(creator);
+    var actionsWidth=actions.getBoundingClientRect().width;
+    // Reserve the action buttons at their natural size, never shrink them.
+    var withCreator=Math.max(0,Math.floor(header.clientWidth-padding-
+      actionsWidth-2*gap-2));
+    var allNeeded=titleWidth+creatorWidth+(countWidth?countWidth+innerGap:0);
+    var headingWidth=titleWidth,creditsWidth=0;
+    if(withCreator>=allNeeded){
+      headingWidth=titleWidth+(countWidth?countWidth+innerGap:0);
+      creditsWidth=creatorWidth;
+    }else if(withCreator>=titleWidth+55&&creatorWidth){
+      // Creator gets every spare pixel. Count is lower priority and hidden
+      // until both strings AND the count fit without ellipsis.
+      panel.setAttribute('data-rico-name-priority','hide-count');
+      headingWidth=titleWidth;
+      creditsWidth=Math.min(creatorWidth,withCreator-titleWidth);
+    }else{
+      // Narrow window: keep name (+ count if possible), hide creator first.
+      var withoutCreator=Math.max(0,Math.floor(header.clientWidth-padding-
+        actionsWidth-gap-2));
+      if(withoutCreator>=titleWidth+countWidth+innerGap){
+        panel.setAttribute('data-rico-name-priority','hide-creator');
+        headingWidth=titleWidth+countWidth+innerGap;
+      }else{
+        panel.setAttribute('data-rico-name-priority','title-only');
+        headingWidth=Math.min(titleWidth,withoutCreator);
+      }
+    }
+    // Explicit measured widths are necessary: flex:1 on the heading used to
+    // steal the newly available pixels from the curator label.
+    heading.style.flex='0 0 '+Math.max(0,headingWidth)+'px';
+    heading.style.width=Math.max(0,headingWidth)+'px';
+    credits.style.flex='0 0 '+Math.max(0,creditsWidth)+'px';
+    credits.style.width=Math.max(0,creditsWidth)+'px';
   }
   function ricoScheduleHeaderFit(panel){
     if(!panel||panel._ricoHeaderFitPending)return;
