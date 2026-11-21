@@ -4956,3 +4956,17 @@ html.rico-karaoke-active #songInfo {
   #ricoLivePlaylistHeader #ricoLiveCount {
   display:none !important;
 }
+
+/* TEST425 — the creator regains its FULL measured intrinsic width whenever
+   the pane is wide enough; the SID count is the last header item restored.
+   Inline widths come from ricoFitPlaylistHeader for each independent pane. */
+#ricoLivePlaylist[data-rico-name-priority="hide-count"]
+  #ricoLivePlaylistHeader #ricoLiveCount {
+  display:none !important;
+}
+#ricoLivePlaylistHeader #ricoLivePlaylistCredits,
+#ricoLivePlaylistHeader #ricoLivePlaylistCreator {
+  max-width:none;
+  white-space:nowrap;
+}
+
