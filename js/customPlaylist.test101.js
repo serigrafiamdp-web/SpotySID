@@ -7013,6 +7013,101 @@
       say('Editable local copy saved: '+copyName+'. Original community list unchanged.');
     }
     window.ricoRenderLocalImportedRows=renderLocalImportedCommunityRows;
+    // TEST422: replacement PUBLISH used only by unpublished COMMUNITY rows.
+    // Same BETA_EDIT_KEY, same D1, same Cloudflare /playlists endpoint.
+    async function publishCommunityRowDirect(draftId){
+      if(remixBusy)return;
+      var draft=remixDrafts.find(function(d){return d.id===draftId;});
+      if(!draft||draft.remoteEditId)return;
+      var name=String(draft.name||'').trim(),creator=String(draft.creator||'').trim();
+      if(!name||!creator||name.length>100||creator.length>60){
+        visiblePublishNotice('PUBLISH FAILED: check name and creator.',true);return;
+      }
+      if(!Array.isArray(draft.tracks)||!draft.tracks.length||draft.tracks.length>2000){
+        visiblePublishNotice('PUBLISH FAILED: invalid number of SID.',true);return;
+      }
+      var refs=draft.tracks.map(remixCanonicalRef);
+      if(!refs.every(validRemixRef)||new Set(refs.map(remixRefKey)).size!==refs.length){
+        visiblePublishNotice('PUBLISH FAILED: invalid or repeated SID references. Draft preserved.',true);return;
+      }
+      var key=await askBetaKeyDialog('PUBLISH');
+      if(!key)return;
+      remixBusy=true;
+      visiblePublishNotice('PUBLISH · checking existing D1 lists…',false);
+      var remoteId=draft.pendingPublishedId||'',created=false;
+      try{
+        // A lost response must never produce another copy of the same playlist.
+        if(!remoteId){
+          remoteId=await findExistingPublishedRemix(draft,refs);
+          if(remoteId){
+            draft.pendingPublishedId=remoteId;
+            preserveRemixes();
+          }
+        }
+        if(!remoteId){
+          visiblePublishNotice('PUBLISH · sending '+refs.length+' SID to D1…',false);
+          var controller=new AbortController();
+          var timeout=setTimeout(function(){controller.abort();},25000);
+          var response;
+          try{
+            response=await fetch(communityWriteApi+'/playlists',{
+              method:'POST',headers:{'Content-Type':'application/json','X-Beta-Key':key},
+              body:JSON.stringify({format:'ricos-sid-playlist',version:2,
+                name:name,createdBy:creator,tracks:refs}),
+              signal:controller.signal
+            });
+          }catch(error){
+            if(error&&error.name==='AbortError')
+              throw Error('Cloudflare POST timed out. The result is unknown. Check D1 before retrying.');
+            throw Error('Cloudflare connection error: '+(error&&error.message||error));
+          }finally{clearTimeout(timeout);}
+          var raw=await response.text(),receipt;
+          try{receipt=JSON.parse(raw);}catch(e){receipt={error:raw.slice(0,200)||'No JSON response'};}
+          if(!response.ok)
+            throw Error((receipt.error||'Publication rejected')+' (HTTP '+response.status+').'+
+              (response.status===403?' Use the original beta key, not the deploy token.':''));
+          if(!receipt.id)throw Error('No playlist ID returned; check D1 before retrying.');
+          remoteId=receipt.id;
+          draft.pendingPublishedId=remoteId;
+          preserveRemixes();
+          created=true;
+        }
+        visiblePublishNotice('PUBLISH · verifying all '+refs.length+' SID in D1…',false);
+        await verifyRemoteOrder(communityWriteApi+'/playlists/'+encodeURIComponent(remoteId),
+          refs,'playlist');
+        // Only after verified readback is the local draft retired.
+        if(activeRemixDraftId===draft.id){
+          var same=activeReferenceTracks&&activeReferenceTracks.length===refs.length&&
+            activeReferenceTracks.every(function(t,i){return remixRefKey(t)===remixRefKey(refs[i]);});
+          activePublicPlaylist=same?{remoteId:remoteId,name:name,createdBy:creator,
+            tracks:refs.slice(),originalCount:refs.length,dirtyOrder:false}:null;
+          activeRemixDraftId=null;activeLocalOrderDirty=false;
+          renderLivePlaylist();
+        }
+        remixDrafts=remixDrafts.filter(function(d){return d.id!==draft.id;});
+        if(preferredRemixDestination===draft.id)rememberRemixDestination('published:'+remoteId);
+        if(communityNewestDraftId===draft.id)communityNewestDraftId='';
+        if(remixTarget===draft.id)remixTarget='';
+        preserveRemixes();
+        visiblePublishNotice('PUBLISHED AND VERIFIED · '+name+' · '+refs.length+' SID',true);
+        // Secondary catalog ordering can fail without undoing the D1 save.
+        if(created&&typeof window.ricoPromoteNewCommunityPlaylist==='function'){
+          try{await window.ricoPromoteNewCommunityPlaylist(remoteId,key);}
+          catch(error){console.warn('Published; catalog order pending:',error);}
+        }
+        try{await loadCommunityCatalog();}
+        catch(error){console.warn('Published; catalog refresh pending:',error);}
+      }catch(error){
+        var message=(draft.pendingPublishedId?'PUBLISH NOT VERIFIED · existing D1 ID kept. ':'PUBLISH FAILED · ')+
+          (error&&error.message||String(error));
+        visiblePublishNotice(message,true);
+        window.alert(message);
+        preserveRemixes();
+      }finally{
+        remixBusy=false;
+        renderRemixes();
+      }
+    }
     // In-progress remix rows visually share the public community list.
     // They exist only within this visitor's browser session until PUBLISH succeeds.
     function renderRemixCommunityRows(){
@@ -7060,7 +7155,8 @@
           preserveRemixes();renderRemixes();
           say('Deleted local REMIX draft: '+d.name+'.');
         },false);
-        action(remixBusy?'PUBLISHING…':'PUBLISH',function(){window.ricoPublishRemixDraft(d.id);},!d.tracks.length||remixBusy);
+        // TEST422: the old REMIX publish handler is no longer used by this row.
+        action(remixBusy?'PUBLISHING…':'PUBLISH',function(){publishCommunityRowDirect(d.id);},!d.tracks.length||remixBusy);
         fragment.appendChild(row);
       });
       communityItems.appendChild(fragment);
