@@ -2437,17 +2437,31 @@
     var key=await askBetaKeyDialog('PUBLISH');
     if(!key)return;
     remixBusy=true;renderRemixes();
+    remixNotice('PUBLISHING '+draft.name+' · checking Cloudflare…');
     try{
       await ensureBetaServerReady();
       var expectedDraftRefs=draft.tracks.map(remixCanonicalRef);
       var remoteId=draft.pendingPublishedId||'';
       var remoteUrl='';
       if(!remoteId){
-        var response=await fetch(communityWriteApi+'/playlists',{
-          method:'POST',headers:{'Content-Type':'application/json','X-Beta-Key':key},
-          body:JSON.stringify({format:'ricos-sid-playlist',version:2,name:draft.name,
-            createdBy:draft.creator,tracks:expectedDraftRefs})
-        });
+        // TEST418: do not leave a 100+ SID playlist spinning indefinitely.
+        // A timed-out POST may have reached D1: preserve the draft and do NOT retry automatically.
+        var publishAbort=new AbortController();
+        var publishTimeout=setTimeout(function(){publishAbort.abort();},25000);
+        var response;
+        try{
+          remixNotice('PUBLISHING '+draft.name+' · sending '+expectedDraftRefs.length+' SID to Cloudflare…');
+          response=await fetch(communityWriteApi+'/playlists',{
+            method:'POST',headers:{'Content-Type':'application/json','X-Beta-Key':key},
+            body:JSON.stringify({format:'ricos-sid-playlist',version:2,name:draft.name,
+              createdBy:draft.creator,tracks:expectedDraftRefs}),signal:publishAbort.signal
+          });
+        }catch(sendError){
+          if(sendError&&sendError.name==='AbortError')
+            throw Error('Cloudflare did not respond within 25 seconds. Publication is UNCONFIRMED; check the public catalog before trying again, to avoid duplicate playlists.');
+          throw Error('Cannot reach Cloudflare: '+(sendError&&sendError.message||sendError));
+        }finally{clearTimeout(publishTimeout);}
+        remixNotice('PUBLISHING '+draft.name+' · checking server response…');
         // TEST413: the Worker can return a non-JSON error (for example a
         // resource limit). Always show the actual HTTP status to the user.
         var rawPublishResponse=await response.text(),result;
@@ -2457,6 +2471,7 @@
           ' (HTTP '+response.status+')');
         if(!result.id)throw Error('Server accepted publication but did not return its ID.');
         remoteId=result.id;
+        remixNotice('SAVED IN D1 · verifying '+expectedDraftRefs.length+' SID…');
         // Keep the ID in the draft until GET confirms the stored order.
         // A temporary failure must never trigger a second POST/duplicate list.
         draft.pendingPublishedId=remoteId;
@@ -6952,7 +6967,7 @@
           preserveRemixes();renderRemixes();
           say('Deleted local REMIX draft: '+d.name+'.');
         },false);
-        action('PUBLISH',function(){window.ricoPublishRemixDraft(d.id);},!d.tracks.length||remixBusy);
+        action(remixBusy?'PUBLISHING…':'PUBLISH',function(){window.ricoPublishRemixDraft(d.id);},!d.tracks.length||remixBusy);
         fragment.appendChild(row);
       });
       communityItems.appendChild(fragment);
