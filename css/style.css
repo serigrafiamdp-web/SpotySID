@@ -4892,3 +4892,15 @@ html.rico-karaoke-active #songInfo {
 ) .rico-community-description {
   color:inherit !important;
 }
+
+/* TEST411 — SHARE has its own column (TEST394). The old TEST379/380
+   selection extensions must not paint that column or the separate MIC
+   control. Only the actual song-title button (.rico-live-row) is inverted
+   for playing, selected, queued, mouse hover or keyboard focus.
+   Keep the SHARE divider, 26px button, copy-confirmation pulse, checkbox
+   and all column widths unchanged in both normal and Shadow DOM panes. */
+#ricoLivePlaylist #ricoLivePlaylistItems .rico-live-edit-row > .rico-live-song-share-slot,
+#ricoLivePlaylist #ricoLivePlaylistItems .rico-live-edit-row > .rico-live-karaoke-slot {
+  background:var(--rico-theme-bg,#000) !important;
+  background-image:none !important;
+}
