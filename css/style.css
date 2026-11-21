@@ -4904,3 +4904,35 @@ html.rico-karaoke-active #songInfo {
   background:var(--rico-theme-bg,#000) !important;
   background-image:none !important;
 }
+
+/* TEST412 — Playlist/group/artist title takes priority over "Playlist by".
+   The header's action buttons and SID count retain their sizes. On narrow
+   independently resized playlist windows, shrink the curator attribution
+   BEFORE truncating the actual playlist title. */
+#ricoLivePlaylistHeader .rico-live-heading {
+  flex:1 1 auto;
+  min-width:0;
+  max-width:none;
+}
+#ricoLivePlaylistHeader #ricoLivePlaylistTitle {
+  flex:1 1 auto;
+  min-width:0;
+  max-width:none !important;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
+#ricoLivePlaylistHeader #ricoLivePlaylistCredits {
+  flex:0 24 145px;
+  width:auto;
+  min-width:0;
+  max-width:145px;
+  overflow:hidden;
+}
+#ricoLivePlaylistHeader #ricoLivePlaylistCreator {
+  flex:1 1 auto;
+  min-width:0;
+  overflow:hidden;
+  white-space:nowrap;
+  text-overflow:ellipsis;
+}
