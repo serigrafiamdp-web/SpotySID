@@ -34,6 +34,37 @@ jobs:
             echo "::error::Worker NOT deployed. Configure CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID as GitHub Actions secrets. Public Karaoke SAVE requires successful deployment."
             exit 1
           fi
+      # TEST415: check token scope and account identity without ever printing
+      # credentials or the account ID. Fail closed before touching live D1.
+      - name: Validate Cloudflare account and target Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! [[ "${CLOUDFLARE_ACCOUNT_ID}" =~ ^[a-fA-F0-9]{32}$ ]]; then
+            echo "::error::CLOUDFLARE_ACCOUNT_ID must contain your 32-character Cloudflare Account ID, not the API token or database ID."
+            exit 1
+          fi
+          response_code="$(curl --silent --show-error --output "${RUNNER_TEMP}/cf-workers-list.json" --write-out "%{http_code}" \
+            --header "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts")"
+          if [ "$response_code" != 200 ]; then
+            echo "::error::Cloudflare cannot list Workers for this Account ID (HTTP $response_code). Check Account ID and API token account permissions; Worker was not deployed."
+            exit 1
+          fi
+          python3 - <<'PY'
+          import json, os, sys
+          with open(os.environ["RUNNER_TEMP"] + "/cf-workers-list.json",encoding="utf-8") as f:
+              data=json.load(f)
+          if data.get("success") is not True or not isinstance(data.get("result"),list):
+              sys.exit("ERROR: Cloudflare returned an unexpected Workers list. No deploy.")
+          names={w.get("id") for w in data["result"]}
+          if "ricos-sid-community" not in names:
+              sys.exit("ERROR: ricos-sid-community is not in the selected Cloudflare account. Verify Account ID; no deploy.")
+          print("TEST415: Account and existing ricos-sid-community Worker verified.")
+          PY
       # TEST414: refuse to deploy if the live Worker has resource bindings
       # missing from source configuration. Existing D1 / R2 assets are never reset.
       - name: Safeguard current Cloudflare bindings
