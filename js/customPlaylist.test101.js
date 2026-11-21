@@ -1049,12 +1049,24 @@
   var communityWriteApi='https://ricos-sid-community.serigrafiamdp.workers.dev';
   var savingCommunityEdits=false;
   function promptBetaKey(){return window.prompt('BETA KEY required to publish permanent changes:');}
+  // TEST420: bound read-only Cloudflare checks, so PUBLISH never waits silently.
+  async function communityReadWithTimeout(url,ms){
+    var controller=new AbortController();
+    var timer=setTimeout(function(){controller.abort();},ms||20000);
+    try{
+      return await fetch(url,{cache:'no-store',signal:controller.signal});
+    }catch(error){
+      if(error&&error.name==='AbortError')
+        throw Error('Cloudflare did not respond within '+Math.round((ms||20000)/1000)+' seconds. No playlist write was attempted by this check.');
+      throw Error('Cloudflare connection failed: '+(error&&error.message||error));
+    }finally{clearTimeout(timer);}
+  }
   async function ensureBetaServerReady(){
-    var response=await fetch(communityWriteApi+'/capabilities',{cache:'no-store'});
-    if(!response.ok)throw Error('TEST63 backend not deployed yet. No public changes were made.');
+    var response=await communityReadWithTimeout(communityWriteApi+'/capabilities',15000);
+    if(!response.ok)throw Error('Cloudflare backend unavailable (HTTP '+response.status+'). No public changes made.');
     var data=await response.json();
     if(!data||!data.betaKeyRequired||!['remove-only','metadata-and-delete'].includes(data.editMode)||!data.configured)
-      throw Error('TEST63 beta protection is not configured in Cloudflare.');
+      throw Error('Cloudflare beta publication is not configured. Check the existing BETA_EDIT_KEY in the existing Worker; do not create a new token.');
   }
 
 
@@ -2416,7 +2428,7 @@
   // TEST419: read-only recovery for a POST whose response was lost.
   // Never manufacture a new playlist if identical content already exists in D1.
   async function findExistingPublishedRemix(draft,refs){
-    var catalogResponse=await fetch(communityWriteApi+'/playlists',{cache:'no-store'});
+    var catalogResponse=await communityReadWithTimeout(communityWriteApi+'/playlists',20000);
     if(!catalogResponse.ok)throw Error('Cannot check existing public playlists (HTTP '+catalogResponse.status+'). No new list was created.');
     var catalog=await catalogResponse.json();
     var candidates=(catalog.playlists||[]).filter(function(row){
@@ -2425,7 +2437,7 @@
         /^[a-z0-9-]{12,48}$/.test(row.id);
     });
     for(var i=0;i<candidates.length;i++){
-      var check=await fetch(communityWriteApi+'/playlists/'+encodeURIComponent(candidates[i].id),{cache:'no-store'});
+      var check=await communityReadWithTimeout(communityWriteApi+'/playlists/'+encodeURIComponent(candidates[i].id),20000);
       if(!check.ok)continue;
       var data=await check.json();
       if(Array.isArray(data.tracks)&&data.tracks.length===refs.length&&
@@ -2438,7 +2450,7 @@
   async function checkRemixSidReferences(refs){
     var ids=refs.filter(function(r){return !!r.sidId;});
     if(!ids.length)return;
-    var response=await fetch(communityWriteApi+'/no-hvsc',{cache:'no-store'});
+    var response=await communityReadWithTimeout(communityWriteApi+'/no-hvsc',20000);
     if(!response.ok)throw Error('Cannot verify NO HVSC archive (HTTP '+response.status+').');
     var catalog=await response.json();
     if(!catalog||!Array.isArray(catalog.tracks))
