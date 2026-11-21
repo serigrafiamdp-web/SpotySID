@@ -7081,6 +7081,8 @@
           async function openPlaylist(isStartup,isShared,options) {
             // TEST384: name = browse, PLAY = start from #1, selected PLAY/MIC =
             // fade to that specific SID. Do not touch the current audio on browse.
+            // TEST410: a late metadata fetch must not reopen a superseded list.
+            var metadataTicket=++ricoBrowseRequestTicket;
             var browseOnly=!!(options&&options.browseOnly);
             var requestedIndex=options&&Number.isInteger(options.startIndex)?options.startIndex:0;
             var wantsKaraoke=!!(options&&options.karaoke);
@@ -7123,7 +7125,6 @@
                 if(!chosen||!Array.isArray(chosen.tracks)||!chosen.tracks.length)
                   throw Error('Playlist has no songs to browse.');
                 // Complete metadata before painting any songs in A or B.
-                var metadataTicket=++ricoBrowseRequestTicket;
                 await ricoCompletePlaylistLabels(chosen);
                 if(metadataTicket!==ricoBrowseRequestTicket)return;
                 // TEST401: another NAME opens a SECOND window, never
@@ -7210,7 +7211,7 @@
                 tracks:chosen.tracks.map(remixCanonicalRef),
                 originalCount:data.tracks.length,
                 dirtyOrder:!!(options&&options.previewData&&
-                  JSON.stringify(chosen.tracks)!==JSON.stringify(data.tracks))
+                  remixTrackKeys(chosen.tracks)!==remixTrackKeys(data.tracks))
               }:null;
               activeSharePlaylistId=pending?'':(item.remoteId||item.id||'');
               renderLivePlaylist();
