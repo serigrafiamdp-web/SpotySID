@@ -6818,6 +6818,138 @@
       });
     }
     window.ricoRefreshCommunityCatalog=loadCommunityCatalog;
+    // TEST423: 500 SID is the safe public cap for NEW imported playlists.
+    // GitHub's 15-asset limit is PER REQUEST, not a playlist limit.
+    var importedPublishing=false;
+    async function publishImportedCommunityList(localId){
+      if(importedPublishing)return;
+      var stored,refs=[],key,created=false;
+      try{
+        stored=await dbCall('readonly',function(store){return store.get(localId);});
+        if(!stored||!Array.isArray(stored.tracks)||!stored.tracks.length)
+          throw Error('No local playlist to publish.');
+        if(stored.tracks.length>500)
+          throw Error('Maximum 500 SID per NEW playlist. The local playlist was not changed.');
+        var name=String(stored.name||'').trim();
+        var creator=String(stored.createdBy||'').trim();
+        if(!creator||creator==='Unknown'){
+          var answer=window.prompt('Playlist by:',creator==='Unknown'?'':creator);
+          if(answer===null)return;
+          creator=answer.trim();
+        }
+        if(!name||name.length>100||!creator||creator.length>60)
+          throw Error('Check playlist name (100 characters) and creator (60 characters).');
+        key=await askBetaKeyDialog('PUBLISH');
+        if(!key)return;
+        importedPublishing=true;
+        visiblePublishNotice('PUBLISH · checking '+stored.tracks.length+' SID…',false);
+        await ensureBetaServerReady();
+        if(stored.version===2){
+          if(!stored.tracks.every(validRemixRef))
+            throw Error('An imported SID reference is invalid. Your local playlist is unchanged.');
+          refs=stored.tracks.map(remixCanonicalRef);
+        }else if(stored.version===1){
+          // Reuse archived SID by content SHA; resume safely after partial uploads.
+          var catalogResponse=await communityReadWithTimeout(communityWriteApi+'/no-hvsc',20000);
+          if(!catalogResponse.ok)throw Error('Cannot read NO HVSC (HTTP '+catalogResponse.status+').');
+          var archive=await catalogResponse.json();
+          if(!archive||!Array.isArray(archive.tracks))
+            throw Error('Invalid NO HVSC archive response.');
+          var known=new Set(archive.tracks.map(function(x){return x.sidId;}));
+          var unique=new Map();
+          for(var i=0;i<stored.tracks.length;i++){
+            var entry=stored.tracks[i];
+            if(!entry||typeof entry.sidBase64!=='string')
+              throw Error('Missing SID file at position '+(i+1)+'.');
+            var bytes=decode(entry.sidBase64);
+            if(bytes.length<118||bytes.length>65536)
+              throw Error('SID '+(i+1)+' must be 118 bytes to 64 KB.');
+            var id=await binarySidHash(bytes);
+            var filename=noHvscFileName({file:entry.file||'track.sid'});
+            if(!/^[^<>:*?|\\/]{1,200}\.sid$/i.test(filename))
+              throw Error('Invalid SID filename: '+filename);
+            var ref={sidId:id,file:filename};
+            refs.push(ref);
+            if(!unique.has(id))unique.set(id,{sidId:id,file:filename,sidBase64:entry.sidBase64});
+          }
+          if(new Set(refs.map(remixRefKey)).size!==refs.length)
+            throw Error('Duplicate SID entries cannot be published unchanged. Local playlist is preserved.');
+          // 10 per POST stays below GitHub's limit of 15 and D1's invocation budget.
+          var pending=Array.from(unique.values()).filter(function(x){return !known.has(x.sidId);});
+          for(var at=0;at<pending.length;at+=10){
+            var batch=pending.slice(at,at+10);
+            visiblePublishNotice('ARCHIVING NO HVSC · '+(at+1)+'–'+
+              (at+batch.length)+' / '+pending.length+' new SID',false);
+            var upload=await fetch(communityWriteApi+'/no-hvsc',{
+              method:'POST',
+              headers:{'Content-Type':'application/json','X-Beta-Key':key},
+              body:JSON.stringify({format:'ricos-no-hvsc-upload',version:1,
+                tracks:batch.map(function(x){return {file:x.file,sidBase64:x.sidBase64};})})
+            });
+            var raw=await upload.text(),receipt={};
+            try{receipt=JSON.parse(raw);}catch(parseError){receipt={error:raw.slice(0,200)};}
+            if(!upload.ok)throw Error((receipt.error||'NO HVSC archive failed')+
+              ' (HTTP '+upload.status+'). Already archived SID remain safe.');
+            if(!Array.isArray(receipt.tracks)||receipt.tracks.length!==batch.length||
+                batch.some(function(x,j){return receipt.tracks[j].sidId!==x.sidId;}))
+              throw Error('Archive confirmation incomplete at SID '+(at+1)+'.');
+          }
+        }else throw Error('Unsupported local playlist format.');
+        if(new Set(refs.map(remixRefKey)).size!==refs.length)
+          throw Error('Duplicate SID references. Local copy preserved.');
+        if(!refs.every(validRemixRef))
+          throw Error('Invalid SID reference. Local copy preserved.');
+        var payload={format:'ricos-sid-playlist',version:2,
+          name:name,createdBy:creator,tracks:refs};
+        var body=JSON.stringify(payload);
+        if(new TextEncoder().encode(body).length>179000)
+          throw Error('Playlist metadata exceeds Cloudflare 180 KB request limit. Shorten filenames before publishing.');
+        // Check D1 first; a lost response must not produce a duplicate playlist.
+        var id=stored.pendingPublicId||'';
+        if(!id)id=await findExistingPublishedRemix({name:name,creator:creator},refs);
+        if(!id){
+          visiblePublishNotice('PUBLISH · saving '+refs.length+' SID to D1…',false);
+          var controller=new AbortController(),timer=setTimeout(function(){controller.abort();},25000);
+          var response;
+          try{
+            response=await fetch(communityWriteApi+'/playlists',{
+              method:'POST',headers:{'Content-Type':'application/json','X-Beta-Key':key},
+              body:body,signal:controller.signal
+            });
+          }catch(error){
+            if(error&&error.name==='AbortError')
+              throw Error('D1 timed out. Publication not confirmed; check public catalog before retrying.');
+            throw Error('Cloudflare connection: '+(error&&error.message||error));
+          }finally{clearTimeout(timer);}
+          var serverText=await response.text(),result={};
+          try{result=JSON.parse(serverText);}
+          catch(parseError){result={error:serverText.slice(0,220)};}
+          if(!response.ok)throw Error((result.error||'D1 publication failed')+' (HTTP '+response.status+')');
+          if(!result.id)throw Error('D1 did not return playlist ID. Check catalog before retry.');
+          id=result.id;created=true;
+        }
+        stored.pendingPublicId=id;
+        await dbCall('readwrite',function(store){return store.put(stored);});
+        visiblePublishNotice('PUBLISH · verifying '+refs.length+' SID in public D1…',false);
+        await verifyRemoteOrder(communityWriteApi+'/playlists/'+encodeURIComponent(id),refs,'playlist');
+        stored.confirmedPublicId=id;
+        await dbCall('readwrite',function(store){return store.put(stored);});
+        visiblePublishNotice('PUBLISHED AND VERIFIED · '+name+' · '+refs.length+' SID',true);
+        // Public save is complete; an order refresh failure is not a failed publish.
+        if(created&&typeof window.ricoPromoteNewCommunityPlaylist==='function'){
+          try{await window.ricoPromoteNewCommunityPlaylist(id,key);}
+          catch(error){console.warn('Published; order refresh pending:',error);}
+        }
+        try{await loadCommunityCatalog();}
+        catch(error){console.warn('Published; refresh pending:',error);}
+        try{await refreshSaved();}
+        catch(error){console.warn('Local catalog refresh pending:',error);}
+      }catch(error){
+        var message='PUBLISH FAILED · '+(error&&error.message||error);
+        visiblePublishNotice(message,true);
+        window.alert(message);
+      }finally{importedPublishing=false;}
+    }
     // TEST73: local imported V1 playlists join the same Community list.
     // They are private IndexedDB records, never sent to D1 or HVSC.
     async function renderLocalImportedCommunityRows(){
@@ -6876,76 +7008,12 @@
             say('Local playlist deleted: '+item.name);
           }catch(error){say(error.message||'Could not delete local playlist.');}
         },false);
-        // TEST83: publish only after a capabilities check confirms R2 is ready.
-        var publish=action('PUBLISH',async function(){
-          if(publish.disabled)return;
-          publish.disabled=true;
-          try{
-            var stored=await dbCall('readonly',function(store){return store.get(item.id);});
-            if(!stored||!Array.isArray(stored.tracks)||!stored.tracks.length)
-              throw Error('Local playlist missing.');
-            var creator=String(stored.createdBy||'').trim();
-            if(!creator||creator==='Unknown'){
-              creator=window.prompt('Playlist by:', '')||'';
-              if(!creator.trim())return;
-            }
-            var key=await askBetaKeyDialog('PUBLISH');
-            if(!key)return;
-            if(stored.version===2){
-              // TEST221: all files have confirmed HVSC/NO HVSC references.
-              // Publish metadata-only; NEVER upload existing SID bytes again.
-              if(!stored.tracks.every(validRemixRef))
-                throw Error('Missing SID reference. Local playlist preserved.');
-              var refs=stored.tracks.map(remixCanonicalRef);
-              var id=stored.pendingPublicId||'';
-              var createdNow=!id;
-              if(!id){
-                var response=await fetch(communityWriteApi+'/playlists',{
-                  method:'POST',headers:{'Content-Type':'application/json','X-Beta-Key':key},
-                  body:JSON.stringify({format:'ricos-sid-playlist',version:2,
-                    name:stored.name,createdBy:creator.trim(),tracks:refs})
-                });
-                var receipt=await response.json();
-                if(!response.ok||!receipt.id)
-                  throw Error(receipt.error||'Playlist publish failed');
-                id=receipt.id;
-                // Keep the ID on the local record before verification so a
-                // network error cannot generate duplicate published lists.
-                stored.pendingPublicId=id;
-                await dbCall('readwrite',function(store){return store.put(stored);});
-              }
-              await verifyRemoteOrder(communityWriteApi+'/playlists/'+encodeURIComponent(id),
-                refs,'playlist');
-              var newOrderPromoted=!createdNow;
-              if(createdNow&&typeof window.ricoPromoteNewCommunityPlaylist==='function')
-                newOrderPromoted=await window.ricoPromoteNewCommunityPlaylist(id,key);
-              say('PUBLISHED · '+stored.name+' · '+refs.length+' SID'+
-                (newOrderPromoted?'':' · COMMUNITY ORDER PENDING'));
-              await loadCommunityCatalog();
-            }else{
-              // Original V1 imported-collection publishing remains unchanged.
-              var capResponse=await fetch(communityWriteApi+'/capabilities',{cache:'no-store'});
-              if(!capResponse.ok)throw Error('Publishing service unavailable.');
-              var cap=await capResponse.json();
-              if(!cap.sidUploadsEnabled)throw Error('SID storage unavailable.');
-              var maxSid=Number(cap.sidUploadLimit)||15;
-              if(stored.tracks.length>maxSid)
-                throw Error('Max '+maxSid+' SID per collection with this storage provider.');
-              var upload=await fetch(communityWriteApi+'/collections',{
-                method:'POST',headers:{'Content-Type':'application/json','X-Beta-Key':key},
-                body:JSON.stringify({format:'ricos-sid-upload',version:1,
-                  name:stored.name,createdBy:creator.trim(),tracks:stored.tracks.map(function(t){
-                    return {file:t.file,sidBase64:t.sidBase64};
-                  })})
-              });
-              var outcome=await upload.json();
-              if(!upload.ok)throw Error(outcome.error||'Collection upload failed');
-              say('PUBLISHED · '+stored.name+' · '+outcome.tracks+' SID');
-            }
-          }catch(error){say('PUBLISH: '+error.message);}
-          finally{publish.disabled=false;}
-        },false);
-        publish.title=item.version===2?'Publish this mixed HVSC / NO HVSC playlist by reference.':'Publish imported SID collection with beta key.';
+        // TEST423: handle both imported V1 files and V2 reference playlists.
+        var publish=action(item.confirmedPublicId?'PUBLISHED':'PUBLISH',function(){
+          publishImportedCommunityList(item.id);
+        },!!item.confirmedPublicId);
+        publish.title=item.confirmedPublicId?'Verified public playlist in D1':
+          'Publish up to 500 SID, automatically archiving imports in batches.';
         fragment.appendChild(row);
       });
       // Newly saved local imports are shown above published catalogs.
