@@ -208,10 +208,36 @@
     event.stopImmediatePropagation();
     close();
   },true);
+  // TEST428: registration is an extensible list (one song today).
+  // Later songs can be appended to SpotySidKaraokeRegisteredSongs when their
+  // respective lyric data and synchronization have been implemented.
+  function karaokeSources(){
+    var sources=[];
+    if(window.SpotySidKaraokeMidi)sources.push(window.SpotySidKaraokeMidi);
+    var extras=window.SpotySidKaraokeRegisteredSongs;
+    if(Array.isArray(extras))extras.forEach(function(e){if(e)sources.push(e);});
+    return sources;
+  }
+  function isRegisteredKaraoke(item,reference){
+    if(!item)return false;
+    var ref=reference||item._hvscRef||item;
+    return karaokeSources().some(function(known){
+      if(!known||!known.sidFile)return false;
+      if(known.sidId&&ref.sidId===known.sidId)return true;
+      if(ref.pack===known.sidPack&&ref.file===known.sidFile)return true;
+      // Fallback for imported copies, but only with a credited matching
+      // author; a filename alone is not a valid Karaoke identity.
+      var matchingAuthor=known.authorPattern?
+        new RegExp(known.authorPattern,'i').test(String(item.author||item.artist||'')):
+        /uctumi|palladino/i.test(String(item.author||item.artist||''));
+      return item.file===known.sidFile&&matchingAuthor;
+    });
+  }
   window.SpotySidKaraoke={
     open:function(item,index){setActive(true,item,index);},
     close:close,
-    isActive:function(){return active;}
+    isActive:function(){return active;},
+    availableFor:isRegisteredKaraoke
   };
   // TEST428 — Auto-enter Karaoke when ANY playlist begins a registered SID,
   // and return to the normal OSC on the next non-Karaoke song. Observe the
@@ -219,14 +245,6 @@
   // Tracking the actual list/item/index also preserves a manual K/OSC close
   // for the rest of the SAME song (it won't reopen every render frame).
   var lastAutoList=null,lastAutoItem=null,lastAutoIndex=-1;
-  function isRegisteredKaraoke(item){
-    var known=window.SpotySidKaraokeMidi;
-    if(!known||!item)return false;
-    var ref=item._hvscRef||item;
-    return !!((ref.pack===known.sidPack&&ref.file===known.sidFile)||
-      (item.file===known.sidFile&&
-       /uctumi|palladino/i.test(String(item.author||item.artist||''))));
-  }
   var playSongBeforeAutoKaraoke=player.playSong;
   player.playSong=function(){
     var result=playSongBeforeAutoKaraoke.apply(this,arguments);
@@ -242,6 +260,18 @@
     if(!karaoke)return result;
     if(isRegisteredKaraoke(item)){
       if(!karaoke.isActive())karaoke.open(item,index);
+      // The legacy loader can reopen the floating playlist *after* playSong.
+      // Close it on the microtask following the completed playlist handoff,
+      // exactly as the manual MIC and K controls already do.
+      Promise.resolve().then(function(){
+        if(!karaoke.isActive()||player.sidList!==lastAutoList||
+           player.sidListIndex!==index||player.sidList[index]!==item)return;
+        var pane=document.getElementById('ricoLivePlaylist');
+        if(pane&&getComputedStyle(pane).display!=='none'){
+          var closePlaylist=document.getElementById('ricoLiveClose');
+          if(closePlaylist)closePlaylist.click();
+        }
+      });
     }else if(karaoke.isActive())karaoke.close();
     return result;
   };
