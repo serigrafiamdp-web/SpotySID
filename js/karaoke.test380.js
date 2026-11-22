@@ -181,6 +181,7 @@
     active=!!state;
     document.documentElement.classList.toggle('rico-karaoke-active',active);
     stage.hidden=!active;
+    syncViewToggle();
     if(active){
       currentIndex=typeof index==='number'?index:-1;
       titleNode.textContent=songLabel(item);
@@ -196,7 +197,26 @@
     if(!active)return;
     setActive(false);
   }
-  exit.addEventListener('click',close);
+  // TEST429: one control toggles both directions without restarting audio.
+  // When returning to OSC, keep MIC available on registered Karaoke tracks.
+  exit.addEventListener('click',function(event){
+    event.preventDefault();
+    event.stopPropagation();
+    var index=typeof player.sidListIndex==='number'?player.sidListIndex:-1;
+    var item=index>=0&&player.sidList?player.sidList[index]:null;
+    if(!isRegisteredKaraoke(item))return;
+    if(active){
+      window.SpotySidKaraoke.close();
+    }else{
+      window.SpotySidKaraoke.open(item,index);
+      // Same UI convention as pressing K or clicking the song's microphone.
+      var pane=document.getElementById('ricoLivePlaylist');
+      if(pane&&getComputedStyle(pane).display!=='none'){
+        var playlistClose=document.getElementById('ricoLiveClose');
+        if(playlistClose)playlistClose.click();
+      }
+    }
+  });
   document.addEventListener('keydown',function(event){
     if(!active||(event.key!=='Escape'&&event.key!=='Esc'))return;
     var settings=document.getElementById('ricoKaraokeConfigOverlay');
@@ -234,6 +254,22 @@
       return item.file===known.sidFile&&matchingAuthor;
     });
   }
+  // The control is outside #ricoKaraokeStage so it stays visible in OSC.
+  // It is hidden on every ordinary SID; both icon and label track the mode.
+  var waveIcon=exit.querySelector('.rico-karaoke-toggle-wave');
+  var micIcon=exit.querySelector('.rico-karaoke-toggle-mic');
+  function syncViewToggle(){
+    var index=typeof player.sidListIndex==='number'?player.sidListIndex:-1;
+    var item=index>=0&&player.sidList?player.sidList[index]:null;
+    var hasLyrics=isRegisteredKaraoke(item);
+    exit.hidden=!hasLyrics;
+    exit.setAttribute('aria-pressed',active?'true':'false');
+    exit.setAttribute('aria-label',active?
+      'Volver al osciloscopio':'Abrir Karaoke para esta canción');
+    exit.title=active?'OSC':'KARAOKE';
+    if(waveIcon)waveIcon.hidden=!active;
+    if(micIcon)micIcon.hidden=active;
+  }
   window.SpotySidKaraoke={
     open:function(item,index){setActive(true,item,index);},
     close:close,
@@ -252,6 +288,7 @@
     if(!this.isPlaying)return result;
     var index=typeof this.sidListIndex==='number'?this.sidListIndex:-1;
     var item=index>=0&&this.sidList?this.sidList[index]:null;
+    syncViewToggle();
     // Do not switch the interface for subtunes, resumes or rendering of the
     // same song, and never open Karaoke for an unregistered SID.
     if(lastAutoList===this.sidList&&lastAutoItem===item&&lastAutoIndex===index)
