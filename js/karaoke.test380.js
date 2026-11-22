@@ -229,7 +229,8 @@
       // author; a filename alone is not a valid Karaoke identity.
       var matchingAuthor=known.authorPattern?
         new RegExp(known.authorPattern,'i').test(String(item.author||item.artist||'')):
-        /uctumi|palladino/i.test(String(item.author||item.artist||''));
+        (known===window.SpotySidKaraokeMidi&&
+         /uctumi|palladino/i.test(String(item.author||item.artist||'')));
       return item.file===known.sidFile&&matchingAuthor;
     });
   }
