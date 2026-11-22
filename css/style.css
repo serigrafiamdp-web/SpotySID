@@ -4488,17 +4488,29 @@ html[data-rico-lcd="2tone"] #ricoLivePlaylistItems .rico-live-edit-row:is(
   min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis;
   white-space:nowrap;font-size:15px;text-align:center;
 }
-#ricoKaraokeStage #ricoKaraokeClose {
-  flex:0 0 auto;box-sizing:border-box;min-height:26px;
-  border:1px solid var(--rico-theme-fg,#fff);
+/* TEST429 — OSC/Karaoke toggle shares the Settings icon's footprint,
+   but lives OUTSIDE the hidden Karaoke stage. MIC remains reachable on OSC. */
+#ricoKaraokeClose {
+  position:fixed;right:52px;bottom:76px;z-index:94;
+  box-sizing:border-box;width:34px;height:34px;min-height:34px;
+  display:flex;justify-content:center;align-items:center;
+  padding:0;margin:0;border:1px solid var(--rico-theme-fg,#fff);
   border-radius:2px;background:var(--rico-theme-bg,#000);
-  color:var(--rico-theme-fg,#fff);
-  font:14px/23px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;
-  padding:0 8px;cursor:pointer;
+  color:var(--rico-theme-fg,#fff);cursor:pointer;
 }
-#ricoKaraokeStage #ricoKaraokeClose:is(:hover,:focus-visible) {
+#ricoKaraokeClose[hidden],
+#ricoKaraokeClose svg[hidden] {display:none !important;}
+#ricoKaraokeClose svg {
+  display:block;width:29px;height:29px;fill:none;
+  stroke:currentColor;pointer-events:none;
+}
+#ricoKaraokeClose:is(:hover,:focus-visible) {
   background:var(--rico-theme-fg,#fff);
   color:var(--rico-theme-bg,#000);
+}
+#ricoKaraokeClose:focus-visible {
+  outline:1px solid var(--rico-theme-fg,#fff);
+  outline-offset:2px;
 }
 #ricoKaraokeStage .rico-karaoke-lyrics {
   flex:1 1 auto;min-height:0;display:flex;flex-direction:column;
@@ -4664,6 +4676,7 @@ html.rico-karaoke-active #songInfo {
 }
 @media(max-width:600px){
   #ricoKaraokeSettings{bottom:34px;right:5px;}
+  #ricoKaraokeClose{bottom:100px;right:45px;}
   #ricoKaraokeConfigForm{padding:12px;}
 }
 
