@@ -1074,6 +1074,11 @@
   // TEST383: the handheld MIC is drawn ONLY for registered Karaoke songs.
   // The source file+HVSC pack distinguish covers with identical titles.
   function karaokeAvailableFor(item,ref){
+    // TEST428: share one extensible registration check across MIC, SHARE,
+    // the player transition, and the upcoming additional Karaoke songs.
+    var registry=window.SpotySidKaraoke;
+    if(registry&&typeof registry.availableFor==='function')
+      return registry.availableFor(item,ref);
     var known=window.SpotySidKaraokeMidi;
     if(!known||!item)return false;
     var origin=ref||item._hvscRef||item;
