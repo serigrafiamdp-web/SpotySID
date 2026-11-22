@@ -181,7 +181,9 @@
       var index=player.sidListIndex;
       var item=typeof index==='number'&&player.sidList&&player.sidList[index];
       var ref=item&&item._hvscRef;
-      var available=!!(item&&((ref&&ref.file===data.sidFile&&ref.pack===data.sidPack)||
+      var available=typeof kara.availableFor==='function'?
+        kara.availableFor(item,ref):
+        !!(item&&((ref&&ref.file===data.sidFile&&ref.pack===data.sidPack)||
         (item.file===data.sidFile&&/uctumi|palladino/i.test(item.author||''))));
       if(!available)return;
       event.preventDefault();
