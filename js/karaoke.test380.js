@@ -213,4 +213,36 @@
     close:close,
     isActive:function(){return active;}
   };
+  // TEST428 — Auto-enter Karaoke when ANY playlist begins a registered SID,
+  // and return to the normal OSC on the next non-Karaoke song. Observe the
+  // already-completed playSong handoff; never seek, restart, or alter audio.
+  // Tracking the actual list/item/index also preserves a manual K/OSC close
+  // for the rest of the SAME song (it won't reopen every render frame).
+  var lastAutoList=null,lastAutoItem=null,lastAutoIndex=-1;
+  function isRegisteredKaraoke(item){
+    var known=window.SpotySidKaraokeMidi;
+    if(!known||!item)return false;
+    var ref=item._hvscRef||item;
+    return !!((ref.pack===known.sidPack&&ref.file===known.sidFile)||
+      (item.file===known.sidFile&&
+       /uctumi|palladino/i.test(String(item.author||item.artist||''))));
+  }
+  var playSongBeforeAutoKaraoke=player.playSong;
+  player.playSong=function(){
+    var result=playSongBeforeAutoKaraoke.apply(this,arguments);
+    if(!this.isPlaying)return result;
+    var index=typeof this.sidListIndex==='number'?this.sidListIndex:-1;
+    var item=index>=0&&this.sidList?this.sidList[index]:null;
+    // Do not switch the interface for subtunes, resumes or rendering of the
+    // same song, and never open Karaoke for an unregistered SID.
+    if(lastAutoList===this.sidList&&lastAutoItem===item&&lastAutoIndex===index)
+      return result;
+    lastAutoList=this.sidList;lastAutoItem=item;lastAutoIndex=index;
+    var karaoke=window.SpotySidKaraoke;
+    if(!karaoke)return result;
+    if(isRegisteredKaraoke(item)){
+      if(!karaoke.isActive())karaoke.open(item,index);
+    }else if(karaoke.isActive())karaoke.close();
+    return result;
+  };
 })();
