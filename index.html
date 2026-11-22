@@ -29,7 +29,6 @@
       <div class="rico-karaoke-header">
         <strong class="rico-karaoke-brand">KARAOKE</strong>
         <span id="ricoKaraokeTitle">SELECTED SID</span>
-        <button type="button" id="ricoKaraokeClose" aria-label="Return to normal oscilloscope">OSC ✕</button>
       </div>
       <div class="rico-karaoke-lyrics" id="ricoKaraokeLyricArea" aria-label="Reserved karaoke lyrics area">
         <canvas id="ricoKaraokeBall" width="8" height="8" aria-label="Authentic PETSCII ball"></canvas>
@@ -49,6 +48,22 @@
       </button>
       <div class="rico-karaoke-foot">KARAOKE · PIXEL / PETSCII / HI-RES</div>
     </section>
+    <!-- TEST429: always reachable when the current SID has Karaoke.
+         To the left of Karaoke Settings: wave in Karaoke, handheld MIC in OSC. -->
+    <button type="button" id="ricoKaraokeClose" hidden
+      aria-label="Switch to normal oscilloscope" aria-pressed="true"
+      title="OSC / KARAOKE">
+      <svg class="rico-karaoke-toggle-wave" viewBox="0 0 34 34" aria-hidden="true" focusable="false">
+        <path d="M3 17h4l2-9 4 19 4-23 4 26 4-16 2 3h4"
+          fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      <svg class="rico-karaoke-toggle-mic" viewBox="0 0 34 34" aria-hidden="true" focusable="false" hidden>
+        <g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M20 4a7 7 0 0 1 10 10l-5 5-10-10Z"/>
+          <path d="m16 10-5 5 8 8 5-5M11 15 3 29l3 2 14-8"/>
+        </g>
+      </svg>
+    </button>
     <div id="ricoKaraokeConfigOverlay" class="rico-karaoke-config-overlay" hidden>
       <form id="ricoKaraokeConfigForm" class="rico-karaoke-config-dialog"
             role="dialog" aria-modal="false" aria-label="Karaoke Settings">
