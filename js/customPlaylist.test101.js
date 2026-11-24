@@ -2981,7 +2981,10 @@
   // The selector and + button edit the same private REMIX draft as the main
   // window, without starting a song, resetting SID output or replacing A.
   function ricoRefreshInactiveDestinations(select){
-    if(!select||!select.isConnected)return;
+    // B is populated before its shadow host is attached to the document.
+    // Do not defer initialization based on isConnected; otherwise a cloned
+    // disabled selector stays locked until a browser-dependent hover event.
+    if(!select)return;
     var requested=select.value||preferredRemixDestination;
     var main=document.getElementById('ricoRemixTarget');
     select.textContent='';
