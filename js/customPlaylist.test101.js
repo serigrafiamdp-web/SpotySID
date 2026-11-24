@@ -2977,6 +2977,121 @@
   // TEST403: the original playlist remains visible after playback is
   // deliberately transferred to a song in the SECOND window.
   var ricoPinnedFirstHost=null,ricoSecondaryPromotion=null;
+  // TEST431: independent ADD + TO in the second/inactive playlist.
+  // The selector and + button edit the same private REMIX draft as the main
+  // window, without starting a song, resetting SID output or replacing A.
+  function ricoRefreshInactiveDestinations(select){
+    if(!select||!select.isConnected)return;
+    var requested=select.value||preferredRemixDestination;
+    var main=document.getElementById('ricoRemixTarget');
+    select.textContent='';
+    var empty=document.createElement('option');
+    empty.value='';empty.textContent='SELECT DESTINATION';
+    select.appendChild(empty);
+    remixDrafts.forEach(function(d){
+      var option=document.createElement('option');
+      option.value=d.id;option.textContent=d.name;
+      select.appendChild(option);
+    });
+    var group=document.createElement('optgroup');
+    group.label='PUBLISHED PLAYLISTS';
+    var known=new Set();
+    publishedRemixChoices.forEach(function(entry){
+      if(!entry||!entry.id||known.has(entry.id))return;
+      known.add(entry.id);
+      var option=document.createElement('option');
+      option.value='published:'+entry.id;
+      option.textContent=entry.title;group.appendChild(option);
+    });
+    // When A is playing a public playlist it MUST remain selectable from B,
+    // even if the catalog fetched its destination choices asynchronously.
+    var current=ricoCurrentWindowSource&&ricoCurrentWindowSource.item;
+    if(current&&current.remoteId&&!known.has(current.remoteId)){
+      var activeOption=document.createElement('option');
+      activeOption.value='published:'+current.remoteId;
+      activeOption.textContent=current.title||current.name||'PLAYING PLAYLIST A';
+      group.insertBefore(activeOption,group.firstChild);
+    }
+    if(group.children.length)select.appendChild(group);
+    var related=remixDrafts.find(function(d){
+      return requested==='published:'+d.remoteEditId||requested===d.id;
+    });
+    var preference=related?related.id:requested;
+    select.value=Array.prototype.some.call(select.options,function(o){
+      return o.value===preference;
+    })?preference:'';
+    select.disabled=false;
+    select.removeAttribute('aria-disabled');
+    select.style.pointerEvents='auto';
+    if(main&&main.disabled)select.title='Choose a private or published playlist to add SID';
+  }
+  function ricoBindInactiveDestination(select,status,count){
+    if(!select||select.dataset.ricoDestinationWired)return;
+    select.dataset.ricoDestinationWired='true';
+    function refresh(){ricoRefreshInactiveDestinations(select);}
+    refresh();
+    // Legacy global handlers must not intercept the dropdown's mouse/keys.
+    ['pointerdown','mousedown','mouseup','click','keydown','keyup'].forEach(function(type){
+      select.addEventListener(type,function(event){event.stopPropagation();});
+    });
+    select.addEventListener('focus',refresh);
+    select.addEventListener('pointerdown',refresh);
+    select.addEventListener('change',async function(event){
+      event.stopPropagation();
+      var chosen=select.value;
+      select.disabled=true;
+      if(status)status.textContent=chosen?'Preparing destination…':'Choose ADD + TO destination';
+      try{
+        await selectRemixDestination(chosen);
+        refresh();
+        if(count)count.textContent=$('#ricoRemixCount').text();
+        if(status)status.textContent=chosen?'Destination selected · use + to add SID':
+          'Choose ADD + TO destination';
+      }catch(error){
+        if(status)status.textContent='Destination unavailable: '+error.message;
+      }finally{select.disabled=false;}
+    });
+  }
+  async function ricoAddInactiveReference(track,entry,notice){
+    function message(text){if(typeof notice==='function')notice(text);}
+    if(!track||!entry||!validRemixRef(track)){
+      message('This SID reference cannot be added.');return false;
+    }
+    var chosen=preferredRemixDestination;
+    if(!chosen){message('Select a playlist in ADD + TO first.');return false;}
+    var destination=remixDrafts.find(function(d){
+      return d.id===chosen||
+        (d.remoteEditId&&chosen==='published:'+d.remoteEditId);
+    });
+    if(!destination&&chosen.indexOf('published:')===0){
+      message('Preparing the published destination without changing playback…');
+      try{
+        await beginPublishedEdit(chosen.slice('published:'.length),false);
+      }catch(error){message('Could not open destination: '+error.message);return false;}
+      // The listener may have selected a different target while D1 loaded.
+      if(preferredRemixDestination!==chosen){
+        message('Destination changed. Select the song again.');return false;
+      }
+      destination=remixDrafts.find(function(d){return d.remoteEditId===
+        chosen.slice('published:'.length);});
+    }
+    if(!destination){message('Select a valid destination first.');return false;}
+    if(destination.tracks.length>=2000){
+      message('Destination already contains 2000 SID.');return false;
+    }
+    var ref=Object.assign(remixCanonicalRef(track),{
+      title:entry.name||entry.file||track.file,
+      artist:entry.author||entry.artist||track.artist||''
+    });
+    if(destination.tracks.some(function(t){return remixRefKey(t)===remixRefKey(ref);})){
+      message('SID already exists in '+destination.name+'.');return false;
+    }
+    destination.tracks.unshift(ref); // TEST248: new SID goes first.
+    preserveRemixes();renderRemixes();
+    message('Added '+ref.title+' to '+destination.name+
+      '. A keeps playing; use REPUBLISH to save public changes.');
+    return true;
+  }
   // TEST406: every visible playlist can ask the same audio player to load a
   // song. The inactive window retains its own source and row indices.
   var ricoCurrentWindowSource=null,ricoInactiveWindowSource=null;
@@ -3458,17 +3573,9 @@
       $('#ricoRemixToggle').trigger('click');
     });
     if(target){
-      // Reuse live destination choices; this selector controls the same
-      // remix destination but is positioned inside the second window.
-      var mainTarget=document.getElementById('ricoRemixTarget');
-      if(mainTarget)target.innerHTML=mainTarget.innerHTML;
-      target.value=preferredRemixDestination||'';
-      target.addEventListener('change',function(event){
-        event.stopPropagation();
-        rememberRemixDestination(target.value);
-        $('#ricoRemixTarget').val(target.value).trigger('change');
-        if(remixCount)remixCount.textContent=$('#ricoRemixCount').text();
-      });
+      // TEST431: do not clone a stale/disabled dropdown from A. Create a live,
+      // independently editable destination selector INSIDE the B shadow DOM.
+      ricoBindInactiveDestination(target,status,remixCount);
     }
     if(remixCount)remixCount.textContent=$('#ricoRemixCount').text();
     if(timer){
@@ -3548,25 +3655,13 @@
       wrap.insertBefore(slot,wrap.querySelector('.rico-live-song-share-slot'));
     }
     async function addOne(index){
-      var track=preview.data.tracks[index],entry=preview.entries[index];
-      if(!track||!entry||!validRemixRef(track)){
-        message('This SID reference cannot be added.');return;
+      if(!mount.isActive())return;
+      var added=await ricoAddInactiveReference(preview.data.tracks[index],
+        preview.entries[index],message);
+      if(added){
+        if(remixCount)remixCount.textContent=$('#ricoRemixCount').text();
+        if(target)ricoRefreshInactiveDestinations(target);
       }
-      var destination=remixDrafts.find(function(d){
-        return d.id===preferredRemixDestination||
-          (d.remoteEditId&&preferredRemixDestination==='published:'+d.remoteEditId);
-      });
-      if(!destination){message('Select a destination using ADD + TO.');return;}
-      if(destination.tracks.length>=2000){message('Maximum 2000 SID per remix.');return;}
-      var ref=Object.assign(remixCanonicalRef(track),
-        {title:entry.name,artist:entry.author});
-      if(destination.tracks.some(function(t){return remixRefKey(t)===remixRefKey(ref);})){
-        message('SID already in '+destination.name+'.');return;
-      }
-      destination.tracks.unshift(ref);
-      preserveRemixes();renderRemixes();
-      if(remixCount)remixCount.textContent=destination.tracks.length+' SID';
-      message('Added '+entry.name+' to '+destination.name+'.');
     }
     function move(index,step){
       var to=Math.max(0,Math.min(preview.entries.length-1,index+step));
