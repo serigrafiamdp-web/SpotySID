@@ -5918,6 +5918,17 @@
     var communityServerOrder=null;
     var communityServerRevision=null;
     var communityPublicOrderDirty=false;
+    // TEST430: pinned rows are movable WITHIN the pinned slots, while their
+    // positions remain protected from automatic new-playlist promotion.
+    // Changes are committed only after public D1 SAVE is verified.
+    var communityPinnedOrderDirty=false;
+    function rememberVerifiedPinnedPositions(){
+      allCommunityOrderRows().forEach(function(row,index){
+        var id=row.dataset.communityOrderKey;
+        if(isCommunityPinned(id))communityPins[id]=index;
+      });
+      saveCommunityPins();
+    }
     // TEST246: the latest verified public CREATE or EDIT/REPUBLISH goes first.
     // Use D1 /catalog-order with its revision guard; never reorder for PLAY,
     // private drafts, rejected writes or unverifiable publications.
@@ -6057,16 +6068,21 @@
     }
     function updateCatalogArrows(){
       var rows=allCommunityOrderRows();
-      var movable=rows.filter(function(row){
+      var pinnedRows=rows.filter(function(row){
+        return isCommunityPinned(row.dataset.communityOrderKey);
+      });
+      var freeRows=rows.filter(function(row){
         return !isCommunityPinned(row.dataset.communityOrderKey);
       });
       rows.forEach(function(row){
         var up=row.querySelector('.rico-community-up');
         var down=row.querySelector('.rico-community-down');
         var pinned=isCommunityPinned(row.dataset.communityOrderKey);
-        var index=movable.indexOf(row);
-        if(up)up.disabled=pinned||index<=0;
-        if(down)down.disabled=pinned||index<0||index===movable.length-1;
+        // TEST430: a fixed row moves only to another fixed slot; a free
+        // row moves only to another free slot. No pin needs to be removed.
+        var group=pinned?pinnedRows:freeRows,index=group.indexOf(row);
+        if(up)up.disabled=index<=0;
+        if(down)down.disabled=index<0||index===group.length-1;
         var button=row.querySelector('.rico-community-pin');
         if(button){
           button.classList.toggle('rico-pin-on',pinned);
@@ -6088,6 +6104,11 @@
       updateCatalogArrows();
     }
     async function toggleCommunityPin(row){
+      if(communityPublicOrderDirty){
+        if(communityOrderStatus)communityOrderStatus.textContent='SAVE the changed order first';
+        say('Save the current Community order before changing a pin.');
+        return;
+      }
       var keyId=row.dataset.communityOrderKey;
       if(!isPublicCommunityKey(keyId))return;
       var oldPin=isCommunityPinned(keyId);
@@ -6203,22 +6224,36 @@
     }
     function moveCommunityRow(row,step){
       var rows=allCommunityOrderRows(),from=rows.indexOf(row);
-      if(from<0||isCommunityPinned(row.dataset.communityOrderKey))return;
-      // Skip all pinned slots, moving only through the available positions.
-      var moving=rows.filter(function(entry){
-        return !isCommunityPinned(entry.dataset.communityOrderKey);
+      if(from<0)return;
+      var pinned=isCommunityPinned(row.dataset.communityOrderKey);
+      // TEST430: both sets reorder independently. Fixed slots never
+      // become free and are never displaced by a manual arrow move.
+      var group=rows.filter(function(entry){
+        return isCommunityPinned(entry.dataset.communityOrderKey)===pinned;
       });
-      var index=moving.indexOf(row);
-      var target=Math.max(0,Math.min(moving.length-1,index+step));
+      var index=group.indexOf(row);
+      var target=Math.max(0,Math.min(group.length-1,index+step));
       if(target===index)return;
-      moving.splice(index,1);
-      moving.splice(target,0,row);
-      var remaining=0;
-      var reordered=rows.map(function(entry){
-        return isCommunityPinned(entry.dataset.communityOrderKey)?
-          entry:moving[remaining++];
-      });
-      // Respect the user's deliberate manual order after first creation.
+      var reordered;
+      if(pinned){
+        // Move ONE pinned playlist through the other pinned positions.
+        // All non-pinned rows retain exactly the same visible slots.
+        group.splice(index,1);
+        group.splice(target,0,row);
+        var fixedIndex=0;
+        reordered=rows.map(function(entry){
+          return isCommunityPinned(entry.dataset.communityOrderKey)?
+            group[fixedIndex++]:entry;
+        });
+      }else{
+        group.splice(index,1);
+        group.splice(target,0,row);
+        var freeIndex=0;
+        reordered=rows.map(function(entry){
+          return isCommunityPinned(entry.dataset.communityOrderKey)?
+            entry:group[freeIndex++];
+        });
+      }
       communityNewestDraftId='';
       var previousPublic=catalogOrderRows().map(function(entry){
         return entry.dataset.communityOrderKey;
@@ -6231,8 +6266,10 @@
       if(previousPublic!==catalogOrderRows().map(function(entry){
         return entry.dataset.communityOrderKey;
       }).join('\n'))communityPublicOrderDirty=true;
+      if(pinned)communityPinnedOrderDirty=true;
       updateCatalogArrows();
-      if(communityOrderStatus)communityOrderStatus.textContent='Unsaved';
+      if(communityOrderStatus)
+        communityOrderStatus.textContent=pinned?'Fixed order unsaved · SAVE':'Unsaved';
     }
     if(communityOrderSave)communityOrderSave.addEventListener('click',async function(event){
       event.preventDefault();event.stopPropagation();
@@ -6255,6 +6292,13 @@
         return;
       }
       if(communityServerRevision===null){
+        // Do NOT silently save a reordered pinned group locally: the editor
+        // explicitly expects SAVE + beta key to publish that change to D1.
+        if(communityPinnedOrderDirty){
+          if(communityOrderStatus)communityOrderStatus.textContent='D1 unavailable · pinned order unsaved';
+          say('The pinned order needs the Community Worker. No public change made.');
+          return;
+        }
         // Offline/old Worker: retain the browser-only fallback explicitly.
         try{
           localStorage.setItem(COMMUNITY_ORDER_STORAGE_KEY,JSON.stringify(allIds));
@@ -6289,7 +6333,11 @@
           throw Error('Published order differs from the requested order. Reload before retrying.');
         communityServerOrder=ids.slice();
         communityServerRevision=latest.revision;
+        // Update local pin anchors ONLY after D1 confirms the new public
+        // ordering. Future CREATE/REPUBLISH keeps these positions protected.
+        if(communityPinnedOrderDirty)rememberVerifiedPinnedPositions();
         communityPublicOrderDirty=false;
+        communityPinnedOrderDirty=false;
         communityDraftOrder=null;
         try{
           if(allIds.some(function(id){return !isPublicCommunityKey(id);}))
