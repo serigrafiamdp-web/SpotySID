@@ -3034,8 +3034,10 @@
     ['pointerdown','mousedown','mouseup','click','keydown','keyup'].forEach(function(type){
       select.addEventListener(type,function(event){event.stopPropagation();});
     });
+    // Refresh BEFORE opening, not during the native select's pointerdown.
+    // Replacing its options mid-click can prevent some browsers opening it.
     select.addEventListener('focus',refresh);
-    select.addEventListener('pointerdown',refresh);
+    select.addEventListener('pointerenter',refresh);
     select.addEventListener('change',async function(event){
       event.stopPropagation();
       var chosen=select.value;
@@ -3293,6 +3295,54 @@
     if(!shadow||!source||typeof source.playFrom!=='function')return;
     var rows=shadow.querySelector('#ricoLivePlaylistItems');
     if(!rows)return;
+    // TEST431: an inactive A or B is still a functional non-playing SID
+    // browser. Its cloned <select> and + cells need fresh listeners.
+    var target=shadow.querySelector('#ricoRemixTarget');
+    var status=shadow.querySelector('#ricoLiveStatus');
+    var count=shadow.querySelector('#ricoRemixCount');
+    ricoBindInactiveDestination(target,status,count);
+    rows.addEventListener('click',function(event){
+      var add=event.target&&event.target.closest&&
+        event.target.closest('button.rico-live-add');
+      if(!add)return;
+      event.preventDefault();event.stopPropagation();
+      if(ricoInactiveWindowSource!==source||
+         ricoSecondaryPromotion||ricoPinnedReturnPromotion)return;
+      var clicked=add.closest('.rico-live-edit-row');
+      var selected=Array.prototype.slice.call(
+        rows.querySelectorAll('input.rico-live-batch-check:checked'));
+      var picked=selected.length?selected.map(function(box){
+        var row=box.closest('.rico-live-edit-row');
+        var song=row&&row.querySelector('button.rico-live-row[data-sid-index]');
+        return song?Number(song.dataset.sidIndex):-1;
+      }):[clicked&&clicked.querySelector('button.rico-live-row[data-sid-index]')?
+        Number(clicked.querySelector('button.rico-live-row').dataset.sidIndex):-1];
+      picked=picked.filter(function(i){return Number.isInteger(i)&&i>=0;});
+      (async function(){
+        for(var i=picked.length-1;i>=0;i--){
+          var at=picked[i],ref=source.data&&source.data.tracks&&source.data.tracks[at];
+          if(!ref)continue;
+          var entry={name:ref.title||ref.name||ref.file,
+            author:ref.author||ref.artist||''};
+          await ricoAddInactiveReference(ref,entry,function(msg){
+            if(status)status.textContent=msg;
+          });
+        }
+        if(target)ricoRefreshInactiveDestinations(target);
+        if(count)count.textContent=$('#ricoRemixCount').text();
+      })().catch(function(error){
+        if(status)status.textContent='ADD + TO: '+error.message;
+      });
+    },true);
+    rows.addEventListener('change',function(event){
+      var el=event.target;
+      if(!el||!el.matches('input.rico-live-batch-check'))return;
+      var n=rows.querySelectorAll('input.rico-live-batch-check:checked').length;
+      var sidCount=shadow.querySelector('#ricoLiveCount');
+      if(sidCount&&source.data&&source.data.tracks)
+        sidCount.textContent='('+source.data.tracks.length+
+          (n?' · '+n+' CHECKED':'')+')';
+    });
     rows.addEventListener('click',function(event){
       var target=event.target;
       var row=target&&target.closest&&target.closest('button.rico-live-row');
