@@ -5073,4 +5073,4 @@ html.rico-karaoke-active #songInfo {
 #ricoD81Panel .rico-d81-curator{flex:0 1 auto;min-width:0;max-width:100%;overflow-wrap:anywhere}
 
 /* TEST442: persistent, compact capacity estimates below the disk selector. */
-#ricoD81Panel .rico-d81-estimates{display:flex;flex-direction:column;gap:2px;font-size:18px;line-height:1.2}
+#ricoD81Panel .rico-d81-estimates{font-size:15px;line-height:1.2}

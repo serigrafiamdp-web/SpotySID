@@ -76,8 +76,7 @@ function open(config){
   });
   body.appendChild(formatBar);
   var estimates=el('div',undefined,'rico-d81-estimates rico-d81-note');
-  estimates.appendChild(el('div','D64 / 1541: approx. 20–40 SIDs + player'));
-  estimates.appendChild(el('div','D81 / 1581: approx. 80–150 SIDs + player'));
+  estimates.textContent='D64: 20–40 SIDs / D81: 80–150 SIDs (approx. + player)';
   body.appendChild(estimates);
   body.appendChild(el('div','TEST84B · COMPATIBILITY CHECK'));
   var notice=el('div',undefined,'rico-d81-note');body.appendChild(notice);
