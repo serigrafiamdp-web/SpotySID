@@ -17,6 +17,15 @@ function inspectSID(bytes){
   if(load<0x1000||end>0x3000||(load&255)===255)return bad('OUTSIDE CURRENT SAFE BANK');
   return {ok:true,load:load,init:init,play:play,sub:word(16)-1,blocks:Math.ceil(bytes.length/254)};
 }
+function resizeRect(r,edge,dx,dy,vw,vh){
+  var margin=4,minW=Math.min(340,Math.max(1,vw-2*margin)),minH=Math.min(240,Math.max(1,vh-2*margin));
+  var l=r.left,t=r.top,rr=r.left+r.width,b=r.top+r.height;
+  if(edge.indexOf('w')>=0)l=Math.max(margin,Math.min(rr-minW,l+dx));
+  if(edge.indexOf('e')>=0)rr=Math.min(vw-margin,Math.max(l+minW,rr+dx));
+  if(edge.indexOf('n')>=0)t=Math.max(margin,Math.min(b-minH,t+dy));
+  if(edge.indexOf('s')>=0)b=Math.min(vh-margin,Math.max(t+minH,b+dy));
+  return {left:l,top:t,width:rr-l,height:b-t};
+}
 var generation=0,panel=null,controller=null;
 function el(tag,text,cls){var n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function close(){generation++;if(controller)controller.abort();controller=null;if(panel)panel.remove();panel=null;}
@@ -38,9 +47,36 @@ function open(config){
   var actions=el('div',undefined,'rico-d81-actions'),scan=el('button','CHECK SIDS');scan.type='button';actions.appendChild(scan);
   var download=el('button','EXPORT D81');download.type='button';download.disabled=true;actions.appendChild(download);body.appendChild(actions);
   document.body.appendChild(p);
+
+  // TEST433D: explicit edge and corner handles, independent of native CSS resize.
+  // Pointer capture keeps resizing active even when the pointer crosses the list.
+  ['n','s','e','w','ne','nw','se','sw'].forEach(function(edge){
+    var grip=el('div',undefined,'rico-d81-resize rico-d81-resize-'+edge);
+    grip.setAttribute('aria-hidden','true');
+    var start=null;
+    grip.addEventListener('pointerdown',function(e){
+      if(e.button!==0)return;
+      var r=p.getBoundingClientRect();
+      start={id:e.pointerId,x:e.clientX,y:e.clientY,rect:{left:r.left,top:r.top,width:r.width,height:r.height}};
+      p.style.left=r.left+'px';p.style.top=r.top+'px';
+      p.style.width=r.width+'px';p.style.height=r.height+'px';p.style.transform='none';
+      if(grip.setPointerCapture)grip.setPointerCapture(e.pointerId);
+      e.preventDefault();e.stopPropagation();
+    });
+    grip.addEventListener('pointermove',function(e){
+      if(!start||e.pointerId!==start.id)return;
+      var r=resizeRect(start.rect,edge,e.clientX-start.x,e.clientY-start.y,window.innerWidth,window.innerHeight);
+      p.style.left=r.left+'px';p.style.top=r.top+'px';p.style.width=r.width+'px';p.style.height=r.height+'px';
+      e.preventDefault();e.stopPropagation();
+    });
+    ['pointerup','pointercancel','lostpointercapture'].forEach(function(n){
+      grip.addEventListener(n,function(){start=null;});
+    });
+    p.appendChild(grip);
+  });
   var drag=null;
   header.addEventListener('pointerdown',function(e){if(e.button!==0||e.target.closest('button'))return;var r=p.getBoundingClientRect();drag={id:e.pointerId,x:e.clientX,y:e.clientY,left:r.left,top:r.top};if(header.setPointerCapture)header.setPointerCapture(e.pointerId);e.preventDefault();});
-  header.addEventListener('pointermove',function(e){if(!drag||e.pointerId!==drag.id)return;p.style.left=Math.max(0,Math.min(innerWidth-p.offsetWidth,drag.left+e.clientX-drag.x))+'px';p.style.top=Math.max(0,Math.min(innerHeight-32,drag.top+e.clientY-drag.y))+'px';p.style.transform='none';});
+  header.addEventListener('pointermove',function(e){if(!drag||e.pointerId!==drag.id)return;p.style.left=Math.max(4,Math.min(innerWidth-p.offsetWidth-4,drag.left+e.clientX-drag.x))+'px';p.style.top=Math.max(4,Math.min(innerHeight-p.offsetHeight-4,drag.top+e.clientY-drag.y))+'px';p.style.transform='none';});
   ['pointerup','pointercancel','lostpointercapture'].forEach(function(n){header.addEventListener(n,function(){drag=null;});});
   p.addEventListener('keydown',function(e){e.stopPropagation();});
   scan.onclick=async function(){

@@ -5010,3 +5010,34 @@ html.rico-karaoke-active #songInfo {
 #ricoD81Panel button{font:14px "RicoAmigaTopaz",Tahoma,Arial,sans-serif!important;color:var(--rico-theme-fg,#fff)!important;background:transparent!important;border:1px solid var(--rico-theme-border,#888)!important;border-radius:2px;padding:3px 7px;cursor:pointer}
 #ricoD81Panel button:hover:not(:disabled),#ricoLiveCreateD81:hover:not(:disabled){background:var(--rico-theme-hover,#555)!important}
 #ricoD81Panel button:disabled{opacity:.5;cursor:default}
+
+/* TEST433D — 150% D81 window, explicit 8-way resizing, no modal overlay.
+   Body scrolls when deliberately shortened so controls never disappear. */
+#ricoD81Panel.rico-d81-panel{
+  width:min(720px,calc(100vw - 24px));height:min(600px,calc(100vh - 24px));
+  min-width:min(340px,calc(100vw - 8px));min-height:min(240px,calc(100vh - 8px));
+  max-width:calc(100vw - 8px);max-height:calc(100vh - 8px);
+  font-size:21px;resize:none;pointer-events:auto;
+}
+#ricoD81Panel .rico-d81-header{flex:0 0 48px;padding:0 12px}
+#ricoD81Panel .rico-d81-body{gap:10px;padding:12px;overflow:auto;overscroll-behavior:contain}
+#ricoD81Panel .rico-d81-body > :not(.rico-d81-list){flex-shrink:0}
+#ricoD81Panel .rico-d81-list{flex:1 0 120px;min-height:120px;overflow:auto;overscroll-behavior:contain}
+#ricoD81Panel .rico-d81-row{gap:12px;padding:7px;font-size:18px}
+#ricoD81Panel .rico-d81-row span:first-child{white-space:normal;overflow-wrap:anywhere}
+#ricoD81Panel .rico-d81-row span:last-child{flex:0 1 auto;text-align:right;max-width:50%;overflow-wrap:anywhere}
+#ricoD81Panel .rico-d81-note{font-size:18px;line-height:1.2}
+#ricoD81Panel .rico-d81-actions{gap:9px;flex-wrap:wrap}
+#ricoD81Panel button{font-size:21px!important;padding:5px 10px}
+#ricoD81Panel .rico-d81-resize{position:absolute;z-index:4;touch-action:none;user-select:none;pointer-events:auto;background:transparent}
+#ricoD81Panel .rico-d81-resize-n,#ricoD81Panel .rico-d81-resize-s{left:13px;right:13px;height:7px;cursor:ns-resize}
+#ricoD81Panel .rico-d81-resize-n{top:0}
+#ricoD81Panel .rico-d81-resize-s{bottom:0}
+#ricoD81Panel .rico-d81-resize-e,#ricoD81Panel .rico-d81-resize-w{top:13px;bottom:13px;width:7px;cursor:ew-resize}
+#ricoD81Panel .rico-d81-resize-e{right:0}
+#ricoD81Panel .rico-d81-resize-w{left:0}
+#ricoD81Panel .rico-d81-resize-ne,#ricoD81Panel .rico-d81-resize-nw,#ricoD81Panel .rico-d81-resize-se,#ricoD81Panel .rico-d81-resize-sw{width:13px;height:13px}
+#ricoD81Panel .rico-d81-resize-ne{top:0;right:0;cursor:nesw-resize}
+#ricoD81Panel .rico-d81-resize-nw{top:0;left:0;cursor:nwse-resize}
+#ricoD81Panel .rico-d81-resize-se{bottom:0;right:0;cursor:nwse-resize;background:linear-gradient(135deg,transparent 0 48%,var(--rico-theme-border,#888) 48% 56%,transparent 56% 69%,var(--rico-theme-border,#888) 69% 77%,transparent 77%)}
+#ricoD81Panel .rico-d81-resize-sw{bottom:0;left:0;cursor:nesw-resize}
