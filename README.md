@@ -144,3 +144,12 @@ SpotySID now uses the approved [SIDPLAY64MIX TEST94 MASTER](https://github.com/s
 
 
 **TEST452 (user PASS; current MASTER):** new D81 exports keep the playlist's physical directory order without a numeric prefix on each SID. Up to 12 characters are available before `.sid`; only name collisions receive a short alphabetic suffix. The previous TEST451 checkpoint and TEST94 launcher are unchanged. [Details](docs/TEST452_D81_FILENAMES.md).
+
+
+### Separate player PRG backups — 27 November 2026
+
+- [TEST94 base PRG (15,014 bytes)](MASTERS/2026-11-27_TEST452/SIDPLAY64MIX_TEST94_BASE.prg) — exact approved base used by the exporter.
+- [TEST452 reference PRG (15,288 bytes)](MASTERS/2026-11-27_TEST452/SIDPLAY64MIX_TEST452_REFERENCE.prg) — timer-integrated reference for the original 100-SID corpus order, not a universal player or the exact last exported D81.
+- [Backup notes and rebuild recipe](MASTERS/2026-11-27_TEST452/README.md).
+
+The active export MASTER is TEST452; the native base is TEST94. Filename prefixes are removed by the exporter, not by a new native player version. Every new playlist still needs its own fade map and SID length injection.

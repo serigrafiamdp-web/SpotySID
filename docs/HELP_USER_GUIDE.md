@@ -101,3 +101,6 @@ A local TILEWORK SAVE is distinct from publishing the artist profile to the onli
 The floating playlist can be moved and resized. **HELP** inside the player offers English and Spanish instructions; **ABOUT** explains the preservation purpose, source credits and new capabilities. Cloudflare public data, local drafts and original SID binary files are stored separately.
 
 **Recorded status:** the user confirmed TEST341 playback behavior (also earlier PETSCII, UI and keyboard milestones), but this does not replace manual checks of every browser, audio engine, public REPUBLISH or artist-profile publication. See [checkpoint](CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) for what was implemented and what still needs verification.
+
+
+For recovery or development, see the [separate player PRG backups](../MASTERS/2026-11-27_TEST452/README.md). Normal users should export each playlist through CREATE C64 DISK rather than copy the reference player manually.

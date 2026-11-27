@@ -34,7 +34,7 @@ This is the **current list of implemented main-branch capabilities**. Where a fe
 - **SHARE** links for eligible published/curated playlists. Users who open a direct link may need a PLAY click to allow Web Audio in their browser.
 - **IMPORT SID** and browser-local lists; supported HVSC reference reuse and independent **NO HVSC** archiving. Archive/playlist reference backends are distinct from the original SID library, which remains unchanged.
 
-## Export playlists to Commodore 64 disks — TEST451 MASTER (PASS)
+## Export playlists to Commodore 64 disks — TEST452 MASTER (PASS)
 
 - **CREATE C64 DISK** analyzes the selected playlist and generates a native **D81 / 1581** disk image entirely in the browser, including SIDPLAY64 SID MIX Mod by Rico and the accepted SID files in playlist order.
 - **CHECK SIDS** verifies PSID compatibility, exact known-corpus hashes, individual default-subtune Songlengths, directory limits and available disk blocks. Rejected tracks and capacity skips are reported; the online playlist is not changed.
