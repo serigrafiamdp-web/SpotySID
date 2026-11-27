@@ -141,3 +141,6 @@ Original artists, groups, demos and composers retain their credits. This README 
 ### C64 disk export — TEST451 MASTER (PASS)
 
 SpotySID now uses the approved [SIDPLAY64MIX TEST94 MASTER](https://github.com/serigrafiamdp-web/SIDPLAY64MIX/tree/fc6563b808623a7ba121d686816d00cda559d4c4/MASTERS/2026-11-27_TEST94_MASTER) for new D81 exports, with individual song lengths added at export time. The combined integration was confirmed PASS by Rico in VICE on November 27, 2026. [Technical notes and rollback](docs/TEST451_TEST94_MASTER_EXPORT.md).
+
+
+**TEST452 (filename-only experiment):** new D81 exports keep the playlist's physical directory order without a numeric prefix on each SID. Up to 12 characters are available before `.sid`; only name collisions receive a short alphabetic suffix. The TEST451 MASTER and TEST94 launcher are unchanged. [Details](docs/TEST452_D81_FILENAMES.md).

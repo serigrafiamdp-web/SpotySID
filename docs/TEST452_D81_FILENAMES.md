@@ -1,0 +1,5 @@
+# TEST452 — D81 names without sequence prefixes
+
+Based on approved TEST451 MASTER. The directory writer already inserts the launcher first and then files in the exact accepted playlist order. No alphabetical sort is added. Remove the former three-digit prefix and hyphen, leaving 12 characters for the normalized song name plus .sid (16-byte Commodore directory limit). Original title digits are retained. Use the source filename as fallback when the display name is absent. Collisions after normalization/truncation receive -a, -b, ... alphabetic suffixes only as needed, reserving other natural names to avoid stealing them. The base launcher, per-song timer overlay, duration injection, compatibility checks, fade remap, payloads, disk builder and structural verification are unchanged. SIDPLAY64MIX repository is untouched.
+
+Validation: 104 filename test cases passed, including 100 identical names and natural-name collisions. Full VICE load, playback and manual transition using the changed names still require user verification. Rollback: MASTER-2026-11-27-TEST451. No promotion until PASS.

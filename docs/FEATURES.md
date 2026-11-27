@@ -90,3 +90,6 @@ Shortcuts do not replace typing in text fields, search, name/creator inputs, TIM
 **Not to claim verified:** sustained Loco un Poco audio balance; an arbitrary public D1 REPUBLISH or full NO HVSC → D1 readback merely from a Git commit; publicly verified TILEWORK artist-profile publication. More accurate, per-test notes: [Latest checkpoint](CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md), [11 Nov historical checkpoint](CHECKPOINT_2026-11-11_SPOTYSID.md), [Architecture](ARCHITECTURE.md).
 
 Historical TEST files in `docs/` are retained as dated development references, not a list of all active UI features.
+
+
+**TEST452 filename experiment:** D81 filenames use up to 12 characters of the normalized song name, plus `.sid`; alphabetic suffixes resolve collisions only. Playlist order remains unchanged. VICE confirmation pending.

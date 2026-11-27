@@ -57,7 +57,7 @@ Public publishing/editing requires appropriate beta authorization and successful
 1. Open the playlist you want to export (a known NordischSound selection is a good initial test).
 2. Click **CREATE C64 DISK** and choose **D81 / 1581**.
 3. Click **CHECK SIDS**. Review the matched, skipped and capacity-limited tracks. **TEST92 MATCH** identifies the original verified SID corpus used by the newer TEST94 player. The duration shown with **DB** comes from Songlengths; **03:05 DEFAULT** is the fallback.
-4. Click **EXPORT D81** once checking finishes and at least one compatible track is accepted. Save the generated `SPOTYSID_TEST451_*.d81` image.
+4. Click **EXPORT D81** once checking finishes and at least one compatible track is accepted. Save the generated `SPOTYSID_TEST452_*.d81` (or `TEST451` on the frozen MASTER) image.
 5. In VICE, configure drive 8 as a **1581**, attach the D81 and start the player:
 
    ```basic
