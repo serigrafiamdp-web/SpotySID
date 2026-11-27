@@ -132,3 +132,8 @@ The previous verified baseline **MASTER-2026-11-16-TEST301** is retained as a se
 Original artists, groups, demos and composers retain their credits. This README highlights current functionality; older TEST files and reports under `docs/` remain historical engineering evidence.
 
 [**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [Latest checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md)
+
+
+### C64 disk export — TEST451
+
+SpotySID now uses the approved [SIDPLAY64MIX TEST94 MASTER](https://github.com/serigrafiamdp-web/SIDPLAY64MIX/tree/fc6563b808623a7ba121d686816d00cda559d4c4/MASTERS/2026-11-27_TEST94_MASTER) for new D81 exports, with individual song lengths added at export time. The combined integration awaits VICE verification. [Technical notes and rollback](docs/TEST451_TEST94_MASTER_EXPORT.md).
