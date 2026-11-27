@@ -3438,8 +3438,53 @@
     bind(shadow.querySelector('#ricoLiveWidthGrip'),'width');
     bind(shadow.querySelector('#ricoLiveResizeGrip'),'height');
   }
+  // TEST433: snapshot the clicked window, independently of audio authority.
+  function ricoOpenD81(name,entries,tracks,allowDefault){
+    if(!window.RicoD81)return;
+    var archives=new Map();
+    var items=(entries||[]).map(function(entry,i){
+      var track=tracks&&tracks[i]||null;
+      var ref=entry&&entry._hvscRef||(track&&validRemixRef(track)?track:null);
+      return {name:entry&&(entry.name||entry.title)||track&&(track.title||track.name)||'',file:entry&&entry.file||track&&track.file||'',ref:ref?remixCanonicalRef(ref):null,bytes:entry&&entry.localBytes instanceof Uint8Array?entry.localBytes:null,base64:track&&track.sidBase64||null};
+    });
+    async function read(item,signal){
+      if(item.bytes)return item.bytes;
+      if(item.base64&&browseSidDecode)return browseSidDecode(item.base64);
+      var ref=item.ref;
+      if(ref&&validRemixRef(ref)){
+        if(ref.sidId){var asset=await fetch(communityWriteApi+'/sid-assets/'+ref.sidId,{signal:signal});if(!asset.ok)throw Error('SID asset');return new Uint8Array(await asset.arrayBuffer());}
+        if(!archives.has(ref.pack)){
+          archives.set(ref.pack,fetch(hvscArchiveUrl(ref.pack),{signal:signal}).then(function(response){if(!response.ok)throw Error('ZIP unavailable');return response.arrayBuffer();}).then(function(data){return JSZip.loadAsync(data);}));
+        }
+        var zip=await archives.get(ref.pack),file=zip.file(ref.file);if(!file)throw Error('Missing SID');return file.async('uint8array');
+      }
+      if(allowDefault&&item.file&&!item.file.includes('..')&&/\.sid$/i.test(item.file)){
+        var response=await fetch('sids/'+item.file,{signal:signal});if(!response.ok)throw Error('SID unavailable');return new Uint8Array(await response.arrayBuffer());
+      }
+      throw Error('Original SID unavailable');
+    }
+    async function duration(item,sub){
+      var ref=item.ref;if(!ref||ref.sidId)return null;
+      var musician=/^library\/packs\/musicians\/([A-Za-z0-9_-]+)\/([A-Za-z0-9_-]+)\.zip$/.exec(ref.pack);
+      var demo=/^library\/packs\/demos\/([A-Za-z0-9_-]+)\.zip$/.exec(ref.pack);
+      if(!musician&&!demo)return null;
+      var source={shard:'library/songlengths/'+(musician?'musicians-'+musician[1]:'demos-'+demo[1])+'.json',relative:musician?musician[2]+'/'+ref.file:ref.file,sub:sub};
+      var times=await loadSonglengthShard(source.shard),values=times&&times[source.relative];
+      return Array.isArray(values)&&Number.isInteger(values[sub])&&values[sub]>0?values[sub]:null;
+    }
+    window.RicoD81.open({name:name,items:items,read:read,duration:duration});
+  }
+  function ricoD81Preview(preview){
+    if(!preview)return;
+    ricoOpenD81(preview.data.name||preview.item.title,preview.entries,preview.data.tracks,false);
+  }
   function ricoBindPinnedSongClicks(shadow,source){
     if(!shadow||!source||typeof source.playFrom!=='function')return;
+    var d81=shadow.querySelector('#ricoLiveCreateD81');
+    if(d81){d81.disabled=false;d81.addEventListener('click',function(event){
+      event.stopPropagation();var tracks=source.data&&source.data.tracks||[];
+      ricoOpenD81(source.data&&source.data.name||'PLAYLIST',tracks,tracks,false);
+    });}
     var rows=shadow.querySelector('#ricoLivePlaylistItems');
     if(!rows)return;
     // TEST431: an inactive A or B is still a functional non-playing SID
@@ -3548,7 +3593,7 @@
     var shadow=pinned.attachShadow({mode:'open'});
     var css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='css/style.css?v=test426-left-group';
+    css.href='css/style.css?v=test433-d81-preflight';
     shadow.appendChild(css);
     // Copy the first playlist BEFORE playback changes its contents. Do not
     // duplicate event handlers: only the RIGHT window controls the player.
@@ -3640,7 +3685,7 @@
     var shadow=nextPinned.attachShadow({mode:'open'});
     var css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='css/style.css?v=test426-left-group';
+    css.href='css/style.css?v=test433-d81-preflight';
     shadow.appendChild(css);
     var copy=ricoClonePinnedPanel(primary);
     copy.style.cssText+=';position:fixed;display:flex;left:'+current.left+
@@ -3723,7 +3768,7 @@
     host.style.cssText='position:fixed;inset:0;z-index:197;pointer-events:none;';
     var shadow=host.attachShadow({mode:'open'});
     var css=document.createElement('link');
-    css.rel='stylesheet';css.href='css/style.css?v=test426-left-group';
+    css.rel='stylesheet';css.href='css/style.css?v=test433-d81-preflight';
     shadow.appendChild(css);
     // Copy the original header, bar, status, grips and all stylistic classes.
     // Never duplicate hundreds of SID rows or original event bindings.
@@ -3831,6 +3876,8 @@
     };
     var preview=createCommunityBrowse(data,item,playFrom,mount);
     ricoSecondaryPreview=preview;
+    var d81=secondary.querySelector('#ricoLiveCreateD81');
+    if(d81){d81.disabled=false;d81.addEventListener('click',function(event){event.stopPropagation();ricoD81Preview(preview);});}
     function updateCount(){
       if(count)count.textContent='('+preview.entries.length+
         (selected.size?' · '+selected.size+' CHECKED':'')+')';
@@ -4179,6 +4226,7 @@
   }
   function renderLivePlaylist() {
     var preview=communityBrowsePreview;
+    $('#ricoLiveCreateD81').prop('disabled',!preview&&(landingPlaylists||!(player.sidList||[]).length));
     // TEST409: loadCustomIndex(), showLivePlaylist() and the completed
     // playlist handoff can all ask for a redraw of the SAME list at the
     // first audio buffer. Never restart an in-progress chunk painter when
@@ -4668,6 +4716,11 @@
     }catch(error){$('#ricoLiveStatus').text('SAVE failed: '+error.message);}
   });
 
+  $('#ricoLiveCreateD81').on('click',function(event){
+    event.preventDefault();event.stopPropagation();
+    if(communityBrowsePreview){ricoD81Preview(communityBrowsePreview);return;}
+    if(!landingPlaylists)ricoOpenD81(loadedPlaylistTitle||'PLAYLIST',player.sidList||[],activeReferenceTracks,!customActive);
+  });
   $('#ricoLiveShare').on('click',function(event){
     event.preventDefault();
     var visibleId=communityBrowsePreview?

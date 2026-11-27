@@ -4177,7 +4177,7 @@ button.rico-community-pin.rico-pin-on {
 /* TEST371 — floating playlist header: SHARE / SAVE / REPUBLISH are identical
    in font size, line box, visible height, border and padding. Both labels
    remain fully readable. Keep the existing JS-owned display:none behavior. */
-#ricoLivePlaylistHeader .rico-live-head-actions > :is(#ricoLiveShare,#ricoLiveSave) {
+#ricoLivePlaylistHeader .rico-live-head-actions > :is(#ricoLiveShare,#ricoLiveSave,#ricoLiveCreateD81) {
   box-sizing:border-box !important;
   height:26px !important;
   min-height:26px !important;
@@ -4993,3 +4993,20 @@ html.rico-karaoke-active #songInfo {
 #ricoLivePlaylistHeader .rico-live-head-actions {
   margin-left:auto;
 }
+
+/* TEST433 — D81 window uses exactly the active SpotySID theme and Topaz.
+   No modal cover, focus trap, shadow host or page-wide pointer blocker. */
+#ricoD81Panel.rico-d81-panel{position:fixed;z-index:650;left:50%;top:50%;transform:translate(-50%,-50%);width:min(480px,calc(100vw - 24px));max-height:calc(100vh - 24px);height:min(400px,calc(100vh - 24px));display:flex;flex-direction:column;box-sizing:border-box;border:1px solid var(--rico-theme-border,#888);border-radius:0;overflow:hidden;resize:both;background:var(--rico-theme-bg,#000);color:var(--rico-theme-fg,#fff);font:14px "RicoAmigaTopaz",Tahoma,Arial,sans-serif;font-synthesis:none;box-shadow:0 5px 14px #0005}
+#ricoD81Panel .rico-d81-header{display:flex;justify-content:space-between;align-items:center;flex:0 0 32px;padding:0 8px;border-bottom:1px solid var(--rico-theme-border,#888);background:var(--rico-theme-panel,#222);cursor:move;user-select:none;touch-action:none}
+#ricoD81Panel .rico-d81-body{display:flex;flex:1;min-height:0;flex-direction:column;gap:7px;padding:8px}
+#ricoD81Panel .rico-d81-title{overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+#ricoD81Panel .rico-d81-status{border-top:1px solid var(--rico-theme-border,#888);padding-top:5px}
+#ricoD81Panel .rico-d81-list{flex:1;min-height:0;overflow:auto;border:1px solid var(--rico-theme-border,#888);scrollbar-color:var(--rico-theme-fg,#fff) var(--rico-theme-bg,#000)}
+#ricoD81Panel .rico-d81-row{display:flex;justify-content:space-between;gap:8px;padding:5px;border-bottom:1px solid var(--rico-theme-border,#888);font-size:12px}
+#ricoD81Panel .rico-d81-row span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#ricoD81Panel .rico-d81-row span:last-child{flex:0 0 auto}
+#ricoD81Panel .rico-d81-note{font-size:12px}
+#ricoD81Panel .rico-d81-actions{display:flex;justify-content:flex-end;gap:6px}
+#ricoD81Panel button{font:14px "RicoAmigaTopaz",Tahoma,Arial,sans-serif!important;color:var(--rico-theme-fg,#fff)!important;background:transparent!important;border:1px solid var(--rico-theme-border,#888)!important;border-radius:2px;padding:3px 7px;cursor:pointer}
+#ricoD81Panel button:hover:not(:disabled),#ricoLiveCreateD81:hover:not(:disabled){background:var(--rico-theme-hover,#555)!important}
+#ricoD81Panel button:disabled{opacity:.5;cursor:default}
