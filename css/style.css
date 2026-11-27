@@ -5061,3 +5061,8 @@ html.rico-karaoke-active #songInfo {
 
 /* TEST437: compact exporter scan summary, without changing the remaining text. */
 #ricoD81Panel .rico-d81-status{font-size:15px;line-height:1.2;overflow-wrap:normal}
+
+/* TEST438: descriptive titlebar, preserving close and resize controls. */
+#ricoD81Panel .rico-d81-header{gap:8px;height:auto;min-height:48px;flex:0 0 auto}
+#ricoD81Panel .rico-d81-header strong{min-width:0;line-height:1.15;overflow-wrap:anywhere;font-size:21px;padding:8px 0}
+#ricoD81Panel .rico-d81-header button{flex:0 0 auto}

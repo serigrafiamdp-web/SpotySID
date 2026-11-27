@@ -43,8 +43,8 @@ document.addEventListener('keydown',function(e){if(panel&&panel.contains(documen
 function open(config){
   close();var token=generation;controller=new AbortController();var signal=controller.signal;
   var p=el('aside',undefined,'rico-d81-panel');panel=p;p.id='ricoD81Panel';
-  p.setAttribute('role','dialog');p.setAttribute('aria-modal','false');p.setAttribute('aria-label','Create C64 disk');
-  var header=el('div',undefined,'rico-d81-header');header.appendChild(el('strong','CREATE C64 DISK'));
+  p.setAttribute('role','dialog');p.setAttribute('aria-modal','false');p.setAttribute('aria-label','Your selected playlist on a real C64');
+  var header=el('div',undefined,'rico-d81-header');header.appendChild(el('strong','YOUR SELECTED PLAYLIST ON A REAL C64'));
   var x=el('button','X');x.type='button';x.setAttribute('aria-label','Close CREATE C64 DISK');x.onclick=close;header.appendChild(x);p.appendChild(header);
   var body=el('div',undefined,'rico-d81-body');p.appendChild(body);
   var intro=el('div',undefined,'rico-d81-intro');
