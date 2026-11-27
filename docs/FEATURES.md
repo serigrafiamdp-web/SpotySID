@@ -1,6 +1,6 @@
 # SpotySid — Features
 
-**Current frontend feature reference · 17 November 2026 (Argentina) · TEST350**
+**Frontend feature reference · C64 disk export updated 27 November 2026 (Argentina) · TEST451 MASTER**
 
 [Open SpotySid](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [README](../README.md) · [User guide](HELP_USER_GUIDE.md) · [Latest checkpoint](CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [Architecture](ARCHITECTURE.md)
 
@@ -33,6 +33,15 @@ This is the **current list of implemented main-branch capabilities**. Where a fe
 - **SAVE** for supported local edits, **PUBLISH** for new lists, and **REPUBLISH** for changes to a published list with its existing record ID and beta-key authorization. A private pending draft is not a public publication.
 - **SHARE** links for eligible published/curated playlists. Users who open a direct link may need a PLAY click to allow Web Audio in their browser.
 - **IMPORT SID** and browser-local lists; supported HVSC reference reuse and independent **NO HVSC** archiving. Archive/playlist reference backends are distinct from the original SID library, which remains unchanged.
+
+## Export playlists to Commodore 64 disks — TEST451 MASTER (PASS)
+
+- **CREATE C64 DISK** analyzes the selected playlist and generates a native **D81 / 1581** disk image entirely in the browser, including SIDPLAY64 SID MIX Mod by Rico and the accepted SID files in playlist order.
+- **CHECK SIDS** verifies PSID compatibility, exact known-corpus hashes, individual default-subtune Songlengths, directory limits and available disk blocks. Rejected tracks and capacity skips are reported; the online playlist is not changed.
+- **EXPORT D81** includes the approved SIDPLAY64MIX TEST94 launcher, with a playlist-specific fade map and duration overlay. Original library files are untouched.
+- In VICE the player supports continuous playback, automatic per-song duration, eight-second fade, background prefetch, stable violet active marker and independent yellow navigation. The launcher is hidden from the visible playlist; the playing SID follows to the top at automatic or ENTER handoff.
+- Current limits: exact verified 100-track corpus, at most 100 SID entries and 3,099 data blocks after the 61-block launcher, plus nine special fade-address slots. Unknown duration defaults to 03:05; known durations outside 00:15–99:59 are skipped. **D64 / 1541 is preflight only**, not an available export. Real hardware and broader SID compatibility are not yet verified.
+- Combined D81 export confirmed PASS by Rico in VICE on November 27, 2026. [How to export](HELP_USER_GUIDE.md#export-a-playlist-to-commodore-64) · [Frozen MASTER and recovery](MASTER_2026-11-27_TEST451.md) · [Technical notes](TEST451_TEST94_MASTER_EXPORT.md).
 
 ## Artist artwork: TILEWORK / STIL+
 
