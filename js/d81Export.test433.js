@@ -76,10 +76,10 @@ function open(config){
   });
   body.appendChild(formatBar);
   var estimates=el('div',undefined,'rico-d81-estimates rico-d81-note');
-  estimates.textContent='D64: 20–40 SIDs / D81: 80–150 SIDs (approx. + player)';
+  estimates.textContent='D64: ~20–40 / D81: ~80–150 SIDs + player';
+  estimates.title='Actual SID count depends on compatibility and file sizes.';
   body.appendChild(estimates);
   body.appendChild(el('div','TEST84B · COMPATIBILITY CHECK'));
-  var notice=el('div',undefined,'rico-d81-note');body.appendChild(notice);
   var status=el('div','SELECT D64 OR D81 · '+config.items.length+' SID','rico-d81-status');status.setAttribute('role','status');body.appendChild(status);
   var list=el('div',undefined,'rico-d81-list');body.appendChild(list);
   list.appendChild(el('div','CHOOSE A FORMAT TO CHECK YOUR PLAYLIST','rico-d81-empty'));
@@ -122,10 +122,8 @@ function open(config){
   function updateFormat(){
     Object.keys(formatButtons).forEach(function(kind){formatButtons[kind].setAttribute('aria-pressed',String(kind===format));});
     if(!format){
-      notice.textContent="Actual SID count depends on compatibility and file sizes.";
       download.textContent='EXPORT DISK';scan.disabled=true;return;
     }
-    notice.textContent='Actual SID count depends on compatibility and file sizes.';
     download.textContent='EXPORT '+format;
   }
   function paintResult(record){
