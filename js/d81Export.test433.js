@@ -1,5 +1,5 @@
-/* TEST433: non-modal D81 preflight. Candidate status is not playback certification.
- * Export stays disabled until a playlist-independent player is available. */
+/* TEST449: experimental D81 export with exact TEST92 hash-matched SID corpus.
+ * D64 and generic SID support remain pending. */
 (function(){
 'use strict';
 function inspectSID(bytes){
@@ -27,14 +27,16 @@ function resizeRect(r,edge,dx,dy,vw,vh){
   return {left:l,top:t,width:rr-l,height:b-t};
 }
 function newCapacity(format){
-  return {available:(format==='D64'?664:3160)-Math.ceil(14700/254),used:0,accepted:0,rejected:0,overflow:0,known:0};
+  return {available:(format==='D64'?664:3160)-60,used:0,accepted:0,rejected:0,overflow:0,known:0,selected:[],high:0};
 }
 function placeCandidate(state,result,seconds){
   if(!result.ok){state.rejected++;return 'SKIP · '+result.reason;}
-  if(state.accepted>=162||state.used+result.blocks>state.available){state.overflow++;return 'SKIP · DISK / PLAYER LIMIT';}
+  var high=[9,29,32,55,77,82,93,94,98].indexOf(result.masterIndex)>=0;
+  if(state.accepted>=100||state.used+result.blocks>state.available||(high&&state.high>=9)){state.overflow++;return 'SKIP · DISK / PLAYER LIMIT';}
+  if(high)state.high++;
   state.accepted++;state.used+=result.blocks;
   if(Number.isInteger(seconds)&&seconds>0)state.known++;
-  return 'CANDIDATE · '+(Number.isInteger(seconds)&&seconds>0?Math.floor(seconds/60)+':'+('0'+seconds%60).slice(-2):'03:05 DEFAULT');
+  return 'TEST92 MATCH · '+(Number.isInteger(seconds)&&seconds>0?Math.floor(seconds/60)+':'+('0'+seconds%60).slice(-2)+' DB':'03:05 DEFAULT');
 }
 var generation=0,panel=null,controller=null;
 function el(tag,text,cls){var n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
@@ -59,7 +61,7 @@ function open(config){
   playlist.appendChild(el('span','('+config.items.length+' SIDS)','rico-d81-total'));
   intro.appendChild(playlist);
   body.appendChild(intro);
-  var format=null,results=[],state=null,scanning=false,started=false;
+  var format=null,results=[],state=null,scanning=false,started=false,exporting=false;
   var step=el('div','CHOOSE A DISK FORMAT!','rico-d81-step');body.appendChild(step);
   var formatBar=el('div',undefined,'rico-d81-format');formatBar.setAttribute('role','group');formatBar.setAttribute('aria-label','Disk format');
   var formatButtons={};
@@ -76,14 +78,14 @@ function open(config){
   });
   body.appendChild(formatBar);
   var estimates=el('div',undefined,'rico-d81-estimates rico-d81-note');
-  estimates.textContent='D64: ~20–40 / D81: ~80–150 SIDs + player';
+  estimates.textContent='D81 TEST: up to 100 matched SIDs + player · D64 preflight only';
   estimates.title='Actual SID count depends on compatibility and file sizes.';
   body.appendChild(estimates);
-  body.appendChild(el('div','TEST84B · COMPATIBILITY CHECK'));
+  body.appendChild(el('div','TEST449 · TEST92 D81 EXPORT'));
   var status=el('div','SELECT D64 OR D81 · '+config.items.length+' SID','rico-d81-status');status.setAttribute('role','status');body.appendChild(status);
   var list=el('div',undefined,'rico-d81-list');body.appendChild(list);
   list.appendChild(el('div','CHOOSE A FORMAT TO CHECK YOUR PLAYLIST','rico-d81-empty'));
-  body.appendChild(el('div','Export pending generic fade / timer support. Candidates require playback validation.','rico-d81-note'));
+  body.appendChild(el('div','Experimental D81: exact SID matches only. Song lengths shown for reference; playback uses the existing player timer. VICE test required. D64 export pending.','rico-d81-note'));
   var actions=el('div',undefined,'rico-d81-actions'),scan=el('button','CHECK SIDS');scan.type='button';scan.disabled=true;actions.appendChild(scan);
   var download=el('button','EXPORT DISK');download.type='button';download.disabled=true;actions.appendChild(download);body.appendChild(actions);
   document.body.appendChild(p);
@@ -130,40 +132,49 @@ function open(config){
     if(!format){
       download.textContent='EXPORT DISK';scan.disabled=true;return;
     }
-    download.textContent='EXPORT '+format;
+    download.textContent='EXPORT '+format;download.disabled=exporting||scanning||format!=='D81'||!state||!state.selected.length;
   }
   function paintResult(record){
-    var label=placeCandidate(state,record.result,record.seconds);
+    var before=state.accepted,label=placeCandidate(state,record.result,record.seconds);if(state.accepted>before)state.selected.push(record);
     var row=el('div',undefined,'rico-d81-row');
     row.appendChild(el('span',(record.index+1)+'. '+(record.item.name||record.item.file||'SID')));
     row.appendChild(el('span',label));list.appendChild(row);
   }
   function updateStatus(){
     status.textContent=(scanning?results.length+'/'+config.items.length+' · ':'')+
-      state.accepted+' CANDIDATES · '+state.rejected+' REJECTED · '+state.overflow+' LIMIT · '+
+      state.accepted+' MATCHED · '+state.rejected+' SKIPPED · '+state.overflow+' LIMIT · '+
       state.used+'/'+state.available+' BLOCKS · '+state.known+' KNOWN TIMES';
   }
   function replayResults(){
     if(!format)return;
     state=newCapacity(format);list.textContent='';
-    results.forEach(paintResult);updateStatus();
+    results.forEach(paintResult);updateStatus();updateFormat();
   }
   scan.onclick=async function(){
     if(!format||scanning)return;
     started=true;scanning=true;scan.disabled=true;results=[];replayResults();
     for(var i=0;i<config.items.length;i++){
       if(signal.aborted||token!==generation)return;
-      var item=config.items[i],result,seconds=null;
-      try{var bytes=await config.read(item,signal);result=inspectSID(bytes);}
-      catch(e){result={ok:false,reason:'SID UNAVAILABLE'};}
+      var item=config.items[i],result,seconds=null,bytes=null;
+      try{bytes=await config.read(item,signal);result=inspectSID(bytes);if(result.ok){var match=await window.RicoDiskTest.match(bytes);if(match<0){result={ok:false,reason:'NOT IN TEST92 VERIFIED CORPUS'};bytes=null;}else result.masterIndex=match;}}
+      catch(e){result={ok:false,reason:'SID / HASH UNAVAILABLE'};bytes=null;}
       if(result.ok){try{seconds=await config.duration(item,result.sub);}catch(e){}}
       if(signal.aborted||token!==generation)return;
-      var record={index:i,item:item,result:result,seconds:seconds};
+      var record={index:i,item:item,result:result,seconds:seconds,bytes:result.ok?bytes:null};
       results.push(record);paintResult(record);updateStatus();
       if(i%8===7)await new Promise(function(resolve){setTimeout(resolve,0);});
     }
-    scanning=false;updateStatus();
+    scanning=false;updateStatus();updateFormat();
     if(token===generation&&!signal.aborted)scan.disabled=false;
+  };
+  download.onclick=async function(){
+    if(exporting||scanning||format!=='D81'||!state||!state.selected.length)return;
+    exporting=true;scan.disabled=true;updateFormat();
+    var snapshot=state.selected.slice();
+    try{var count=await window.RicoDiskTest.exportD81(snapshot,config.name,signal);
+      if(token===generation&&!signal.aborted)status.textContent='D81 CREATED · '+count+' SIDS · VICE TEST REQUIRED';
+    }catch(e){if(token===generation&&!signal.aborted)status.textContent='EXPORT FAILED · '+(e&&e.message||'UNKNOWN ERROR');}
+    finally{exporting=false;if(token===generation&&!signal.aborted){scan.disabled=false;updateFormat();}}
   };
   updateFormat();
 }
