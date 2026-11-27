@@ -5108,3 +5108,7 @@ html.rico-karaoke-active #songInfo {
 #ricoD81Panel .rico-d81-row{min-height:24px;padding:4px 6px}
 #ricoD81Panel button{height:26px;min-height:26px;line-height:24px}
 #ricoD81Panel .rico-d81-format button{min-height:26px}
+
+/* TEST447: center playlist credits and disk format prompt only. */
+#ricoD81Panel .rico-d81-playlist{justify-content:center;text-align:center}
+#ricoD81Panel .rico-d81-step{text-align:center}
