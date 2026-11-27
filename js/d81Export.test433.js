@@ -47,7 +47,16 @@ function open(config){
   var header=el('div',undefined,'rico-d81-header');header.appendChild(el('strong','CREATE C64 DISK'));
   var x=el('button','X');x.type='button';x.setAttribute('aria-label','Close CREATE C64 DISK');x.onclick=close;header.appendChild(x);p.appendChild(header);
   var body=el('div',undefined,'rico-d81-body');p.appendChild(body);
-  body.appendChild(el('div',config.name||'PLAYLIST','rico-d81-title'));
+  var intro=el('div',undefined,'rico-d81-intro');
+  intro.appendChild(el('div','EXPORT A C64 DISK','rico-d81-headline'));
+  intro.appendChild(el('div',"WITH 6R6'S SIDPLAY64 SID MIX MOD BY RICO",'rico-d81-subtitle'));
+  var playlist=el('div',undefined,'rico-d81-playlist');
+  var playlistName=el('span',config.name||'PLAYLIST','rico-d81-title');
+  playlistName.title=config.name||'PLAYLIST';
+  playlist.appendChild(playlistName);
+  playlist.appendChild(el('span','('+config.items.length+' SIDS)','rico-d81-total'));
+  intro.appendChild(playlist);
+  body.appendChild(intro);
   var format=null,results=[],state=null,scanning=false,started=false;
   var step=el('div','SELECT DISK FORMAT','rico-d81-step');body.appendChild(step);
   var formatBar=el('div',undefined,'rico-d81-format');formatBar.setAttribute('role','group');formatBar.setAttribute('aria-label','Disk format');
@@ -108,12 +117,11 @@ function open(config){
   function updateFormat(){
     Object.keys(formatButtons).forEach(function(kind){formatButtons[kind].setAttribute('aria-pressed',String(kind===format));});
     if(!format){
-      notice.textContent="Choose D64 (1541) or D81 (1581). The playlist will be checked automatically for 6R6's Sidplay64 Sid Mix Mod by Rico, with the player included in the planned compilation.";
+      notice.textContent="Compatible SID candidates are selected automatically. The player is included in the planned disk compilation.";
       download.textContent='EXPORT DISK';scan.disabled=true;return;
     }
     step.textContent='DISK FORMAT';
-    notice.textContent=(format==='D81'?'Approximately 80–100 SID candidates are expected on a typical D81. More or fewer may fit. ':'D64 capacity is calculated from the actual SID file sizes. ')+
-      "Candidates are automatically selected from your playlist for playback using 6R6's Sidplay64 Sid Mix Mod by Rico. The final "+format+" compilation will include the player, ready to use on a Commodore 64.";
+    notice.textContent=(format==='D81'?'Typically 80–100 SIDs; actual count depends on compatibility and available space.':'SID count depends on compatibility and actual file sizes.')+' Player included in the planned '+format+' compilation.';
     download.textContent='EXPORT '+format;
   }
   function paintResult(record){

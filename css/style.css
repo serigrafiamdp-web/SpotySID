@@ -5050,3 +5050,11 @@ html.rico-karaoke-active #songInfo {
 #ricoD81Panel .rico-d81-step{font-weight:normal;line-height:1.2}
 #ricoD81Panel .rico-d81-format button{flex:1 1 130px;min-height:42px}
 #ricoD81Panel .rico-d81-empty{padding:12px;font-size:18px;text-align:center}
+
+/* TEST436: clear title hierarchy and original playlist count. */
+#ricoD81Panel .rico-d81-intro{display:flex;flex-direction:column;gap:4px;min-width:0}
+#ricoD81Panel .rico-d81-headline{font-size:30px;line-height:1.15;overflow-wrap:anywhere}
+#ricoD81Panel .rico-d81-subtitle{font-size:22px;line-height:1.2;overflow-wrap:anywhere}
+#ricoD81Panel .rico-d81-playlist{display:flex;align-items:baseline;gap:8px;min-width:0;margin-top:4px;font-size:21px}
+#ricoD81Panel .rico-d81-playlist .rico-d81-title{flex:0 1 auto;min-width:0}
+#ricoD81Panel .rico-d81-total{flex:0 0 auto;white-space:nowrap}

@@ -20,3 +20,7 @@ The playlist action and floating window are now CREATE C64 DISK. D81 is selected
 ## TEST435 — Format first
 
 Opening CREATE C64 DISK does not initiate a scan or select a default format. The user must explicitly choose D64 or D81. First choice starts the scan; switching formats during or after scanning recalculates from available results without a duplicate scan. CHECK SIDS is disabled until the initial scan finishes. Export remains disabled pending player integration.
+
+## TEST436 — Exporter title hierarchy
+
+Large title and subtitle identify the export and player. Artist/playlist name is followed by the total number of entries in the original SpotySID playlist snapshot (before compatibility and capacity filtering). Format-specific explanatory text is shortened. No scan, resize, or capacity logic changes.

@@ -3593,7 +3593,7 @@
     var shadow=pinned.attachShadow({mode:'open'});
     var css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='css/style.css?v=test435-format-first';
+    css.href='css/style.css?v=test436-title-count';
     shadow.appendChild(css);
     // Copy the first playlist BEFORE playback changes its contents. Do not
     // duplicate event handlers: only the RIGHT window controls the player.
@@ -3685,7 +3685,7 @@
     var shadow=nextPinned.attachShadow({mode:'open'});
     var css=document.createElement('link');
     css.rel='stylesheet';
-    css.href='css/style.css?v=test435-format-first';
+    css.href='css/style.css?v=test436-title-count';
     shadow.appendChild(css);
     var copy=ricoClonePinnedPanel(primary);
     copy.style.cssText+=';position:fixed;display:flex;left:'+current.left+
@@ -3768,7 +3768,7 @@
     host.style.cssText='position:fixed;inset:0;z-index:197;pointer-events:none;';
     var shadow=host.attachShadow({mode:'open'});
     var css=document.createElement('link');
-    css.rel='stylesheet';css.href='css/style.css?v=test435-format-first';
+    css.rel='stylesheet';css.href='css/style.css?v=test436-title-count';
     shadow.appendChild(css);
     // Copy the original header, bar, status, grips and all stylistic classes.
     // Never duplicate hundreds of SID rows or original event bindings.
