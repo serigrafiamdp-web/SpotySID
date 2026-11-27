@@ -153,3 +153,6 @@ SpotySID now uses the approved [SIDPLAY64MIX TEST94 MASTER](https://github.com/s
 - [Backup notes and rebuild recipe](MASTERS/2026-11-27_TEST452/README.md).
 
 The active export MASTER is TEST452; the native base is TEST94. Filename prefixes are removed by the exporter, not by a new native player version. Every new playlist still needs its own fade map and SID length injection.
+
+
+**TEST453 experimental:** all playlists can contribute new SID candidates via conservative fade-store discovery. TEST452 remains the approved MASTER. [Test and limits](docs/TEST453_EXPANDED_PLAYLISTS.md).
