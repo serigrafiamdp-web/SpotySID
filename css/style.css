@@ -5058,3 +5058,6 @@ html.rico-karaoke-active #songInfo {
 #ricoD81Panel .rico-d81-playlist{display:flex;align-items:baseline;gap:8px;min-width:0;margin-top:4px;font-size:21px}
 #ricoD81Panel .rico-d81-playlist .rico-d81-title{flex:0 1 auto;min-width:0}
 #ricoD81Panel .rico-d81-total{flex:0 0 auto;white-space:nowrap}
+
+/* TEST437: compact exporter scan summary, without changing the remaining text. */
+#ricoD81Panel .rico-d81-status{font-size:15px;line-height:1.2;overflow-wrap:normal}
