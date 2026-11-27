@@ -1,6 +1,6 @@
 # SpotySid — Features
 
-**Frontend feature reference · C64 disk export updated 27 November 2026 (Argentina) · TEST451 MASTER**
+**Frontend feature reference · C64 disk export updated 27 November 2026 (Argentina) · TEST452 MASTER**
 
 [Open SpotySid](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [README](../README.md) · [User guide](HELP_USER_GUIDE.md) · [Latest checkpoint](CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md) · [Architecture](ARCHITECTURE.md)
 
@@ -41,7 +41,7 @@ This is the **current list of implemented main-branch capabilities**. Where a fe
 - **EXPORT D81** includes the approved SIDPLAY64MIX TEST94 launcher, with a playlist-specific fade map and duration overlay. Original library files are untouched.
 - In VICE the player supports continuous playback, automatic per-song duration, eight-second fade, background prefetch, stable violet active marker and independent yellow navigation. The launcher is hidden from the visible playlist; the playing SID follows to the top at automatic or ENTER handoff.
 - Current limits: exact verified 100-track corpus, at most 100 SID entries and 3,099 data blocks after the 61-block launcher, plus nine special fade-address slots. Unknown duration defaults to 03:05; known durations outside 00:15–99:59 are skipped. **D64 / 1541 is preflight only**, not an available export. Real hardware and broader SID compatibility are not yet verified.
-- Combined D81 export confirmed PASS by Rico in VICE on November 27, 2026. [How to export](HELP_USER_GUIDE.md#export-a-playlist-to-commodore-64) · [Frozen MASTER and recovery](MASTER_2026-11-27_TEST451.md) · [Technical notes](TEST451_TEST94_MASTER_EXPORT.md).
+- Combined D81 export confirmed PASS by Rico in VICE on November 27, 2026. [How to export](HELP_USER_GUIDE.md#export-a-playlist-to-commodore-64) · [Frozen MASTER and recovery](MASTER_2026-11-27_TEST452.md) · [Technical notes](TEST451_TEST94_MASTER_EXPORT.md).
 
 ## Artist artwork: TILEWORK / STIL+
 
@@ -92,4 +92,4 @@ Shortcuts do not replace typing in text fields, search, name/creator inputs, TIM
 Historical TEST files in `docs/` are retained as dated development references, not a list of all active UI features.
 
 
-**TEST452 filename experiment:** D81 filenames use up to 12 characters of the normalized song name, plus `.sid`; alphabetic suffixes resolve collisions only. Playlist order remains unchanged. VICE confirmation pending.
+**TEST452 filename improvement (user PASS):** D81 filenames use up to 12 characters of the normalized song name, plus `.sid`; alphabetic suffixes resolve collisions only. Playlist order remains unchanged. Rico confirmed PASS on November 27, 2026.

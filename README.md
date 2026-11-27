@@ -6,9 +6,9 @@
 
 SpotySid continues the original James / Jojati web SID Player, with extensions by RICO / RicoSerigrafia. The music, original artists and SID files keep their own credits; playlist editing does **not** change the original compositions.
 
-## Current approved export MASTER — TEST451 (November 27, 2026)
+## Current approved export MASTER — TEST452 (November 27, 2026)
 
-Rico confirmed PASS in VICE for the combined D81 export using SIDPLAY64MIX TEST94, automatic per-song durations and the follow-playing playlist. The [frozen MASTER branch](https://github.com/serigrafiamdp-web/SpotySID/tree/MASTER-2026-11-27-TEST451) preserves the approved implementation; [checkpoint and recovery instructions](docs/MASTER_2026-11-27_TEST451.md). This approval covers the C64 export workflow, not all unrelated browser/Cloudflare features. D64 and broader SID support remain pending.
+Rico confirmed PASS in VICE for the combined D81 export using SIDPLAY64MIX TEST94, automatic per-song durations and the follow-playing playlist (TEST451), followed by the removal of artificial sequence prefixes from disk filenames (TEST452). TEST452 is the final approved export MASTER of November 27, 2026. The [frozen MASTER branch](https://github.com/serigrafiamdp-web/SpotySID/tree/MASTER-2026-11-27-TEST452) preserves the approved implementation; [checkpoint and recovery instructions](docs/MASTER_2026-11-27_TEST452.md). This approval covers the C64 export workflow, not all unrelated browser/Cloudflare features. D64 and broader SID support remain pending.
 
 ## Features — start here
 
@@ -138,9 +138,9 @@ Original artists, groups, demos and composers retain their credits. This README 
 [**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [Latest checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md)
 
 
-### C64 disk export — TEST451 MASTER (PASS)
+### C64 disk export — TEST452 MASTER (PASS)
 
 SpotySID now uses the approved [SIDPLAY64MIX TEST94 MASTER](https://github.com/serigrafiamdp-web/SIDPLAY64MIX/tree/fc6563b808623a7ba121d686816d00cda559d4c4/MASTERS/2026-11-27_TEST94_MASTER) for new D81 exports, with individual song lengths added at export time. The combined integration was confirmed PASS by Rico in VICE on November 27, 2026. [Technical notes and rollback](docs/TEST451_TEST94_MASTER_EXPORT.md).
 
 
-**TEST452 (filename-only experiment):** new D81 exports keep the playlist's physical directory order without a numeric prefix on each SID. Up to 12 characters are available before `.sid`; only name collisions receive a short alphabetic suffix. The TEST451 MASTER and TEST94 launcher are unchanged. [Details](docs/TEST452_D81_FILENAMES.md).
+**TEST452 (user PASS; current MASTER):** new D81 exports keep the playlist's physical directory order without a numeric prefix on each SID. Up to 12 characters are available before `.sid`; only name collisions receive a short alphabetic suffix. The previous TEST451 checkpoint and TEST94 launcher are unchanged. [Details](docs/TEST452_D81_FILENAMES.md).
