@@ -156,3 +156,6 @@ The active export MASTER is TEST452; the native base is TEST94. Filename prefixe
 
 
 **TEST453 experimental:** all playlists can contribute new SID candidates via conservative fade-store discovery. TEST452 remains the approved MASTER. [Test and limits](docs/TEST453_EXPANDED_PLAYLISTS.md).
+
+
+**TEST454 experimental:** header-compatible new tracks without fade patching; verified tracks retain fade. [Technical notes](docs/TEST454_OPTIONAL_FADE.md). TEST452 remains MASTER.

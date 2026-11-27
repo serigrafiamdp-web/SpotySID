@@ -1,0 +1,5 @@
+# TEST454 — Playback first, optional fade
+
+TEST453 rejected all 66 LFT tracks in the user's screenshot. TEST454 keeps the original PSID header, bank, vectors, single-chip and duration checks but removes fade discovery as a prerequisite. Verified TEST92 tracks retain their original fade table. Unknown header-compatible tracks are NEW / NO FADE: reserve $FF in the map and route through a new $4190 guard to the existing normal PLAY exit ($3B80), before patching any SID instruction. The timer installer copies 89 bytes instead of 75. The existing duration/prefetch/handoff logic is retained, including manual transition wait. Unknown tracks have no fade. No change to base PRG, SIDPLAY64MIX, file names or 61-block launcher size. 100-entry cap still applies; nine special-address slots only for known fade entries.
+
+Validation: 25600 guard opcode simulation cases (100 indices x 256 possible bytes) plus original map sentinel and branch-target checks. New library tunes and full VICE execution remain unverified; header checks cannot guarantee runtime compatibility. Restore MASTER-2026-11-27-TEST452 if necessary. D64 remains preflight only.
