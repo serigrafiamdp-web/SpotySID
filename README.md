@@ -159,3 +159,6 @@ The active export MASTER is TEST452; the native base is TEST94. Filename prefixe
 
 
 **TEST454 experimental:** header-compatible new tracks without fade patching; verified tracks retain fade. [Technical notes](docs/TEST454_OPTIONAL_FADE.md). TEST452 remains MASTER.
+
+
+**TEST455 experimental:** late short fade for statically identified new candidates; no-fade fallback. [Technical notes](docs/TEST455_SHORT_FADE.md). TEST452 remains MASTER.
