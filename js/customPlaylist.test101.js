@@ -954,6 +954,141 @@
   var activePublicCollection = null;
   // TEST170: NO HVSC-only visual subgroups; preserve original SID order.
   var NO_HVSC_COLLECTION_ID='00000000-0000-4000-8000-000000000001';
+  // TEST432: temporary display/search quarantine of exactly 104 Thunder imports.
+  // D1 remains unchanged. Use SHA-256 IDs, never titles or author text.
+  // The 13 RICO + 3 Uctumi uploads are NOT in this set.
+  var TEST432_WITHDRAWN_NO_HVSC=new Set([
+    '015e0eabc3d174d12523ca768e63c99c264bf66211cd7741ece897fd4c041788',
+    '017af28f50f95e6e6bd02ff3b1e6207bba9a1eadccc037c8ffb0f820df325edf',
+    '06664f2e5a5d5360c412d487e15f402c8c5cf0d287e7ab88bfcf679914119237',
+    '07aedac86d708dd7605dcc7f794e07a9ea67db524d0855e668f9e080b2c87052',
+    '0963375c18cfbea80a8b453ad782a5a73733c4d699c2957da681ffa60bdb156c',
+    '0b9cd9c042252e280d1494a5e88b639abe08d8256c4452204a4c8b5b29dbe234',
+    '0ea53d6fbadfa41d8eebc4969161e4284936f4808352a5db106fecacf46b8fe6',
+    '1c0b3008b896f98a07bf675d79d3eee533f0df23bd91c8f1477138ba68fcf904',
+    '21c8441f757f70eaa38aee68231b953d1a0614c8e972a2bb1bed69ec79a88b42',
+    '25a848d8e2a0c73f38bb8c7c59d7a03fd40ace8b11fb77590fffab297db9b767',
+    '26d9a0b0a04778ce88dcc68ea6b09a5c0cb31cf4a650f68245e9e91f0a09e950',
+    '271cbb3d99071266b4a008cc8674356b0cf245b06ff578225cc2222b33d987e3',
+    '2b073391013cfce1b7a159bacc82cf2a319ce3daf273347a7c62defc6a28f976',
+    '2b80e484e0b4be56b1b97830407c4c4fb35bd7d9518f21804e66cd9b46954cff',
+    '2e45bb0bafc0504177610d2e41a20edde41509421890e83ff3c36c44e5593890',
+    '2eec231b5bdf78dcadba59e4e8b82504565246469af3062991faca99a0f4540d',
+    '2f098d39f0771b6119110b56c1860d9223b428d95203808e2520911f594c756c',
+    '303334597e136e3c283f7533a02fd745bda52931e7885bf1c2722c9dbd0e17fb',
+    '317b2ef80841cfb857a700f0ce407562004b5c3d3c6053b1195dc5c72dc75f54',
+    '318c866b89483cebc09ebd1c96a488d802dc2320df29f54138905e3ab87893ce',
+    '3238ccbbea1ce662e1b5cd74482300abaf8a32e7293e1a72f55aa38879b5716d',
+    '34b4e4f26efa7d22551c6336a38092b4e7b33b85ea034166a6cd0a253573c1e9',
+    '359774eefa987c835198d36a66e87e86f7482cc36ed95aee6be9e69e3007f9e6',
+    '3dd2c6684bc99b93757398bc9690a3ad3466dae792c81b8835f24281a469fb3b',
+    '4cc8d84149f8a076460b8da6cd98fb8aef1a3f00c0ffcf56979c625ae708aa80',
+    '4e115e88afde54bcdb898376fc45f169b74fb30c9b4c00f404dca3cac0effa40',
+    '50195700ee49526cf95e7b10825662966d4c1a8ae0e7d6fb017cd18f5f2809e1',
+    '51c6da9cd708c26681c338f461d65ab8cc4d8d99be364a90dd1fd409b2cb8667',
+    '52ffca8fbd5836e51bd7025d6babc51abcd4612e8a456c147c486726ad482978',
+    '55302a4f425f8fbc6066545f43d30360ed1cc6ce351e5a532a74cbf628b9f7ed',
+    '577ad0656ae26741f7c84a238a75af4c7e621d7cc21b9af2a441cd66e472bcaf',
+    '5959ad52ec7b7f75fd5abae76bfa10b8dbc42240d5c74df58dd9ad7da5e7c7b1',
+    '5bad525b264ce0368e8f024a7c9e6f9fde9bc64bd8aa7cca8380fc11e2f6810b',
+    '5e07d9053c1ff8ae25623a10f0bc1d192cbbd77cbc7dfeb1bb976ab11a9b4a60',
+    '5f613377ce114e3705a76c93df1153b355bbef48a3b0e85501f9c7c253ccdee1',
+    '627b22e8b01c1cf3fc11343d060ea91f59da3946d2b53f0450b0f7778ea84951',
+    '642cbcb2276db6abf45c8f0532f618f100a111418d65c138f608dd88fc45a928',
+    '6a17b0c95452162cb66318edc77ee95d35713d15eb0f0aa8a1c430ae8b85dd66',
+    '70750faf09963cb6e23753bf10068e6b728e385322bbd66d0d5fd02218220e91',
+    '72c9f370a7df2600bd2f50e593fb34734beb179b387d80c0661f1632b72c7b2e',
+    '7544dded04de37733a0237d030ae1503ceff31ec151f4ce3c178288d87444d58',
+    '766d02cfdbeac4c296aec71fd66b3778400b7fbd96a3ac888aa68c3913a89b15',
+    '77f6abb5efd1cddbd420aa1ff83e9fee605a565fd4d3c0760cd3c181732de458',
+    '7a1728ea09fb7e3f441799fb18c2233ac8cb5ee5f891013759c7f5f6c5534ac9',
+    '7c0d85e034977ce41e6c9537753afcacac31c7c08feb09b28c23090574b8c3d4',
+    '7e6e6ad4933f76ef05a024e19c4f5789da30c8d85b4d75d8be3a5b1a5aab5a55',
+    '7e92e9521ede458eb72053dd8656a6ae59cda3892efabba0ca0404a2665e1270',
+    '811e146924611d16a17ab087ac613eba9bf13efd428ae7e2d38885a75615bfd6',
+    '86d7fb4acd91564efe9393e5714516ed89ce63508070db50342745d68aaf478e',
+    '8abea2e784f76bd48707b5e62f48623395245246fe3d041260ccbcc88b51fee2',
+    '8ca4202aec86409f974b65356f422dcf96ec5dcfddaf755269307d0dca26c48c',
+    '8d96f175fea78071ee19be571d1cfc1ad9805a1262249566358e9c0e9a58d96c',
+    '930b626d5a048fbf033a705455d7a0371229b8019707d1502eae467481f403b9',
+    '9342d22e037ab1ea74c5a58f0d7dfbd65a0136394c03050e70ccd1378be4c004',
+    '93da2ebb278632b656b1eed3591d943f39e60648674e808d49475c82c0ad0bd6',
+    '948accf921b55df7267a22497455901241bc740962be7b941a35196ea21cff8a',
+    '970fe040f9ab002228156013fc7d5504915a755304698abaf1c2946174a2a5c6',
+    '9830ab5bfae25cfd3805a7169569e74142a2f15274bb449d0d9b277d0dde7c10',
+    '990b1dd8b7eb8e7ec6e83d7a63e8eab6b5f806d5e88625fb15dbede89d366d7a',
+    '9efdec33061ed0fe16691965279fdf76a38486f511d8af41da08d7cb9c5181d0',
+    '9f771af263e0285301c41ee80bdfa5bd857079d624b7e3a461411b5a61866996',
+    'a3a2614f13b58e243d673830d293a03ad7768cced3e95b98008315fde478c460',
+    'a3cc46c0e8a79e3c3055621a8b2a937b998e8500971e9943300d4b9eefae52f7',
+    'a5ed2b40c97d38f22581983038db53750230c080797ed1886b5e7eaa1aa2831c',
+    'aa98ae8febc95ebee2feaaa71ff2078f4f150f8ddf6db89763d8b9843ec4577d',
+    'abd86a0f1ebff3fa98f7aeb33f38e58eb0a28b36aa2edd3ff3d4c0c8c284d70c',
+    'ac573c2df6705393c9070ed8965a66b8414debc019bd4da4b2b4008c4eb590ef',
+    'ae57ef0b2c019ba9914cd949763c757fd52d443224a1a8eed9b80c2e3702fc9b',
+    'af33f604ecba70cd5ceb1a87ba8adc5dc0e4ddc098dded4a61cb08f67b9569a1',
+    'b018cfeaddaa84e2c43e8f0e59510a7da987b361acfb3a1d4e8dbaa106c7e69a',
+    'b465101bf80b45efb88da2f73701291fa7ec7a3d30506bfe6b9a904bf8d10223',
+    'b488b0108724cc774f5328025f499589ee9e7dcd5ba67f81023cc7f7ea9873db',
+    'b5c00ec578504d45139c98d6092e9acc83266f21ce331928bb233bbef58621f7',
+    'b682b20f83fc5a99cbbbde0ce7f301c529701588255c9558576d04cfa9b683d6',
+    'b794f861756900da64c7ffcd165284e37c609ccbd19b5c45942aad77f8e23ecb',
+    'bc2321eecf86795aac4a86e906068cc938d13bee2c9e6bde7d5461d37fcd30f9',
+    'c0276933aef5ece22d712c3d35e195de892cb9168f786db62426bcd997c63550',
+    'c2b7869902d0724ebc88fec9e18995c30444fd528ed66643b444e9c6947d2b8d',
+    'c70d67aadefad000ffe1e5e9b46e8411fa8475474ed11db917472a73f768ecc6',
+    'ca713ef92d6a8273af4f46b94eb208dd7a35235364487ca94064ef8caf75b540',
+    'cae84577f4cdc4db5a9c15a8fbf253753088a2adec8af877ecf9d116b099edef',
+    'cb77027ea6224d239727f5128e0466b70a9c541e26db091af69e8082ab51efd3',
+    'cb9a13b87da9b4de9c905069c604753d40f6bf98a1268a96e5070f8cc5a3b85c',
+    'cced4201dc6ff2ea81e6be6b48752b4afd31bc41859ed4a66f64679b967952ed',
+    'ce210671dc83403368b888f333dd35e170fc406e6201252b04428fe1f943628f',
+    'd33d8dc9167905d3e33943a8e217208d29841599c71d306a509f62bae8db653e',
+    'd4cf12ef179f300595b2a655f041f599b4ca6517609e998f1a406c5606191ee5',
+    'd50b0e1e4864ae08caea804b9e5239baff8fe04ac1b5b6a910c24fff29a06871',
+    'd995f303bce2cc7d57c7171948a17d91a908445c7be2d2f09f25c1442933c510',
+    'dbefbc94a21fa7a441adc1a16a09d55f0f79986c536e8e331394c086eedb46c1',
+    'dcff9b7bb0e9557b4857875c3241629f57ae45d5626f821f43e147d3bba81fec',
+    'e082468c28d12064ef49566d9aeac50c6ae12beccae44524996be28de27c14d3',
+    'e5b3d92caa08da9ed632d94359a490e32fd0d8de1f4fd3bedd64f0f6ea0c8e91',
+    'e613719abc9e968e84c457f4a41a458bb7a21924376fa61dc269a99a5c908e42',
+    'ecf4a6569ce7d6b776c4767222d9a5e499edafa2285f6cac51e64c60aff6e7ff',
+    'f55e01264419780420bbb7da33352e0958d7186e439b37331076088ea3cefb87',
+    'f6ac6f42e09388ec927b899a464e01f49d5f345b2c6e0f36951cedfe91ea7fc6',
+    'f783420de8257a622e007169f4ad9622ddaf9d5541c1fd4cb81860335032c39c',
+    'f9b8b0b919a1d4d14720f59a437302cedd8f56204b06cf60cb32ad46ce3de5e3',
+    'f9cc0c8a34c504ad7b02bc30f4a71520d4398198880776baca8be1e26ba17f21',
+    'f9ef4f64914dd779b9d336e6930c2342130587dedd768cf0f57624198cbc2579',
+    'fccbd763872d2af7db2a9c1b294de347a1da8a5001bcd4071122efa3c7ab3f05',
+    'fdb02ccb5ddc4f5f92c070fd21dac2965699f08c2b0d05b7b60adc4692dd58e8',
+    'fdcc0f123c21f6bc21d8a3bea43dd59abaded7a62a0ef4403ec96683527de8dd'
+  ]);
+  function test432WithdrawnRef(ref){
+    return !!ref&&typeof ref.sidId==='string'&&
+      TEST432_WITHDRAWN_NO_HVSC.has(ref.sidId.toLowerCase());
+  }
+  function test432VisibleTracks(tracks){
+    return tracks.filter(function(ref){return !test432WithdrawnRef(ref);});
+  }
+  function test432ScreenPlaylist(data,index){
+    if(!data||data.version!==2||!Array.isArray(data.tracks))
+      return {data:data,index:index,hidden:0};
+    var tracks=test432VisibleTracks(data.tracks);
+    if(tracks.length===data.tracks.length)
+      return {data:data,index:index,hidden:0};
+    var newIndex=0;
+    if(Number.isInteger(index)&&index>=0&&index<data.tracks.length){
+      var selected=data.tracks[index];
+      if(!test432WithdrawnRef(selected))
+        newIndex=Math.max(0,tracks.indexOf(selected));
+    }
+    return {data:Object.assign({},data,{tracks:tracks}),index:newIndex,
+      hidden:data.tracks.length-tracks.length};
+  }
+  window.RICO_TEST432={version:432,withdrawnCount:TEST432_WITHDRAWN_NO_HVSC.size,
+    isWithdrawnSidId:function(id){
+      return typeof id==='string'&&TEST432_WITHDRAWN_NO_HVSC.has(id.toLowerCase());
+    }};
   // TEST170 FIX1: verified by the curator as one artist. The three
   // SID binaries were archived together on 2026-11-10. Preserve their
   // original header credits; this overrides artist GROUPING only.
@@ -1287,6 +1422,8 @@
     return order;
   }
   function bulkMoveCheckedSids(step){
+    if((activePublicCollection&&activePublicCollection.test432ReadOnly)||
+       (activePublicPlaylist&&activePublicPlaylist.test432ReadOnly))return;
     var indices=checkedSidIndices();
     if(!indices.length||!customActive||loadedRankedPlaylist||savingCommunityEdits||
        batchActionBusy||!Number.isInteger(step))return;
@@ -1411,6 +1548,8 @@
   }
   // TEST94/105: reorder without restarting SID or losing metadata/reference sync.
   function moveLiveSong(index,step){
+    if((activePublicCollection&&activePublicCollection.test432ReadOnly)||
+       (activePublicPlaylist&&activePublicPlaylist.test432ReadOnly))return;
     if(!customActive||loadedRankedPlaylist||savingCommunityEdits||index<0||index>=custom.length)return;
     var destination=Math.max(0,Math.min(custom.length-1,index+step));
     if(destination===index)return;
@@ -1768,6 +1907,11 @@
   }
   async function savePublicRemovals(){
     var collection=activePublicCollection,playlist=activePublicPlaylist;
+    if((collection&&collection.test432ReadOnly)||
+       (playlist&&playlist.test432ReadOnly)){
+      $('#ricoLiveStatus').text('TEST432: filtered SID archive is read-only.');
+      return;
+    }
     if(savingCommunityEdits||(!collection&&!playlist))return;
     var changed=collection ? collection.dirtyOrder :
       (playlist.dirtyOrder||playlist.tracks.length!==playlist.originalCount);
@@ -4092,7 +4236,9 @@
       $('#ricoLiveStatus').text('BROWSE · CLICK SONG TO PLAY');
     }else updateCheckedSidCount();
     // TEST106: SAVE is visible for any editable loaded list, never TOP 100.
-    var canSave=!!(!preview&&customActive&&!landingPlaylists&&!isRanked&&list.length);
+    var canSave=!!(!preview&&customActive&&!landingPlaylists&&!isRanked&&list.length&&
+      !(activePublicCollection&&activePublicCollection.test432ReadOnly)&&
+      !(activePublicPlaylist&&activePublicPlaylist.test432ReadOnly));
     var pendingDraft=remixDrafts.find(function(d){
       return d.remoteEditId&&Array.isArray(d.baseTracks)&&
         ((activeRemixDraftId&&d.id===activeRemixDraftId)||
@@ -5758,6 +5904,9 @@
       var initialIndex=Number.isInteger(startIndex)&&startIndex>=0&&
         data&&Array.isArray(data.tracks)&&startIndex<data.tracks.length?
         startIndex:0;
+      // TEST432: also filter direct SHARE, remix and reference-only load paths.
+      var screened=test432ScreenPlaylist(data,initialIndex);
+      data=screened.data;initialIndex=screened.index;
       // TEST177: the selected track's verified HVSC reference decides its engine.
       var serial=requestPlaylistChange();
       if (!data || data.format!=='ricos-sid-playlist') throw Error('Unsupported playlist.');
@@ -7737,6 +7886,12 @@
                 name:pending.name,createdBy:pending.creator,
                 tracks:pending.tracks.map(remixCanonicalRef)
               }:data;
+              // TEST432: filter both A/B browse previews and PLAY before any SID
+              // metadata is displayed. Keep SHARE's intended surviving track.
+              var screenedPlaylist=test432ScreenPlaylist(chosen,
+                isShared?sharedStartIndex:requestedIndex);
+              chosen=screenedPlaylist.data;
+              var screenedStartIndex=screenedPlaylist.index;
               // TEST406: retain a callable source for each playlist window.
               // The catalog row closure can still request the original audio
               // loader even after MOS is closed and the other list is active.
@@ -7819,7 +7974,7 @@
                 removePlayingWindow();
                 ricoPrimaryBrowseKey='';
               }
-              var startAt=isShared?sharedStartIndex:requestedIndex;
+              var startAt=screenedStartIndex;
               var applied;
               try{
                 applied=await loadStoredPlaylist(chosen,false,item.remoteId||null,
@@ -7840,6 +7995,8 @@
               activePublicPlaylist=!pending&&item.remoteId&&data.version===2?{
                 remoteId:item.remoteId,name:chosen.name,createdBy:chosen.createdBy,
                 tracks:chosen.tracks.map(remixCanonicalRef),
+                test432ReadOnly:screenedPlaylist.hidden>0||
+                  test432ScreenPlaylist(data,0).hidden>0,
                 originalCount:data.tracks.length,
                 dirtyOrder:!!(options&&options.previewData&&
                   remixTrackKeys(chosen.tracks)!==remixTrackKeys(data.tracks))
@@ -8028,7 +8185,8 @@
           var title=document.createElement('strong');title.textContent=c.name;
           var detail=document.createElement('small');
           detail.textContent='Collection by '+c.creator+' · '+
-            (c.remote?c.trackCount:c.tracks.length)+' SID'+
+            (c.remote&&c.trackCount===null?'—':
+              (c.remote?c.trackCount:c.tracks.length))+' SID'+
             (c.local?' · LOCAL ONLY':' · PUBLISHED');
           label.appendChild(title);label.appendChild(detail);row.appendChild(label);
           var load=addAction(row,'PLAY',async function(){
@@ -8058,7 +8216,7 @@
                       });
                     }
                   }catch(metaError){console.warn('NO HVSC artist metadata unavailable',metaError);}
-                  var refs=manifest.tracks.map(function(t){
+                  var refs=test432VisibleTracks(manifest.tracks).map(function(t){
                     if(!/^[0-9a-f]{64}$/.test(t.sidId)||!t.file)
                       throw Error('Invalid NO HVSC asset reference.');
                     var metadata=metaBySidId.get(t.sidId);
@@ -8074,6 +8232,7 @@
                   await loadStoredPlaylist({format:'ricos-sid-playlist',version:2,
                     name:c.name,createdBy:c.creator,tracks:refs},false);
                   activePublicCollection={id:c.id,name:c.name,creator:c.creator,
+                    test432ReadOnly:manifest.tracks.length!==refs.length,
                     artistBySidId:artistBySidId,
                     originalTracks:refs.map(remixCanonicalRef),
                     tracks:refs.map(function(t,i){
@@ -8143,19 +8302,27 @@
         }
         items.appendChild(fragment);
       }
-      function inspectPlaylist(id,name,creator,tracks,local,updatedAt){
+      async function inspectPlaylist(id,name,creator,tracks,local,updatedAt){
         if(!Array.isArray(tracks)||!tracks.length)return null;
-        var valid=[];
-        tracks.forEach(function(t){
-          if(!t||typeof t.sidBase64!=='string')return;
+        // Include locally saved v1 SID in the same temporary quarantine,
+        // without removing any IndexedDB record or changing its bytes.
+        var inspected=await Promise.all(tracks.map(async function(t){
+          if(!t||typeof t.sidBase64!=='string')return null;
           try{
             var bytes=decode(t.sidBase64);
+            if(window.crypto&&window.crypto.subtle&&
+               TEST432_WITHDRAWN_NO_HVSC.has(await binarySidHash(bytes)))
+              return null;
             var parsed=parseSID(bytes,{name:t.file||'track.sid',size:bytes.length});
-            if(!parsed)return;
-            valid.push({file:t.file||'track.sid',sidBase64:t.sidBase64,
-              title:parsed.name||t.file||'Untitled SID',author:parsed.author||'Unknown'});
-          }catch(e){console.warn('Skipped invalid SID in collection '+name,e);}
-        });
+            if(!parsed)return null;
+            return {file:t.file||'track.sid',sidBase64:t.sidBase64,
+              title:parsed.name||t.file||'Untitled SID',author:parsed.author||'Unknown'};
+          }catch(e){
+            console.warn('Skipped invalid SID in collection '+name,e);
+            return null;
+          }
+        }));
+        var valid=inspected.filter(Boolean);
         return valid.length?{id:id,name:name,creator:creator||'Unknown',
           tracks:valid,local:local,updatedAt:updatedAt||''}:null;
       }
@@ -8181,14 +8348,38 @@
               }
             }
           }catch(error){console.warn('Published SID collections unavailable',error);}
+          // TEST432: remote collection indexes contain 120 D1 records, but only
+          // the surviving SID may appear in OUR COLLECTION counts or searches.
+          var noHvscRow=result.find(function(c){
+            return c.remote&&c.id===NO_HVSC_COLLECTION_ID;
+          });
+          if(noHvscRow){
+            noHvscRow.trackCount=null; // Do not display the stale D1 count.
+            try{
+              var metaResponse=await fetch(communityWriteApi+'/no-hvsc',
+                {cache:'no-store'});
+              if(!metaResponse.ok)throw Error('NO HVSC metadata unavailable');
+              var metaCatalog=await metaResponse.json();
+              if(!metaCatalog||!Array.isArray(metaCatalog.tracks))
+                throw Error('Invalid NO HVSC metadata');
+              var available=test432VisibleTracks(metaCatalog.tracks);
+              noHvscRow.tracks=available.map(function(t){
+                return {sidId:t.sidId,file:t.file,title:t.title||t.file,
+                  author:t.author||''};
+              });
+              noHvscRow.trackCount=available.length;
+            }catch(error){
+              console.warn('TEST432: filtered NO HVSC search deferred',error);
+            }
+          }
           var saved=await dbCall('readonly',function(store){return store.getAll();});
-          saved.forEach(function(list){
+          for(var list of saved){
             if(list&&list.version===1&&Array.isArray(list.tracks)){
-              var entry=inspectPlaylist('local-'+list.id,list.name||'IMPORT SID',
+              var entry=await inspectPlaylist('local-'+list.id,list.name||'IMPORT SID',
                 list.createdBy||'Unknown',list.tracks,true,list.updatedAt||list.createdAt);
               if(entry)result.push(entry);
             }
-          });
+          }
           result.sort(function(a,b){
             if(a.local!==b.local)return a.local?-1:1;
             return String(b.updatedAt||'').localeCompare(String(a.updatedAt||''));
