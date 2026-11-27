@@ -5041,3 +5041,7 @@ html.rico-karaoke-active #songInfo {
 #ricoD81Panel .rico-d81-resize-nw{top:0;left:0;cursor:nwse-resize}
 #ricoD81Panel .rico-d81-resize-se{bottom:0;right:0;cursor:nwse-resize;background:linear-gradient(135deg,transparent 0 48%,var(--rico-theme-border,#888) 48% 56%,transparent 56% 69%,var(--rico-theme-border,#888) 69% 77%,transparent 77%)}
 #ricoD81Panel .rico-d81-resize-sw{bottom:0;left:0;cursor:nesw-resize}
+
+/* TEST434: format selection uses the existing two theme inks. */
+#ricoD81Panel .rico-d81-format{display:flex;gap:8px;flex-wrap:wrap}
+#ricoD81Panel .rico-d81-format button[aria-pressed="true"]{background:var(--rico-theme-fg,#fff)!important;color:var(--rico-theme-bg,#000)!important}

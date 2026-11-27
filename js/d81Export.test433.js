@@ -26,6 +26,16 @@ function resizeRect(r,edge,dx,dy,vw,vh){
   if(edge.indexOf('s')>=0)b=Math.min(vh-margin,Math.max(t+minH,b+dy));
   return {left:l,top:t,width:rr-l,height:b-t};
 }
+function newCapacity(format){
+  return {available:(format==='D64'?664:3160)-Math.ceil(14700/254),used:0,accepted:0,rejected:0,overflow:0,known:0};
+}
+function placeCandidate(state,result,seconds){
+  if(!result.ok){state.rejected++;return 'SKIP · '+result.reason;}
+  if(state.accepted>=162||state.used+result.blocks>state.available){state.overflow++;return 'SKIP · DISK / PLAYER LIMIT';}
+  state.accepted++;state.used+=result.blocks;
+  if(Number.isInteger(seconds)&&seconds>0)state.known++;
+  return 'CANDIDATE · '+(Number.isInteger(seconds)&&seconds>0?Math.floor(seconds/60)+':'+('0'+seconds%60).slice(-2):'03:05 DEFAULT');
+}
 var generation=0,panel=null,controller=null;
 function el(tag,text,cls){var n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function close(){generation++;if(controller)controller.abort();controller=null;if(panel)panel.remove();panel=null;}
@@ -33,14 +43,23 @@ document.addEventListener('keydown',function(e){if(panel&&panel.contains(documen
 function open(config){
   close();var token=generation;controller=new AbortController();var signal=controller.signal;
   var p=el('aside',undefined,'rico-d81-panel');panel=p;p.id='ricoD81Panel';
-  p.setAttribute('role','dialog');p.setAttribute('aria-modal','false');p.setAttribute('aria-label','Create D81');
-  var header=el('div',undefined,'rico-d81-header');header.appendChild(el('strong','CREATE D81'));
-  var x=el('button','X');x.type='button';x.setAttribute('aria-label','Close CREATE D81');x.onclick=close;header.appendChild(x);p.appendChild(header);
+  p.setAttribute('role','dialog');p.setAttribute('aria-modal','false');p.setAttribute('aria-label','Create C64 disk');
+  var header=el('div',undefined,'rico-d81-header');header.appendChild(el('strong','CREATE C64 DISK'));
+  var x=el('button','X');x.type='button';x.setAttribute('aria-label','Close CREATE C64 DISK');x.onclick=close;header.appendChild(x);p.appendChild(header);
   var body=el('div',undefined,'rico-d81-body');p.appendChild(body);
   body.appendChild(el('div',config.name||'PLAYLIST','rico-d81-title'));
-  body.appendChild(el('div','SIDPLAY64 SID MIX / 1581'));
+  var format='D81',results=[],state=newCapacity(format),scanning=false;
+  var formatBar=el('div',undefined,'rico-d81-format');formatBar.setAttribute('role','group');formatBar.setAttribute('aria-label','Disk format');
+  var formatButtons={};
+  ['D64','D81'].forEach(function(kind){
+    var button=el('button',kind+(kind==='D64'?' / 1541':' / 1581'));
+    button.type='button';button.setAttribute('aria-pressed',String(kind===format));
+    button.onclick=function(){if(kind===format)return;format=kind;updateFormat();replayResults();};
+    formatButtons[kind]=button;formatBar.appendChild(button);
+  });
+  body.appendChild(formatBar);
   body.appendChild(el('div','TEST84B · COMPATIBILITY CHECK'));
-  body.appendChild(el('div',"Approximately 80–100 SID candidates will be automatically selected from your current playlist for playback on a real Commodore 64 using 6R6's Sidplay64 Sid Mix Mod by Rico. The final D81 compilation will include the player, ready to use on a Commodore 64. The actual number depends on compatibility and available disk space.",'rico-d81-note'));
+  var notice=el('div',undefined,'rico-d81-note');body.appendChild(notice);
   var status=el('div','READY · '+config.items.length+' SID','rico-d81-status');status.setAttribute('role','status');body.appendChild(status);
   var list=el('div',undefined,'rico-d81-list');body.appendChild(list);
   body.appendChild(el('div','Export pending generic fade / timer support. Candidates require playback validation.','rico-d81-note'));
@@ -79,9 +98,30 @@ function open(config){
   header.addEventListener('pointermove',function(e){if(!drag||e.pointerId!==drag.id)return;p.style.left=Math.max(4,Math.min(innerWidth-p.offsetWidth-4,drag.left+e.clientX-drag.x))+'px';p.style.top=Math.max(4,Math.min(innerHeight-p.offsetHeight-4,drag.top+e.clientY-drag.y))+'px';p.style.transform='none';});
   ['pointerup','pointercancel','lostpointercapture'].forEach(function(n){header.addEventListener(n,function(){drag=null;});});
   p.addEventListener('keydown',function(e){e.stopPropagation();});
+  function updateFormat(){
+    Object.keys(formatButtons).forEach(function(kind){formatButtons[kind].setAttribute('aria-pressed',String(kind===format));});
+    notice.textContent=(format==='D81'?'Approximately 80–100 SID candidates are expected on a typical D81. More or fewer may fit. ':'D64 capacity is calculated from the actual SID file sizes. ')+
+      "Candidates are automatically selected from your playlist for playback using 6R6's Sidplay64 Sid Mix Mod by Rico. The final "+format+" compilation will include the player, ready to use on a Commodore 64.";
+    download.textContent='EXPORT '+format;
+  }
+  function paintResult(record){
+    var label=placeCandidate(state,record.result,record.seconds);
+    var row=el('div',undefined,'rico-d81-row');
+    row.appendChild(el('span',(record.index+1)+'. '+(record.item.name||record.item.file||'SID')));
+    row.appendChild(el('span',label));list.appendChild(row);
+  }
+  function updateStatus(){
+    status.textContent=(scanning?results.length+'/'+config.items.length+' · ':'')+
+      state.accepted+' CANDIDATES · '+state.rejected+' REJECTED · '+state.overflow+' LIMIT · '+
+      state.used+'/'+state.available+' BLOCKS · '+state.known+' KNOWN TIMES';
+  }
+  function replayResults(){
+    state=newCapacity(format);list.textContent='';
+    results.forEach(paintResult);updateStatus();
+  }
   scan.onclick=async function(){
-    scan.disabled=true;list.textContent='';
-    var available=3160-Math.ceil(14700/254),used=0,accepted=0,rejected=0,overflow=0,known=0;
+    if(scanning)return;
+    scanning=true;scan.disabled=true;results=[];replayResults();
     for(var i=0;i<config.items.length;i++){
       if(signal.aborted||token!==generation)return;
       var item=config.items[i],result,seconds=null;
@@ -89,18 +129,14 @@ function open(config){
       catch(e){result={ok:false,reason:'SID UNAVAILABLE'};}
       if(result.ok){try{seconds=await config.duration(item,result.sub);}catch(e){}}
       if(signal.aborted||token!==generation)return;
-      var label;
-      if(!result.ok){rejected++;label='SKIP · '+result.reason;}
-      else if(accepted>=162||used+result.blocks>available){overflow++;label='SKIP · DISK / PLAYER LIMIT';}
-      else{accepted++;used+=result.blocks;if(Number.isInteger(seconds)&&seconds>0)known++;
-        label='CANDIDATE · '+(Number.isInteger(seconds)&&seconds>0?Math.floor(seconds/60)+':'+('0'+seconds%60).slice(-2):'03:05 DEFAULT');}
-      var row=el('div',undefined,'rico-d81-row');row.appendChild(el('span',(i+1)+'. '+(item.name||item.file||'SID')));row.appendChild(el('span',label));list.appendChild(row);
-      status.textContent=(i+1)+'/'+config.items.length+' · '+accepted+' CANDIDATES · '+rejected+' REJECTED · '+overflow+' LIMIT';
+      var record={index:i,item:item,result:result,seconds:seconds};
+      results.push(record);paintResult(record);updateStatus();
       if(i%8===7)await new Promise(function(resolve){setTimeout(resolve,0);});
     }
-    status.textContent=accepted+' CANDIDATES · '+rejected+' REJECTED · '+overflow+' LIMIT · '+used+'/'+available+' BLOCKS · '+known+' KNOWN TIMES';
+    scanning=false;updateStatus();
     if(token===generation&&!signal.aborted)scan.disabled=false;
   };
+  updateFormat();
   scan.click();
 }
 window.RicoD81={open:open,inspectSID:inspectSID};

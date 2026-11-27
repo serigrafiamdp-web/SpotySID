@@ -12,3 +12,7 @@
 ## TEST433B — compilation notice
 
 The exporter explains the approximate 80–100 SID expectation, automatic candidate filtering, and intended ready-to-use D81 including 6R6's Sidplay64 Sid Mix Mod by Rico. This estimate is not a fixed limit or a compatibility guarantee. The actual selection still depends on the candidate filter, capacity and current player ceiling. Export remains disabled at this preflight stage.
+
+## TEST434 — CREATE C64 DISK
+
+The playlist action and floating window are now CREATE C64 DISK. D81 is selected by default; D64 can be selected before, during or after scanning. Switching formats replays cached preflight results in playlist order without downloading the files again. A 35-track D64 provides 664 data blocks, or 606 after reserving the current 58-block PRG. D81 provides 3102 after the same reservation. The existing 162-SID selector cap still applies; metadata overhead remains to be accounted for in the final generator. Both EXPORT buttons remain disabled pending generic player integration and drive tests. No changes to SID parsing or fade engine.
