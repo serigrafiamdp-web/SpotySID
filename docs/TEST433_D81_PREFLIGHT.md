@@ -8,3 +8,7 @@
 - Estimated D81 data capacity: 3160 blocks (track 40 reserved), minus 58 launcher blocks, 254 bytes per data block. Current historical selector ceiling is 162 SIDs, not a fixed 100. Final generator must reserve any metadata and verify BAM/chains and selector ceiling.
 - Scan in order; skips rejected or over-capacity entries, keeps scanning later smaller entries. Reports unavailable files separately in the row. No duration metadata written yet.
 - Validation: synthetic PSID header positive and rejection tests executed while creating the branch. Visual and real C64 tests pending.
+
+## TEST433B — compilation notice
+
+The exporter explains the approximate 80–100 SID expectation, automatic candidate filtering, and intended ready-to-use D81 including 6R6's Sidplay64 Sid Mix Mod by Rico. This estimate is not a fixed limit or a compatibility guarantee. The actual selection still depends on the candidate filter, capacity and current player ceiling. Export remains disabled at this preflight stage.

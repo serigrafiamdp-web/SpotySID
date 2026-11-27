@@ -31,6 +31,7 @@ function open(config){
   body.appendChild(el('div',config.name||'PLAYLIST','rico-d81-title'));
   body.appendChild(el('div','SIDPLAY64 SID MIX / 1581'));
   body.appendChild(el('div','TEST84B · COMPATIBILITY CHECK'));
+  body.appendChild(el('div',"Approximately 80–100 SID candidates will be automatically selected for 6R6's Sidplay64 Sid Mix Mod by Rico. The final D81 compilation will include the player, ready to use on a Commodore 64. The actual number depends on compatibility and available disk space.",'rico-d81-note'));
   var status=el('div','READY · '+config.items.length+' SID','rico-d81-status');status.setAttribute('role','status');body.appendChild(status);
   var list=el('div',undefined,'rico-d81-list');body.appendChild(list);
   body.appendChild(el('div','Export pending generic fade / timer support. Candidates require playback validation.','rico-d81-note'));
