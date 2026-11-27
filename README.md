@@ -6,6 +6,10 @@
 
 SpotySid continues the original James / Jojati web SID Player, with extensions by RICO / RicoSerigrafia. The music, original artists and SID files keep their own credits; playlist editing does **not** change the original compositions.
 
+## Current approved export MASTER — TEST451 (November 27, 2026)
+
+Rico confirmed PASS in VICE for the combined D81 export using SIDPLAY64MIX TEST94, automatic per-song durations and the follow-playing playlist. The [frozen MASTER branch](https://github.com/serigrafiamdp-web/SpotySID/tree/MASTER-2026-11-27-TEST451) preserves the approved implementation; [checkpoint and recovery instructions](docs/MASTER_2026-11-27_TEST451.md). This approval covers the C64 export workflow, not all unrelated browser/Cloudflare features. D64 and broader SID support remain pending.
+
 ## Features — start here
 
 ### Play and visualize SID music
@@ -65,9 +69,9 @@ SpotySid continues the original James / Jojati web SID Player, with extensions b
 
 Shortcuts do not override text editing or other foreground editors/dialogs. Navigation is **not** the same as the on-row **↑/↓ reorder buttons**.
 
-## Latest progress — 17 November 2026 · TEST350 (visual controls)
+## Historical progress — 17 November 2026 · TEST350 (visual controls)
 
-**Current development: `main` through TEST350.** The user confirmed **TEST341 PASS**, **TEST342 PASS** (zoom) and reported clean XP/Supermium audio transitions with TEST344–346. TEST347 increased the XP OSC ceiling to 25 FPS in normal playback. **TEST348 improves long lists on XP only:** verify the first SID before starting playback, disable bulk SID prefetch, and draw the playlist incrementally; OSC remains at 20 FPS while the list is painting. Real XP PASS for TEST348 is pending. **TEST349 N shortcut is user PASS**; **TEST350** adds waveform action labeling and pending-NEXT visual feedback (hardware PASS pending). The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
+**Historical record as of TEST350.** The user confirmed **TEST341 PASS**, **TEST342 PASS** (zoom) and reported clean XP/Supermium audio transitions with TEST344–346. TEST347 increased the XP OSC ceiling to 25 FPS in normal playback. **TEST348 improves long lists on XP only:** verify the first SID before starting playback, disable bulk SID prefetch, and draw the playlist incrementally; OSC remains at 20 FPS while the list is painting. Real XP PASS for TEST348 is pending. **TEST349 N shortcut is user PASS**; **TEST350** adds waveform action labeling and pending-NEXT visual feedback (hardware PASS pending). The earlier record is in [the 17 Nov TEST341 checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md).
 
 | Area | Recent tests and change |
 | --- | --- |
@@ -134,6 +138,6 @@ Original artists, groups, demos and composers retain their credits. This README 
 [**Open SpotySid**](https://serigrafiamdp-web.github.io/RICOS-MOD-JAMES-SIDPLAYER-ONLINE/) · [Features](docs/FEATURES.md) · [Latest checkpoint](docs/CHECKPOINT_2026-11-17_TEST341_SPOTYSID.md)
 
 
-### C64 disk export — TEST451
+### C64 disk export — TEST451 MASTER (PASS)
 
-SpotySID now uses the approved [SIDPLAY64MIX TEST94 MASTER](https://github.com/serigrafiamdp-web/SIDPLAY64MIX/tree/fc6563b808623a7ba121d686816d00cda559d4c4/MASTERS/2026-11-27_TEST94_MASTER) for new D81 exports, with individual song lengths added at export time. The combined integration awaits VICE verification. [Technical notes and rollback](docs/TEST451_TEST94_MASTER_EXPORT.md).
+SpotySID now uses the approved [SIDPLAY64MIX TEST94 MASTER](https://github.com/serigrafiamdp-web/SIDPLAY64MIX/tree/fc6563b808623a7ba121d686816d00cda559d4c4/MASTERS/2026-11-27_TEST94_MASTER) for new D81 exports, with individual song lengths added at export time. The combined integration was confirmed PASS by Rico in VICE on November 27, 2026. [Technical notes and rollback](docs/TEST451_TEST94_MASTER_EXPORT.md).
