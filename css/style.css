@@ -5074,3 +5074,26 @@ html.rico-karaoke-active #songInfo {
 
 /* TEST442: persistent, compact capacity estimates below the disk selector. */
 #ricoD81Panel .rico-d81-estimates{font-size:15px;line-height:1.2;white-space:nowrap;overflow-x:auto;flex-shrink:0}
+
+/* TEST445: match the live playlist scale and theme; two text sizes. */
+#ricoD81Panel.rico-d81-panel{width:min(510px,calc(100vw - 20px));height:min(520px,calc(100vh - 40px));font-size:14px;border-radius:5px;box-shadow:0 8px 28px rgba(0,0,0,.5)}
+#ricoD81Panel .rico-d81-header{min-height:39px;padding:0 10px;gap:6px}
+#ricoD81Panel .rico-d81-header strong{font-size:14px;font-weight:normal;line-height:1.2;padding:4px 0}
+#ricoD81Panel .rico-d81-body{gap:5px;padding:7px 9px}
+#ricoD81Panel .rico-d81-intro{gap:3px}
+#ricoD81Panel .rico-d81-headline,#ricoD81Panel .rico-d81-playlist{font-size:14px;line-height:1.2}
+#ricoD81Panel .rico-d81-playlist{margin-top:0;column-gap:8px;row-gap:2px}
+#ricoD81Panel .rico-d81-note,#ricoD81Panel .rico-d81-estimates,#ricoD81Panel .rico-d81-status,#ricoD81Panel .rico-d81-curator,#ricoD81Panel .rico-d81-total,#ricoD81Panel .rico-d81-empty{font-size:12px;line-height:1.25}
+#ricoD81Panel .rico-d81-status{padding-top:4px}
+#ricoD81Panel .rico-d81-empty{padding:10px}
+#ricoD81Panel .rico-d81-list{border:0;scrollbar-width:thin}
+#ricoD81Panel .rico-d81-list::-webkit-scrollbar{width:8px}
+#ricoD81Panel .rico-d81-list::-webkit-scrollbar-track{background:var(--rico-theme-bg)}
+#ricoD81Panel .rico-d81-list::-webkit-scrollbar-thumb{background:var(--rico-theme-fg);border:1px solid var(--rico-theme-bg);border-radius:5px}
+#ricoD81Panel .rico-d81-row{align-items:center;gap:8px;padding:5px 7px;font-size:14px;line-height:1.25;min-height:26px;box-sizing:border-box;border-color:var(--rico-theme-panel)}
+#ricoD81Panel .rico-d81-row span:last-child{font-size:12px}
+#ricoD81Panel button{box-sizing:border-box;font-size:14px!important;font-weight:400;line-height:24px;height:26px;min-height:26px;padding:0 7px;border-color:var(--rico-theme-fg)!important}
+#ricoD81Panel .rico-d81-format{gap:6px}
+#ricoD81Panel .rico-d81-format button{min-height:26px}
+#ricoD81Panel .rico-d81-actions{gap:6px}
+#ricoD81Panel .rico-d81-header button{border:0!important;padding:0 4px}

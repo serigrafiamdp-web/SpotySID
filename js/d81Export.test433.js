@@ -87,6 +87,12 @@ function open(config){
   var actions=el('div',undefined,'rico-d81-actions'),scan=el('button','CHECK SIDS');scan.type='button';scan.disabled=true;actions.appendChild(scan);
   var download=el('button','EXPORT DISK');download.type='button';download.disabled=true;actions.appendChild(download);body.appendChild(actions);
   document.body.appendChild(p);
+  // TEST445: start at the clicked playlist window's size, independently resizable.
+  var sourceRect=config.sourceRect;
+  if(sourceRect&&sourceRect.width>0&&sourceRect.height>0){
+    p.style.width=Math.min(innerWidth-8,Math.max(340,Math.round(sourceRect.width)))+'px';
+    p.style.height=Math.min(innerHeight-8,Math.max(240,Math.round(sourceRect.height)))+'px';
+  }
 
   // TEST433D: explicit edge and corner handles, independent of native CSS resize.
   // Pointer capture keeps resizing active even when the pointer crosses the list.
