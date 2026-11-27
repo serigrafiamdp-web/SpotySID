@@ -5071,3 +5071,6 @@ html.rico-karaoke-active #songInfo {
 #ricoD81Panel .rico-d81-playlist{flex-wrap:wrap;column-gap:12px;row-gap:3px}
 #ricoD81Panel .rico-d81-playlist .rico-d81-title{max-width:100%;white-space:normal;overflow-wrap:anywhere}
 #ricoD81Panel .rico-d81-curator{flex:0 1 auto;min-width:0;max-width:100%;overflow-wrap:anywhere}
+
+/* TEST442: persistent, compact capacity estimates below the disk selector. */
+#ricoD81Panel .rico-d81-estimates{display:flex;flex-direction:column;gap:2px;font-size:18px;line-height:1.2}

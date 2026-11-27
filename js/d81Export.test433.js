@@ -60,7 +60,7 @@ function open(config){
   intro.appendChild(playlist);
   body.appendChild(intro);
   var format=null,results=[],state=null,scanning=false,started=false;
-  var step=el('div','SELECT DISK FORMAT','rico-d81-step');body.appendChild(step);
+  var step=el('div','CHOOSE A DISK FORMAT!','rico-d81-step');body.appendChild(step);
   var formatBar=el('div',undefined,'rico-d81-format');formatBar.setAttribute('role','group');formatBar.setAttribute('aria-label','Disk format');
   var formatButtons={};
   ['D64','D81'].forEach(function(kind){
@@ -75,6 +75,10 @@ function open(config){
     formatButtons[kind]=button;formatBar.appendChild(button);
   });
   body.appendChild(formatBar);
+  var estimates=el('div',undefined,'rico-d81-estimates rico-d81-note');
+  estimates.appendChild(el('div','D64 / 1541: approx. 20–40 SIDs + player'));
+  estimates.appendChild(el('div','D81 / 1581: approx. 80–150 SIDs + player'));
+  body.appendChild(estimates);
   body.appendChild(el('div','TEST84B · COMPATIBILITY CHECK'));
   var notice=el('div',undefined,'rico-d81-note');body.appendChild(notice);
   var status=el('div','SELECT D64 OR D81 · '+config.items.length+' SID','rico-d81-status');status.setAttribute('role','status');body.appendChild(status);
@@ -119,11 +123,10 @@ function open(config){
   function updateFormat(){
     Object.keys(formatButtons).forEach(function(kind){formatButtons[kind].setAttribute('aria-pressed',String(kind===format));});
     if(!format){
-      notice.textContent="Compatible SID candidates are selected automatically. The player is included in the planned disk compilation.";
+      notice.textContent="Actual SID count depends on compatibility and file sizes.";
       download.textContent='EXPORT DISK';scan.disabled=true;return;
     }
-    step.textContent='DISK FORMAT';
-    notice.textContent=(format==='D81'?'Typically 80–100 SIDs; actual count depends on compatibility and available space.':'SID count depends on compatibility and actual file sizes.')+' Player included in the planned '+format+' compilation.';
+    notice.textContent='Actual SID count depends on compatibility and file sizes.';
     download.textContent='EXPORT '+format;
   }
   function paintResult(record){
