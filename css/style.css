@@ -5066,3 +5066,8 @@ html.rico-karaoke-active #songInfo {
 #ricoD81Panel .rico-d81-header{gap:8px;height:auto;min-height:48px;flex:0 0 auto}
 #ricoD81Panel .rico-d81-header strong{min-width:0;line-height:1.15;overflow-wrap:anywhere;font-size:21px;padding:8px 0}
 #ricoD81Panel .rico-d81-header button{flex:0 0 auto}
+
+/* TEST441: playlist name, curator and source count, with wrapping at narrow widths. */
+#ricoD81Panel .rico-d81-playlist{flex-wrap:wrap;column-gap:12px;row-gap:3px}
+#ricoD81Panel .rico-d81-playlist .rico-d81-title{max-width:100%;white-space:normal;overflow-wrap:anywhere}
+#ricoD81Panel .rico-d81-curator{flex:0 1 auto;min-width:0;max-width:100%;overflow-wrap:anywhere}

@@ -53,6 +53,9 @@ function open(config){
   var playlistName=el('span',config.name||'PLAYLIST','rico-d81-title');
   playlistName.title=config.name||'PLAYLIST';
   playlist.appendChild(playlistName);
+  var curator=el('span','Playlist by '+(config.creator||'Unknown curator'),'rico-d81-curator');
+  curator.title=curator.textContent;
+  playlist.appendChild(curator);
   playlist.appendChild(el('span','('+config.items.length+' SIDS)','rico-d81-total'));
   intro.appendChild(playlist);
   body.appendChild(intro);
