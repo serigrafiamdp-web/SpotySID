@@ -48,23 +48,30 @@ function open(config){
   var x=el('button','X');x.type='button';x.setAttribute('aria-label','Close CREATE C64 DISK');x.onclick=close;header.appendChild(x);p.appendChild(header);
   var body=el('div',undefined,'rico-d81-body');p.appendChild(body);
   body.appendChild(el('div',config.name||'PLAYLIST','rico-d81-title'));
-  var format='D81',results=[],state=newCapacity(format),scanning=false;
+  var format=null,results=[],state=null,scanning=false,started=false;
+  var step=el('div','SELECT DISK FORMAT','rico-d81-step');body.appendChild(step);
   var formatBar=el('div',undefined,'rico-d81-format');formatBar.setAttribute('role','group');formatBar.setAttribute('aria-label','Disk format');
   var formatButtons={};
   ['D64','D81'].forEach(function(kind){
     var button=el('button',kind+(kind==='D64'?' / 1541':' / 1581'));
     button.type='button';button.setAttribute('aria-pressed',String(kind===format));
-    button.onclick=function(){if(kind===format)return;format=kind;updateFormat();replayResults();};
+    button.onclick=function(){
+      if(kind===format)return;
+      format=kind;updateFormat();
+      if(!started){scan.onclick();return;}
+      replayResults();
+    };
     formatButtons[kind]=button;formatBar.appendChild(button);
   });
   body.appendChild(formatBar);
   body.appendChild(el('div','TEST84B · COMPATIBILITY CHECK'));
   var notice=el('div',undefined,'rico-d81-note');body.appendChild(notice);
-  var status=el('div','READY · '+config.items.length+' SID','rico-d81-status');status.setAttribute('role','status');body.appendChild(status);
+  var status=el('div','SELECT D64 OR D81 · '+config.items.length+' SID','rico-d81-status');status.setAttribute('role','status');body.appendChild(status);
   var list=el('div',undefined,'rico-d81-list');body.appendChild(list);
+  list.appendChild(el('div','CHOOSE A FORMAT TO CHECK YOUR PLAYLIST','rico-d81-empty'));
   body.appendChild(el('div','Export pending generic fade / timer support. Candidates require playback validation.','rico-d81-note'));
-  var actions=el('div',undefined,'rico-d81-actions'),scan=el('button','CHECK SIDS');scan.type='button';actions.appendChild(scan);
-  var download=el('button','EXPORT D81');download.type='button';download.disabled=true;actions.appendChild(download);body.appendChild(actions);
+  var actions=el('div',undefined,'rico-d81-actions'),scan=el('button','CHECK SIDS');scan.type='button';scan.disabled=true;actions.appendChild(scan);
+  var download=el('button','EXPORT DISK');download.type='button';download.disabled=true;actions.appendChild(download);body.appendChild(actions);
   document.body.appendChild(p);
 
   // TEST433D: explicit edge and corner handles, independent of native CSS resize.
@@ -100,6 +107,11 @@ function open(config){
   p.addEventListener('keydown',function(e){e.stopPropagation();});
   function updateFormat(){
     Object.keys(formatButtons).forEach(function(kind){formatButtons[kind].setAttribute('aria-pressed',String(kind===format));});
+    if(!format){
+      notice.textContent="Choose D64 (1541) or D81 (1581). The playlist will be checked automatically for 6R6's Sidplay64 Sid Mix Mod by Rico, with the player included in the planned compilation.";
+      download.textContent='EXPORT DISK';scan.disabled=true;return;
+    }
+    step.textContent='DISK FORMAT';
     notice.textContent=(format==='D81'?'Approximately 80–100 SID candidates are expected on a typical D81. More or fewer may fit. ':'D64 capacity is calculated from the actual SID file sizes. ')+
       "Candidates are automatically selected from your playlist for playback using 6R6's Sidplay64 Sid Mix Mod by Rico. The final "+format+" compilation will include the player, ready to use on a Commodore 64.";
     download.textContent='EXPORT '+format;
@@ -116,12 +128,13 @@ function open(config){
       state.used+'/'+state.available+' BLOCKS · '+state.known+' KNOWN TIMES';
   }
   function replayResults(){
+    if(!format)return;
     state=newCapacity(format);list.textContent='';
     results.forEach(paintResult);updateStatus();
   }
   scan.onclick=async function(){
-    if(scanning)return;
-    scanning=true;scan.disabled=true;results=[];replayResults();
+    if(!format||scanning)return;
+    started=true;scanning=true;scan.disabled=true;results=[];replayResults();
     for(var i=0;i<config.items.length;i++){
       if(signal.aborted||token!==generation)return;
       var item=config.items[i],result,seconds=null;
@@ -137,7 +150,6 @@ function open(config){
     if(token===generation&&!signal.aborted)scan.disabled=false;
   };
   updateFormat();
-  scan.click();
 }
 window.RicoD81={open:open,inspectSID:inspectSID};
 })();

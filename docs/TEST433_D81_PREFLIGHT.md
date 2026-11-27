@@ -16,3 +16,7 @@ The exporter explains the approximate 80–100 SID expectation, automatic candid
 ## TEST434 — CREATE C64 DISK
 
 The playlist action and floating window are now CREATE C64 DISK. D81 is selected by default; D64 can be selected before, during or after scanning. Switching formats replays cached preflight results in playlist order without downloading the files again. A 35-track D64 provides 664 data blocks, or 606 after reserving the current 58-block PRG. D81 provides 3102 after the same reservation. The existing 162-SID selector cap still applies; metadata overhead remains to be accounted for in the final generator. Both EXPORT buttons remain disabled pending generic player integration and drive tests. No changes to SID parsing or fade engine.
+
+## TEST435 — Format first
+
+Opening CREATE C64 DISK does not initiate a scan or select a default format. The user must explicitly choose D64 or D81. First choice starts the scan; switching formats during or after scanning recalculates from available results without a duplicate scan. CHECK SIDS is disabled until the initial scan finishes. Export remains disabled pending player integration.
