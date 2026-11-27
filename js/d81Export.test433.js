@@ -48,8 +48,7 @@ function open(config){
   var x=el('button','X');x.type='button';x.setAttribute('aria-label','Close CREATE C64 DISK');x.onclick=close;header.appendChild(x);p.appendChild(header);
   var body=el('div',undefined,'rico-d81-body');p.appendChild(body);
   var intro=el('div',undefined,'rico-d81-intro');
-  intro.appendChild(el('div','EXPORT A C64 DISK','rico-d81-headline'));
-  intro.appendChild(el('div',"WITH 6R6'S SIDPLAY64 SID MIX MOD BY RICO",'rico-d81-subtitle'));
+  intro.appendChild(el('div','EXPORT A C64 DISK WITH SIDPLAY64 SID MIX MOD BY RICO','rico-d81-headline'));
   var playlist=el('div',undefined,'rico-d81-playlist');
   var playlistName=el('span',config.name||'PLAYLIST','rico-d81-title');
   playlistName.title=config.name||'PLAYLIST';
